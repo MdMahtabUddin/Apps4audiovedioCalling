@@ -7,38 +7,32 @@ import {
   Camera,
   VideoOff,
   MonitorUp,
-  MessageSquare,
-  Users,
   Smile,
-  Settings,
   PhoneOff,
   Copy,
   Check,
-  ShieldCheck,
   Lock,
   Unlock,
-  Maximize,
-  Minimize,
-  MoreVertical,
   Radio,
   Share2,
+  Users,
+  Volume2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useMeeting } from '@/lib/meeting/meeting-provider';
 import { useVideo } from '@/lib/webrtc/video-provider';
 import { useToast } from '@/components/ui/toast';
+import { RemoteVideoTile } from './remote-video-tile';
 
 export function MeetingRoomView() {
   const toast = useToast();
   const {
     meetingId,
     title,
-    hostName,
     isHost,
-    myRole,
     isLocked,
-    settings,
+    participants,
     leaveRoom,
     endRoom,
     toggleLock,
@@ -51,6 +45,9 @@ export function MeetingRoomView() {
     isVideoEnabled,
     isScreenSharing,
     micVolume,
+    remoteStreams,
+    activeSpeakerId,
+    networkQuality,
     toggleAudio,
     toggleVideo,
     startScreenShare,
@@ -64,7 +61,6 @@ export function MeetingRoomView() {
   const [meetingDuration, setMeetingDuration] = useState('00:00');
   const [activeReaction, setActiveReaction] = useState<string | null>(null);
   const [showReactionsBar, setShowReactionsBar] = useState(false);
-  const [showParticipantsDrawer, setShowParticipantsDrawer] = useState(false);
   const [showEndModal, setShowEndModal] = useState(false);
 
   // Meeting timer
@@ -110,6 +106,20 @@ export function MeetingRoomView() {
     setTimeout(() => setActiveReaction(null), 2500);
   };
 
+  // Convert remoteStreams Map to array for rendering
+  const remotePeers = Array.from(remoteStreams.entries());
+  const totalParticipants = 1 + remotePeers.length;
+
+  // Grid layout class based on participant count
+  const getGridClasses = () => {
+    if (totalParticipants === 1) return 'max-w-4xl w-full aspect-video';
+    if (totalParticipants === 2) return 'w-full grid grid-cols-1 md:grid-cols-2 gap-4 max-w-6xl';
+    if (totalParticipants <= 4) return 'w-full grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-6xl';
+    return 'w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-7xl';
+  };
+
+  const isLocalSpeaking = activeSpeakerId === 'local' && micVolume > 20;
+
   return (
     <div className="h-screen w-screen bg-[#06080e] text-slate-100 flex flex-col overflow-hidden select-none relative">
       {/* Reaction Float Animation */}
@@ -137,7 +147,7 @@ export function MeetingRoomView() {
               <span>•</span>
               <span className="flex items-center gap-1 text-emerald-400">
                 <Radio className="h-3 w-3 animate-pulse" />
-                P2P Mesh Encrypted
+                WebRTC Mesh ({totalParticipants} online)
               </span>
             </div>
           </div>
@@ -160,12 +170,7 @@ export function MeetingRoomView() {
             </button>
           )}
 
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={handleCopyLink}
-            className="text-xs"
-          >
+          <Button size="sm" variant="secondary" onClick={handleCopyLink} className="text-xs">
             {copied ? (
               <>
                 <Check className="h-3.5 w-3.5 text-emerald-400" />
@@ -182,95 +187,138 @@ export function MeetingRoomView() {
       </header>
 
       {/* Main Video Stage Area */}
-      <main className="flex-1 p-3 sm:p-5 relative flex items-center justify-center overflow-hidden">
-        {/* If screen sharing is active, show screen share prominently */}
+      <main className="flex-1 p-3 sm:p-5 relative flex items-center justify-center overflow-y-auto">
+        {/* If screen sharing is active, show large screen share + participant sidebar/filmstrip */}
         {isScreenSharing && screenStream ? (
           <div className="w-full h-full flex flex-col lg:flex-row gap-4 items-center justify-center">
             {/* Big Screen Share Tile */}
             <div className="flex-1 w-full h-full rounded-3xl bg-black border border-white/[0.1] overflow-hidden flex items-center justify-center relative shadow-2xl">
-              <video
-                ref={screenVideoRef}
-                autoPlay
-                playsInline
-                className="w-full h-full object-contain"
-              />
+              <video ref={screenVideoRef} autoPlay playsInline className="w-full h-full object-contain" />
               <div className="absolute top-4 left-4 bg-black/70 backdrop-blur px-3 py-1.5 rounded-xl border border-white/10 text-xs font-semibold text-white flex items-center gap-2">
                 <MonitorUp className="h-4 w-4 text-indigo-400" />
                 <span>You are sharing your screen</span>
               </div>
             </div>
 
-            {/* Thumbnail Local Video Tile */}
-            <div className="w-64 aspect-video rounded-2xl bg-[#0c101c] border border-white/10 overflow-hidden relative shadow-xl shrink-0">
-              <video
-                ref={localVideoRef}
-                autoPlay
-                playsInline
-                muted
-                className={`w-full h-full object-cover scale-x-[-1] ${
-                  isVideoEnabled && localStream ? 'opacity-100' : 'opacity-0'
+            {/* Thumbnail Local & Remote Video Tiles Filmstrip */}
+            <div className="w-full lg:w-72 flex lg:flex-col gap-3 overflow-x-auto lg:overflow-y-auto shrink-0 max-h-[75vh]">
+              {/* Local Thumbnail Tile */}
+              <div
+                className={`w-48 lg:w-full aspect-video rounded-2xl bg-[#0c101c] overflow-hidden relative shadow-xl shrink-0 transition-all ${
+                  isLocalSpeaking ? 'ring-2 ring-emerald-400' : 'border border-white/10'
                 }`}
-              />
-              {(!isVideoEnabled || !localStream) && (
-                <div className="absolute inset-0 flex items-center justify-center bg-[#0a0d16] text-xs font-bold text-gray-400">
-                  Camera Off
+              >
+                <video
+                  ref={localVideoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className={`w-full h-full object-cover scale-x-[-1] ${
+                    isVideoEnabled && localStream ? 'opacity-100' : 'opacity-0'
+                  }`}
+                />
+                {(!isVideoEnabled || !localStream) && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-[#0a0d16] text-xs font-bold text-gray-400">
+                    Camera Off
+                  </div>
+                )}
+                <div className="absolute bottom-2 left-2 px-2 py-0.5 rounded-lg bg-black/60 text-[10px] text-white font-medium flex items-center gap-1">
+                  <span>You</span>
+                  {!isAudioEnabled && <MicOff className="h-3 w-3 text-rose-400" />}
                 </div>
-              )}
-              <div className="absolute bottom-2 left-2 px-2 py-0.5 rounded-lg bg-black/60 text-[10px] text-white font-medium">
-                You
               </div>
+
+              {/* Remote Participant Filmstrip Tiles */}
+              {remotePeers.map(([peerId, stream]) => (
+                <div key={peerId} className="w-48 lg:w-full shrink-0">
+                  <RemoteVideoTile
+                    peerId={peerId}
+                    stream={stream}
+                    isSpeaking={activeSpeakerId === peerId}
+                    quality={networkQuality.get(peerId)}
+                  />
+                </div>
+              ))}
             </div>
           </div>
         ) : (
-          /* Standard Video Grid (1 or more participants) */
-          <div className="w-full h-full max-w-5xl flex items-center justify-center">
-            <div className="relative w-full aspect-video max-h-[75vh] rounded-3xl bg-gradient-to-br from-[#0c101c] to-[#070912] border-2 border-indigo-500/50 shadow-2xl shadow-indigo-950/40 overflow-hidden flex items-center justify-center group">
-              {/* Local Video Stream */}
-              <video
-                ref={localVideoRef}
-                autoPlay
-                playsInline
-                muted
-                className={`w-full h-full object-cover scale-x-[-1] transition-opacity duration-200 ${
-                  isVideoEnabled && localStream ? 'opacity-100' : 'opacity-0'
+          /* Multi-Participant Dynamic Grid Layout */
+          <div className="w-full h-full flex items-center justify-center">
+            <div className={getGridClasses()}>
+              {/* Local Participant Card */}
+              <div
+                className={`relative w-full aspect-video rounded-3xl bg-gradient-to-br from-[#0c101c] to-[#070912] shadow-2xl overflow-hidden flex items-center justify-center transition-all duration-300 group ${
+                  isLocalSpeaking
+                    ? 'ring-4 ring-emerald-500 shadow-emerald-500/25'
+                    : 'border-2 border-indigo-500/40 shadow-indigo-950/40'
                 }`}
-              />
+              >
+                {/* Local Video Stream */}
+                <video
+                  ref={localVideoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className={`w-full h-full object-cover scale-x-[-1] transition-opacity duration-200 ${
+                    isVideoEnabled && localStream ? 'opacity-100' : 'opacity-0'
+                  }`}
+                />
 
-              {/* Video Disabled Avatar Display */}
-              {(!isVideoEnabled || !localStream) && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center space-y-3 bg-[#0a0d16]">
-                  <div className="h-28 w-28 rounded-full bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center text-4xl font-extrabold text-white shadow-2xl shadow-indigo-600/40 border-2 border-indigo-400/40">
-                    You
-                  </div>
-                  <p className="text-sm font-bold text-white">You (Host / Participant)</p>
-                  <p className="text-xs text-gray-400">Camera stream paused</p>
-                </div>
-              )}
-
-              {/* Local Status Badges */}
-              <div className="absolute bottom-4 left-4 flex items-center gap-2">
-                <div className="px-3 py-1.5 rounded-xl bg-black/70 backdrop-blur-md border border-white/10 text-xs font-semibold text-white flex items-center gap-2 shadow-lg">
-                  <span>You {isHost ? '(Host)' : ''}</span>
-                  {!isAudioEnabled && <MicOff className="h-3.5 w-3.5 text-rose-400" />}
-                </div>
-
-                {isAudioEnabled && (
-                  <div className="px-2.5 py-1.5 rounded-xl bg-black/70 backdrop-blur-md border border-white/10 flex items-center gap-1.5 shadow-lg">
-                    <div className="h-1.5 w-10 bg-gray-800 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-emerald-400 transition-all duration-75"
-                        style={{ width: `${micVolume}%` }}
-                      />
+                {/* Video Disabled Avatar Display */}
+                {(!isVideoEnabled || !localStream) && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center space-y-3 bg-[#0a0d16]">
+                    <div className="h-24 w-24 rounded-full bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center text-3xl font-extrabold text-white shadow-2xl shadow-indigo-600/40 border-2 border-indigo-400/40">
+                      You
                     </div>
+                    <p className="text-sm font-bold text-white">You {isHost ? '(Host)' : ''}</p>
+                    <p className="text-xs text-gray-400">Camera stream paused</p>
+                  </div>
+                )}
+
+                {/* Local Status Badges */}
+                <div className="absolute bottom-4 left-4 flex items-center gap-2">
+                  <div className="px-3 py-1.5 rounded-xl bg-black/70 backdrop-blur-md border border-white/10 text-xs font-semibold text-white flex items-center gap-2 shadow-lg">
+                    <span>You {isHost ? '(Host)' : ''}</span>
+                    {!isAudioEnabled && <MicOff className="h-3.5 w-3.5 text-rose-400" />}
+                    {isLocalSpeaking && (
+                      <span className="flex items-center gap-1 text-[10px] text-emerald-400 font-bold">
+                        <Volume2 className="h-3.5 w-3.5 animate-pulse" />
+                        Speaking
+                      </span>
+                    )}
+                  </div>
+
+                  {isAudioEnabled && (
+                    <div className="px-2.5 py-1.5 rounded-xl bg-black/70 backdrop-blur-md border border-white/10 flex items-center gap-1.5 shadow-lg">
+                      <div className="h-1.5 w-10 bg-gray-800 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-emerald-400 transition-all duration-75"
+                          style={{ width: `${micVolume}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Single participant invitation prompt */}
+                {remotePeers.length === 0 && (
+                  <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10 text-xs text-indigo-300 font-medium flex items-center gap-1.5">
+                    <Share2 className="h-3.5 w-3.5 text-indigo-400" />
+                    <span>Share link to invite participants</span>
                   </div>
                 )}
               </div>
 
-              {/* Waiting for other participants badge */}
-              <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10 text-xs text-indigo-300 font-medium flex items-center gap-1.5">
-                <Share2 className="h-3.5 w-3.5 text-indigo-400" />
-                <span>Share link to invite participants</span>
-              </div>
+              {/* Remote Participants Cards */}
+              {remotePeers.map(([peerId, stream]) => (
+                <RemoteVideoTile
+                  key={peerId}
+                  peerId={peerId}
+                  stream={stream}
+                  isSpeaking={activeSpeakerId === peerId}
+                  quality={networkQuality.get(peerId)}
+                />
+              ))}
             </div>
           </div>
         )}
@@ -368,31 +416,47 @@ export function MeetingRoomView() {
         {/* Right Info */}
         <div className="hidden md:flex items-center gap-2">
           <Badge variant="indigo" dot>
-            WebRTC Active
+            WebRTC Mesh
           </Badge>
         </div>
-      </footer >
+      </footer>
 
       {/* Host End Meeting Confirmation Modal */}
       {showEndModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
           <div className="w-full max-w-md p-6 rounded-3xl bg-[#0c101c] border border-white/[0.1] shadow-2xl space-y-4 animate-in fade-in zoom-in-95">
             <h3 className="text-lg font-bold text-white">Conclude Meeting</h3>
-            <p className="text-xs text-gray-400 leading-relaxed">
-              As the meeting host, you can end this session for all participants or leave while keeping the room open.
+            <p className="text-sm text-gray-400">
+              As the meeting host, would you like to leave the call or conclude the session for all participants?
             </p>
-
-            <div className="flex flex-col gap-2 pt-2">
-              <Button variant="danger" onClick={endRoom}>
-                End Meeting for Everyone
+            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+              <Button
+                variant="danger"
+                className="flex-1"
+                onClick={async () => {
+                  setShowEndModal(false);
+                  await endRoom();
+                }}
+              >
+                End Meeting for All
               </Button>
-              <Button variant="secondary" onClick={leaveRoom}>
-                Leave Meeting Alone
-              </Button>
-              <Button variant="ghost" onClick={() => setShowEndModal(false)}>
-                Cancel
+              <Button
+                variant="secondary"
+                className="flex-1"
+                onClick={() => {
+                  setShowEndModal(false);
+                  leaveRoom();
+                }}
+              >
+                Leave Only
               </Button>
             </div>
+            <button
+              onClick={() => setShowEndModal(false)}
+              className="w-full text-xs text-gray-400 hover:text-white pt-2 cursor-pointer"
+            >
+              Cancel
+            </button>
           </div>
         </div>
       )}

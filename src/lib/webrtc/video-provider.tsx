@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useRef, useCallback, useEffect } from 'react';
 import { getConnectedDevices, AvailableDevices, requestMediaStream } from './devices';
+import { WebRTCMeshManager, NetworkQuality, RemoteParticipantStream } from './webrtc-mesh';
 
 export interface VideoContextType {
   localStream: MediaStream | null;
@@ -14,6 +15,17 @@ export interface VideoContextType {
   selectedVideoInput: string;
   selectedAudioOutput: string;
   micVolume: number;
+  // Phase 3 WebRTC Mesh additions
+  remoteStreams: Map<string, MediaStream>;
+  activeSpeakerId: string | null;
+  dominantVolume: number;
+  networkQuality: Map<string, NetworkQuality>;
+  connectToPeer: (peerId: string) => Promise<RTCSessionDescriptionInit>;
+  handlePeerOffer: (peerId: string, offer: RTCSessionDescriptionInit) => Promise<RTCSessionDescriptionInit>;
+  handlePeerAnswer: (peerId: string, answer: RTCSessionDescriptionInit) => Promise<void>;
+  handlePeerIceCandidate: (peerId: string, candidate: RTCIceCandidateInit) => Promise<void>;
+  disconnectPeer: (peerId: string) => void;
+  // Controls
   toggleAudio: () => boolean;
   toggleVideo: () => boolean;
   startScreenShare: () => Promise<MediaStream | null>;
@@ -44,10 +56,55 @@ export function VideoProvider({ children }: { children: React.ReactNode }) {
   const [selectedAudioOutput, setSelectedAudioOutput] = useState('');
   const [micVolume, setMicVolume] = useState(0);
 
+  // WebRTC Mesh state
+  const [remoteStreams, setRemoteStreams] = useState<Map<string, MediaStream>>(new Map());
+  const [activeSpeakerId, setActiveSpeakerId] = useState<string | null>(null);
+  const [dominantVolume, setDominantVolume] = useState(0);
+  const [networkQuality, setNetworkQuality] = useState<Map<string, NetworkQuality>>(new Map());
+
   const streamRef = useRef<MediaStream | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const animationFrameRef = useRef<number | null>(null);
+  const meshManagerRef = useRef<WebRTCMeshManager | null>(null);
+
+  // Initialize WebRTC Mesh Manager
+  useEffect(() => {
+    const mesh = new WebRTCMeshManager({
+      onRemoteStream: (peerId, stream) => {
+        setRemoteStreams((prev) => {
+          const next = new Map(prev);
+          next.set(peerId, stream);
+          return next;
+        });
+      },
+      onRemoteTrackRemoved: (peerId) => {
+        setRemoteStreams((prev) => {
+          const next = new Map(prev);
+          // If all tracks removed, clean up or keep empty
+          return next;
+        });
+      },
+      onSpeakerChange: (speakerId, volume) => {
+        setActiveSpeakerId(speakerId);
+        setDominantVolume(volume);
+      },
+      onQualityUpdate: (peerId, quality) => {
+        setNetworkQuality((prev) => {
+          const next = new Map(prev);
+          next.set(peerId, quality);
+          return next;
+        });
+      },
+    });
+
+    meshManagerRef.current = mesh;
+
+    return () => {
+      mesh.closeAll();
+      meshManagerRef.current = null;
+    };
+  }, []);
 
   // Refresh available devices
   const refreshDevices = useCallback(async () => {
@@ -78,7 +135,9 @@ export function VideoProvider({ children }: { children: React.ReactNode }) {
   const setupAudioMeter = (stream: MediaStream) => {
     try {
       if (typeof window === 'undefined') return;
-      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      const AudioCtx =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       if (!AudioCtx) return;
 
       const audioCtx = new AudioCtx();
@@ -131,6 +190,9 @@ export function VideoProvider({ children }: { children: React.ReactNode }) {
       audioContextRef.current.close().catch(() => {});
       audioContextRef.current = null;
     }
+    if (meshManagerRef.current) {
+      meshManagerRef.current.setLocalStream(null);
+    }
     setLocalStream(null);
     setMicVolume(0);
   }, [screenStream]);
@@ -159,6 +221,10 @@ export function VideoProvider({ children }: { children: React.ReactNode }) {
         setIsAudioEnabled(wantAudio);
         setIsVideoEnabled(wantVideo);
 
+        if (meshManagerRef.current) {
+          meshManagerRef.current.setLocalStream(stream);
+        }
+
         if (wantAudio) {
           setupAudioMeter(stream);
         }
@@ -166,7 +232,6 @@ export function VideoProvider({ children }: { children: React.ReactNode }) {
         return stream;
       } catch (err) {
         console.warn('Failed to acquire requested media stream:', err);
-        // Fallback: try audio only or dummy stream if permissions denied
         return null;
       }
     },
@@ -245,7 +310,11 @@ export function VideoProvider({ children }: { children: React.ReactNode }) {
             oldTrack.stop();
           }
           streamRef.current.addTrack(newTrack);
-          setLocalStream(new MediaStream(streamRef.current.getTracks()));
+          const updated = new MediaStream(streamRef.current.getTracks());
+          setLocalStream(updated);
+          if (meshManagerRef.current) {
+            meshManagerRef.current.setLocalStream(updated);
+          }
         } catch (e) {
           console.error('Failed to switch camera:', e);
         }
@@ -270,7 +339,11 @@ export function VideoProvider({ children }: { children: React.ReactNode }) {
             oldTrack.stop();
           }
           streamRef.current.addTrack(newTrack);
-          setLocalStream(new MediaStream(streamRef.current.getTracks()));
+          const updated = new MediaStream(streamRef.current.getTracks());
+          setLocalStream(updated);
+          if (meshManagerRef.current) {
+            meshManagerRef.current.setLocalStream(updated);
+          }
         } catch (e) {
           console.error('Failed to switch microphone:', e);
         }
@@ -281,6 +354,43 @@ export function VideoProvider({ children }: { children: React.ReactNode }) {
 
   const switchSpeaker = useCallback(async (deviceId: string) => {
     setSelectedAudioOutput(deviceId);
+  }, []);
+
+  // WebRTC Mesh Peer Connection wrappers
+  const connectToPeer = useCallback(async (peerId: string) => {
+    if (!meshManagerRef.current) throw new Error('WebRTC Mesh not initialized');
+    return meshManagerRef.current.createOffer(peerId);
+  }, []);
+
+  const handlePeerOffer = useCallback(async (peerId: string, offer: RTCSessionDescriptionInit) => {
+    if (!meshManagerRef.current) throw new Error('WebRTC Mesh not initialized');
+    return meshManagerRef.current.handleOffer(peerId, offer);
+  }, []);
+
+  const handlePeerAnswer = useCallback(async (peerId: string, answer: RTCSessionDescriptionInit) => {
+    if (!meshManagerRef.current) throw new Error('WebRTC Mesh not initialized');
+    return meshManagerRef.current.handleAnswer(peerId, answer);
+  }, []);
+
+  const handlePeerIceCandidate = useCallback(async (peerId: string, candidate: RTCIceCandidateInit) => {
+    if (!meshManagerRef.current) throw new Error('WebRTC Mesh not initialized');
+    return meshManagerRef.current.addIceCandidate(peerId, candidate);
+  }, []);
+
+  const disconnectPeer = useCallback((peerId: string) => {
+    if (meshManagerRef.current) {
+      meshManagerRef.current.removePeer(peerId);
+    }
+    setRemoteStreams((prev) => {
+      const next = new Map(prev);
+      next.delete(peerId);
+      return next;
+    });
+    setNetworkQuality((prev) => {
+      const next = new Map(prev);
+      next.delete(peerId);
+      return next;
+    });
   }, []);
 
   return (
@@ -296,6 +406,15 @@ export function VideoProvider({ children }: { children: React.ReactNode }) {
         selectedVideoInput,
         selectedAudioOutput,
         micVolume,
+        remoteStreams,
+        activeSpeakerId,
+        dominantVolume,
+        networkQuality,
+        connectToPeer,
+        handlePeerOffer,
+        handlePeerAnswer,
+        handlePeerIceCandidate,
+        disconnectPeer,
         toggleAudio,
         toggleVideo,
         startScreenShare,
