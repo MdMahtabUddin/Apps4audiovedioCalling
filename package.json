@@ -7,10 +7,12 @@
     "build": "prisma generate && node scripts/db-sync.mjs && next build",
     "postinstall": "prisma generate",
     "start": "next start",
+    "signaling": "node server/signaling.mjs",
     "lint": "eslint",
     "test:phase1": "node scripts/test-phase1.mjs",
     "test:phase2": "node scripts/test-phase2.mjs",
-    "test:phase3": "node scripts/test-phase3.mjs"
+    "test:phase3": "node scripts/test-phase3.mjs",
+    "test:phase4": "node scripts/test-phase4.mjs"
   },
   "dependencies": {
     "@prisma/client": "6.4.1",
@@ -21,6 +23,8 @@
     "next": "16.4.5",
     "react": "19.3.0",
     "react-dom": "19.3.0",
+    "socket.io": "^4.8.4",
+    "socket.io-client": "^4.8.4",
     "tailwind-merge": "^3.7.0"
   },
   "devDependencies": {

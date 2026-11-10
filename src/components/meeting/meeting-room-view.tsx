@@ -17,11 +17,14 @@ import {
   Share2,
   Users,
   Volume2,
+  Wifi,
+  WifiOff,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useMeeting } from '@/lib/meeting/meeting-provider';
 import { useVideo } from '@/lib/webrtc/video-provider';
+import { useMeetingSocket } from '@/lib/socket/use-meeting-socket';
 import { useToast } from '@/components/ui/toast';
 import { RemoteVideoTile } from './remote-video-tile';
 
@@ -32,7 +35,6 @@ export function MeetingRoomView() {
     title,
     isHost,
     isLocked,
-    participants,
     leaveRoom,
     endRoom,
     toggleLock,
@@ -54,6 +56,20 @@ export function MeetingRoomView() {
     stopScreenShare,
   } = useVideo();
 
+  // Phase 4 Socket.IO Real-Time Signaling Gateway
+  const {
+    connectionStatus,
+    participants: socketParticipants,
+    activeReaction: remoteReaction,
+    sendReaction,
+    endMeetingForAll,
+  } = useMeetingSocket({
+    meetingId,
+    displayName: isHost ? 'Host' : 'Participant',
+    role: isHost ? 'HOST' : 'PARTICIPANT',
+    isJoined: true,
+  });
+
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const screenVideoRef = useRef<HTMLVideoElement>(null);
 
@@ -62,6 +78,15 @@ export function MeetingRoomView() {
   const [activeReaction, setActiveReaction] = useState<string | null>(null);
   const [showReactionsBar, setShowReactionsBar] = useState(false);
   const [showEndModal, setShowEndModal] = useState(false);
+
+  // Sync remote reaction received via socket
+  useEffect(() => {
+    if (remoteReaction) {
+      setActiveReaction(remoteReaction.emoji);
+      const timer = setTimeout(() => setActiveReaction(null), 2500);
+      return () => clearTimeout(timer);
+    }
+  }, [remoteReaction]);
 
   // Meeting timer
   useEffect(() => {
@@ -102,13 +127,14 @@ export function MeetingRoomView() {
 
   const handleTriggerReaction = (emoji: string) => {
     setActiveReaction(emoji);
+    sendReaction(emoji);
     setShowReactionsBar(false);
     setTimeout(() => setActiveReaction(null), 2500);
   };
 
   // Convert remoteStreams Map to array for rendering
   const remotePeers = Array.from(remoteStreams.entries());
-  const totalParticipants = 1 + remotePeers.length;
+  const totalParticipants = 1 + Math.max(remotePeers.length, socketParticipants.length);
 
   // Grid layout class based on participant count
   const getGridClasses = () => {
@@ -145,9 +171,18 @@ export function MeetingRoomView() {
             <div className="flex items-center gap-2 text-[11px] text-gray-400">
               <span className="font-mono">{meetingDuration}</span>
               <span>•</span>
-              <span className="flex items-center gap-1 text-emerald-400">
-                <Radio className="h-3 w-3 animate-pulse" />
-                WebRTC Mesh ({totalParticipants} online)
+              <span className="flex items-center gap-1.5 text-emerald-400">
+                <span
+                  className={`h-2 w-2 rounded-full ${
+                    connectionStatus === 'connected'
+                      ? 'bg-emerald-400 animate-pulse'
+                      : connectionStatus === 'connecting' || connectionStatus === 'reconnecting'
+                      ? 'bg-amber-400 animate-pulse'
+                      : 'bg-indigo-400'
+                  }`}
+                />
+                <span className="capitalize">{connectionStatus}</span>
+                <span>({totalParticipants} online)</span>
               </span>
             </div>
           </div>
@@ -229,16 +264,22 @@ export function MeetingRoomView() {
               </div>
 
               {/* Remote Participant Filmstrip Tiles */}
-              {remotePeers.map(([peerId, stream]) => (
-                <div key={peerId} className="w-48 lg:w-full shrink-0">
-                  <RemoteVideoTile
-                    peerId={peerId}
-                    stream={stream}
-                    isSpeaking={activeSpeakerId === peerId}
-                    quality={networkQuality.get(peerId)}
-                  />
-                </div>
-              ))}
+              {remotePeers.map(([peerId, stream]) => {
+                const info = socketParticipants.find((p) => p.socketId === peerId);
+                return (
+                  <div key={peerId} className="w-48 lg:w-full shrink-0">
+                    <RemoteVideoTile
+                      peerId={peerId}
+                      name={info?.displayName}
+                      stream={stream}
+                      isSpeaking={activeSpeakerId === peerId}
+                      quality={networkQuality.get(peerId)}
+                      isAudioEnabled={info?.isAudioEnabled ?? true}
+                      isVideoEnabled={info?.isVideoEnabled ?? true}
+                    />
+                  </div>
+                );
+              })}
             </div>
           </div>
         ) : (
@@ -310,15 +351,21 @@ export function MeetingRoomView() {
               </div>
 
               {/* Remote Participants Cards */}
-              {remotePeers.map(([peerId, stream]) => (
-                <RemoteVideoTile
-                  key={peerId}
-                  peerId={peerId}
-                  stream={stream}
-                  isSpeaking={activeSpeakerId === peerId}
-                  quality={networkQuality.get(peerId)}
-                />
-              ))}
+              {remotePeers.map(([peerId, stream]) => {
+                const info = socketParticipants.find((p) => p.socketId === peerId);
+                return (
+                  <RemoteVideoTile
+                    key={peerId}
+                    peerId={peerId}
+                    name={info?.displayName}
+                    stream={stream}
+                    isSpeaking={activeSpeakerId === peerId}
+                    quality={networkQuality.get(peerId)}
+                    isAudioEnabled={info?.isAudioEnabled ?? true}
+                    isVideoEnabled={info?.isVideoEnabled ?? true}
+                  />
+                );
+              })}
             </div>
           </div>
         )}
@@ -416,7 +463,7 @@ export function MeetingRoomView() {
         {/* Right Info */}
         <div className="hidden md:flex items-center gap-2">
           <Badge variant="indigo" dot>
-            WebRTC Mesh
+            Signaling Live
           </Badge>
         </div>
       </footer>
@@ -435,6 +482,7 @@ export function MeetingRoomView() {
                 className="flex-1"
                 onClick={async () => {
                   setShowEndModal(false);
+                  endMeetingForAll();
                   await endRoom();
                 }}
               >

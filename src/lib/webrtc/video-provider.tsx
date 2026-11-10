@@ -24,6 +24,7 @@ export interface VideoContextType {
   handlePeerOffer: (peerId: string, offer: RTCSessionDescriptionInit) => Promise<RTCSessionDescriptionInit>;
   handlePeerAnswer: (peerId: string, answer: RTCSessionDescriptionInit) => Promise<void>;
   handlePeerIceCandidate: (peerId: string, candidate: RTCIceCandidateInit) => Promise<void>;
+  registerIceCandidateHandler: (cb: (peerId: string, candidate: RTCIceCandidate) => void) => void;
   disconnectPeer: (peerId: string) => void;
   // Controls
   toggleAudio: () => boolean;
@@ -67,6 +68,7 @@ export function VideoProvider({ children }: { children: React.ReactNode }) {
   const analyserRef = useRef<AnalyserNode | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const meshManagerRef = useRef<WebRTCMeshManager | null>(null);
+  const iceCandidateCallbackRef = useRef<((peerId: string, candidate: RTCIceCandidate) => void) | null>(null);
 
   // Initialize WebRTC Mesh Manager
   useEffect(() => {
@@ -84,6 +86,11 @@ export function VideoProvider({ children }: { children: React.ReactNode }) {
           // If all tracks removed, clean up or keep empty
           return next;
         });
+      },
+      onIceCandidate: (peerId, candidate) => {
+        if (iceCandidateCallbackRef.current) {
+          iceCandidateCallbackRef.current(peerId, candidate);
+        }
       },
       onSpeakerChange: (speakerId, volume) => {
         setActiveSpeakerId(speakerId);
@@ -377,6 +384,10 @@ export function VideoProvider({ children }: { children: React.ReactNode }) {
     return meshManagerRef.current.addIceCandidate(peerId, candidate);
   }, []);
 
+  const registerIceCandidateHandler = useCallback((cb: (peerId: string, candidate: RTCIceCandidate) => void) => {
+    iceCandidateCallbackRef.current = cb;
+  }, []);
+
   const disconnectPeer = useCallback((peerId: string) => {
     if (meshManagerRef.current) {
       meshManagerRef.current.removePeer(peerId);
@@ -414,6 +425,7 @@ export function VideoProvider({ children }: { children: React.ReactNode }) {
         handlePeerOffer,
         handlePeerAnswer,
         handlePeerIceCandidate,
+        registerIceCandidateHandler,
         disconnectPeer,
         toggleAudio,
         toggleVideo,
