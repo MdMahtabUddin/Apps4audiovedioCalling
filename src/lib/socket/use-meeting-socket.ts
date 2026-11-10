@@ -269,12 +269,14 @@ export function useMeetingSocket({
     }
   }, []);
 
+  const getSocket = useCallback(() => socketRef.current, []);
+
   return {
     connectionStatus,
     participants,
     activeReaction,
     sendReaction,
     endMeetingForAll,
-    socket: socketRef.current,
+    getSocket,
   };
 }

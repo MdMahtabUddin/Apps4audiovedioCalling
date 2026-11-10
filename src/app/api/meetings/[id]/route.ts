@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth/session';
-import { meetingService, userService } from '@/lib/db';
+import { meetingService } from '@/lib/db';
 
 export async function GET(
   req: NextRequest,

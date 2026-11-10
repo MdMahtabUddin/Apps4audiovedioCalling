@@ -10,6 +10,7 @@ import {
   MonitorUp,
   ArrowRight,
   Mic,
+  MicOff,
   Camera,
   MessageSquare,
   Users,
@@ -22,6 +23,10 @@ import {
   Check,
   ChevronRight,
   Smile,
+  Laptop,
+  Layers,
+  Cpu,
+  Flame,
 } from 'lucide-react';
 import { Navbar } from '@/components/navbar';
 import { Badge } from '@/components/ui/badge';
@@ -34,6 +39,8 @@ export default function HomePage() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [meetingInput, setMeetingInput] = useState('');
   const [floatingReaction, setFloatingReaction] = useState<string | null>(null);
+  const [isDemoMuted, setIsDemoMuted] = useState(false);
+  const [isDemoCamOn, setIsDemoCamOn] = useState(true);
 
   useEffect(() => {
     fetch('/api/auth/me')
@@ -62,25 +69,25 @@ export default function HomePage() {
 
   const triggerReaction = (emoji: string) => {
     setFloatingReaction(emoji);
-    setTimeout(() => setFloatingReaction(null), 2000);
+    setTimeout(() => setFloatingReaction(null), 2500);
   };
 
   return (
     <div className="min-h-screen bg-[#06080e] text-slate-100 flex flex-col selection:bg-indigo-500 selection:text-white relative overflow-hidden">
       {/* Aurora Ambient Mesh Background */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[550px] bg-gradient-to-b from-indigo-600/15 via-purple-600/10 to-transparent rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute top-96 -left-48 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute top-96 -right-48 w-96 h-96 bg-violet-600/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1100px] h-[600px] bg-gradient-to-b from-indigo-600/15 via-purple-600/10 to-transparent rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-96 -left-48 w-[450px] h-[450px] bg-blue-600/10 rounded-full blur-3xl pointer-events-none animate-float" />
+      <div className="absolute top-96 -right-48 w-[450px] h-[450px] bg-violet-600/10 rounded-full blur-3xl pointer-events-none animate-float-slow" />
 
       <Navbar user={user} onQuickNewMeeting={handleStartInstant} />
 
       <main className="flex-1 flex flex-col justify-center items-center px-4 sm:px-6 lg:px-8 pt-12 sm:pt-20 pb-24 relative z-10">
         <div className="max-w-5xl mx-auto text-center space-y-8">
-          {/* Top Pill */}
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/[0.04] border border-white/[0.08] backdrop-blur-xl shadow-lg shadow-black/20 text-xs font-semibold text-indigo-300 animate-in fade-in zoom-in-95 duration-500">
-            <span className="flex h-2 w-2 rounded-full bg-indigo-400 animate-pulse" />
-            <span>Next-Gen WebRTC Video Infrastructure</span>
-            <ChevronRight className="h-3.5 w-3.5 text-gray-400" />
+          {/* Top Pill with Glow */}
+          <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-white/[0.04] border border-white/[0.1] backdrop-blur-xl shadow-lg shadow-black/20 text-xs font-semibold text-indigo-300 hover:border-indigo-500/40 transition-colors cursor-pointer group">
+            <span className="flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="tracking-wide">Ultra Low-Latency WebRTC 2.0 Engine</span>
+            <ChevronRight className="h-3.5 w-3.5 text-gray-400 group-hover:translate-x-0.5 transition-transform" />
           </div>
 
           {/* World-Class Hero Heading */}
@@ -99,7 +106,7 @@ export default function HomePage() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-4 max-w-xl mx-auto w-full">
             <Button
               size="lg"
-              className="w-full sm:w-auto shadow-xl shadow-indigo-600/30 text-sm sm:text-base font-bold"
+              className="w-full sm:w-auto shadow-2xl shadow-indigo-600/40 text-sm sm:text-base font-bold transition-all duration-300 hover:scale-[1.02] cursor-pointer"
               onClick={handleStartInstant}
             >
               <Video className="h-5 w-5" />
@@ -109,34 +116,34 @@ export default function HomePage() {
             <form onSubmit={handleJoinInput} className="w-full sm:w-auto flex items-center gap-2 flex-1">
               <input
                 type="text"
-                placeholder="Enter room code..."
+                placeholder="Enter room code (e.g. abc-defg-hij)"
                 value={meetingInput}
                 onChange={(e) => setMeetingInput(e.target.value)}
-                className="w-full sm:w-60 bg-white/[0.05] border border-white/[0.1] rounded-2xl px-4 py-3 text-xs sm:text-sm text-gray-100 placeholder:text-gray-500 outline-none focus:border-indigo-500 focus:bg-white/[0.08] transition-all font-mono"
+                className="w-full sm:w-64 bg-white/[0.05] border border-white/[0.1] rounded-2xl px-4 py-3 text-xs sm:text-sm text-gray-100 placeholder:text-gray-500 outline-none focus:border-indigo-500 focus:bg-white/[0.08] transition-all font-mono"
               />
-              <Button size="lg" variant="secondary" type="submit" disabled={!meetingInput.trim()}>
+              <Button size="lg" variant="secondary" type="submit" disabled={!meetingInput.trim()} className="cursor-pointer">
                 Join
               </Button>
             </form>
           </div>
 
           {/* Interactive Live Meeting Room Mockup Stage */}
-          <div className="pt-10 max-w-5xl mx-auto relative">
+          <div className="pt-10 max-w-5xl mx-auto relative animate-float-slow">
             {/* Floating reaction animation */}
             {floatingReaction && (
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-6xl animate-bounce z-40 pointer-events-none drop-shadow-2xl">
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-7xl animate-bounce z-40 pointer-events-none drop-shadow-2xl">
                 {floatingReaction}
               </div>
             )}
 
-            <div className="rounded-3xl border border-white/[0.1] bg-[#0c101c]/80 backdrop-blur-2xl p-4 sm:p-6 shadow-2xl shadow-indigo-950/40 relative overflow-hidden">
+            <div className="rounded-3xl border border-white/[0.12] bg-[#0c101c]/85 backdrop-blur-2xl p-4 sm:p-6 shadow-2xl shadow-indigo-950/50 relative overflow-hidden group">
               {/* Fake Chrome / Address Bar */}
               <div className="flex items-center justify-between pb-4 border-b border-white/[0.08]">
                 <div className="flex items-center gap-2">
-                  <span className="h-3 w-3 rounded-full bg-rose-500/80 inline-block" />
-                  <span className="h-3 w-3 rounded-full bg-amber-500/80 inline-block" />
-                  <span className="h-3 w-3 rounded-full bg-emerald-500/80 inline-block" />
-                  <span className="text-xs text-gray-400 font-mono ml-3 px-3 py-1 rounded-lg bg-black/40 border border-white/[0.06]">
+                  <span className="h-3 w-3 rounded-full bg-rose-500/80 inline-block shadow-sm shadow-rose-500/50" />
+                  <span className="h-3 w-3 rounded-full bg-amber-500/80 inline-block shadow-sm shadow-amber-500/50" />
+                  <span className="h-3 w-3 rounded-full bg-emerald-500/80 inline-block shadow-sm shadow-emerald-500/50" />
+                  <span className="text-xs text-gray-400 font-mono ml-3 px-3 py-1 rounded-lg bg-black/40 border border-white/[0.06] hidden sm:inline">
                     https://meetflow.app/meeting/sync-daily-standup
                   </span>
                 </div>
@@ -150,11 +157,11 @@ export default function HomePage() {
 
               {/* Video Grid Tiles */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 my-6">
-                {/* Tile 1: Host Speaking */}
-                <div className="relative aspect-video rounded-2xl bg-gradient-to-br from-indigo-950/60 via-[#101528] to-[#0c101c] border-2 border-indigo-500/70 shadow-lg shadow-indigo-500/20 flex items-center justify-center overflow-hidden group">
+                {/* Tile 1: Host Speaking with Active Sound Waves */}
+                <div className="relative aspect-video rounded-2xl bg-gradient-to-br from-indigo-950/70 via-[#101528] to-[#0c101c] border-2 border-indigo-500/80 shadow-xl shadow-indigo-500/25 flex items-center justify-center overflow-hidden">
                   <div className="text-center space-y-3">
                     <div className="relative inline-block">
-                      <div className="h-20 w-20 rounded-full bg-gradient-to-tr from-indigo-600 to-violet-500 border-2 border-indigo-400/50 flex items-center justify-center mx-auto text-white font-extrabold text-2xl shadow-xl shadow-indigo-600/30">
+                      <div className="h-20 w-20 rounded-full bg-gradient-to-tr from-indigo-600 to-violet-500 border-2 border-indigo-400/50 flex items-center justify-center mx-auto text-white font-extrabold text-2xl shadow-xl shadow-indigo-600/40">
                         AJ
                       </div>
                       <span className="absolute bottom-1 right-1 h-4 w-4 rounded-full bg-emerald-400 border-2 border-[#101528]" />
@@ -166,11 +173,14 @@ export default function HomePage() {
                   </div>
 
                   {/* Active Audio Waveform bars */}
-                  <div className="absolute top-4 right-4 flex items-center gap-1 bg-black/60 backdrop-blur-md px-2.5 py-1.5 rounded-xl border border-white/10">
-                    <span className="h-3 w-1 bg-emerald-400 rounded-full animate-pulse" />
-                    <span className="h-5 w-1 bg-emerald-400 rounded-full animate-pulse delay-75" />
-                    <span className="h-2 w-1 bg-emerald-400 rounded-full animate-pulse delay-150" />
-                    <span className="text-[10px] text-emerald-400 font-bold ml-1">Speaking</span>
+                  <div className="absolute top-4 right-4 flex items-center gap-1.5 bg-black/70 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10 shadow-lg">
+                    <div className="flex items-center gap-1 h-5">
+                      <span className="w-1 bg-emerald-400 rounded-full soundwave-bar-1" />
+                      <span className="w-1 bg-emerald-400 rounded-full soundwave-bar-2" />
+                      <span className="w-1 bg-emerald-400 rounded-full soundwave-bar-3" />
+                      <span className="w-1 bg-emerald-400 rounded-full soundwave-bar-4" />
+                    </div>
+                    <span className="text-[11px] text-emerald-400 font-bold ml-1">Speaking</span>
                   </div>
 
                   <div className="absolute bottom-3 left-3">
@@ -195,8 +205,9 @@ export default function HomePage() {
                     </div>
                   </div>
 
-                  <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md p-1.5 rounded-xl border border-white/10">
-                    <Mic className="h-3.5 w-3.5 text-gray-400" />
+                  <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md px-2.5 py-1.5 rounded-xl border border-white/10 text-xs font-mono text-gray-300 flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                    <span>38ms</span>
                   </div>
 
                   <div className="absolute bottom-3 left-3">
@@ -207,16 +218,28 @@ export default function HomePage() {
                 </div>
               </div>
 
-              {/* Floating Action Controls Bar */}
-              <div className="flex items-center justify-between gap-3 p-3 bg-black/60 border border-white/[0.08] backdrop-blur-xl rounded-2xl max-w-xl mx-auto shadow-2xl">
+              {/* Floating Action Controls Bar with Interactive Controls */}
+              <div className="flex items-center justify-between gap-3 p-3 bg-black/70 border border-white/[0.1] backdrop-blur-xl rounded-2xl max-w-xl mx-auto shadow-2xl">
                 <div className="flex items-center gap-2">
-                  <button className="h-10 w-10 rounded-xl bg-white/[0.08] hover:bg-white/[0.14] text-white flex items-center justify-center transition-colors">
-                    <Mic className="h-4 w-4 text-emerald-400" />
+                  <button
+                    onClick={() => setIsDemoMuted(!isDemoMuted)}
+                    className={`h-10 w-10 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
+                      isDemoMuted ? 'bg-rose-600 text-white' : 'bg-white/[0.08] hover:bg-white/[0.14] text-emerald-400'
+                    }`}
+                    title={isDemoMuted ? 'Unmute' : 'Mute'}
+                  >
+                    {isDemoMuted ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
                   </button>
-                  <button className="h-10 w-10 rounded-xl bg-white/[0.08] hover:bg-white/[0.14] text-white flex items-center justify-center transition-colors">
-                    <Camera className="h-4 w-4 text-emerald-400" />
+                  <button
+                    onClick={() => setIsDemoCamOn(!isDemoCamOn)}
+                    className={`h-10 w-10 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
+                      !isDemoCamOn ? 'bg-rose-600 text-white' : 'bg-white/[0.08] hover:bg-white/[0.14] text-emerald-400'
+                    }`}
+                    title={isDemoCamOn ? 'Turn camera off' : 'Turn camera on'}
+                  >
+                    <Camera className="h-4 w-4" />
                   </button>
-                  <button className="h-10 w-10 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center shadow-lg shadow-indigo-600/30 transition-all">
+                  <button className="h-10 w-10 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center shadow-lg shadow-indigo-600/30 transition-all cursor-pointer">
                     <MonitorUp className="h-4 w-4" />
                   </button>
                 </div>
@@ -235,8 +258,11 @@ export default function HomePage() {
                 </div>
 
                 <div>
-                  <button className="h-10 px-4 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition-all shadow-lg shadow-rose-600/30 cursor-pointer">
-                    Leave Call
+                  <button
+                    onClick={handleStartInstant}
+                    className="h-10 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all shadow-lg shadow-indigo-600/30 cursor-pointer"
+                  >
+                    Try Live Call
                   </button>
                 </div>
               </div>
@@ -245,67 +271,88 @@ export default function HomePage() {
 
           {/* Social Proof & Metrics Strip */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-16 max-w-4xl mx-auto text-left">
-            <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/[0.06]">
-              <div className="text-2xl sm:text-3xl font-black text-white font-mono">&lt; 100ms</div>
+            <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/[0.06] hover:border-indigo-500/30 transition-colors">
+              <div className="text-2xl sm:text-3xl font-black text-white font-mono">&lt; 85ms</div>
               <p className="text-xs text-gray-400 mt-1">Glass-to-glass latency</p>
             </div>
-            <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/[0.06]">
-              <div className="text-2xl sm:text-3xl font-black text-white font-mono">1080p60</div>
-              <p className="text-xs text-gray-400 mt-1">Adaptive HD Video</p>
+            <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/[0.06] hover:border-indigo-500/30 transition-colors">
+              <div className="text-2xl sm:text-3xl font-black text-white font-mono">48 kHz</div>
+              <p className="text-xs text-gray-400 mt-1">Studio Opus audio</p>
             </div>
-            <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/[0.06]">
-              <div className="text-2xl sm:text-3xl font-black text-white font-mono">DTLS-SRTP</div>
-              <p className="text-xs text-gray-400 mt-1">End-to-end encrypted</p>
+            <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/[0.06] hover:border-indigo-500/30 transition-colors">
+              <div className="text-2xl sm:text-3xl font-black text-white font-mono">4K UHD</div>
+              <p className="text-xs text-gray-400 mt-1">Screen sharing resolution</p>
             </div>
-            <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/[0.06]">
-              <div className="text-2xl sm:text-3xl font-black text-white font-mono">Zero Bloat</div>
-              <p className="text-xs text-gray-400 mt-1">No install required</p>
+            <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/[0.06] hover:border-indigo-500/30 transition-colors">
+              <div className="text-2xl sm:text-3xl font-black text-white font-mono">100%</div>
+              <p className="text-xs text-gray-400 mt-1">Peer-to-peer encrypted</p>
             </div>
           </div>
 
-          {/* Feature Cards Matrix */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-12 text-left max-w-5xl mx-auto">
-            <div className="p-7 rounded-3xl bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.08] hover:border-indigo-500/40 transition-all duration-300 space-y-4">
-              <div className="h-12 w-12 rounded-2xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center border border-indigo-500/20 shadow-lg shadow-indigo-500/10">
-                <Zap className="h-6 w-6" />
-              </div>
-              <h3 className="text-base font-bold text-white">Direct WebRTC Mesh</h3>
-              <p className="text-xs sm:text-sm text-gray-400 leading-relaxed">
-                Connect directly between browsers for absolute minimum latency and maximum privacy with STUN/TURN NAT traversal.
-              </p>
+          {/* Bento Feature Grid */}
+          <div className="pt-20 max-w-5xl mx-auto">
+            <div className="text-center space-y-3 mb-12">
+              <Badge variant="indigo">High Performance Architecture</Badge>
+              <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
+                Designed for Teams That Never Settle for Lag.
+              </h2>
             </div>
 
-            <div className="p-7 rounded-3xl bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.08] hover:border-purple-500/40 transition-all duration-300 space-y-4">
-              <div className="h-12 w-12 rounded-2xl bg-purple-500/10 text-purple-400 flex items-center justify-center border border-purple-500/20 shadow-lg shadow-purple-500/10">
-                <MonitorUp className="h-6 w-6" />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
+              {/* Card 1 */}
+              <div className="p-6 rounded-3xl bg-[#0c101c]/80 border border-white/[0.08] hover:border-indigo-500/40 transition-all duration-300 shadow-xl group">
+                <div className="h-12 w-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 mb-5 group-hover:scale-110 transition-transform">
+                  <Zap className="h-6 w-6" />
+                </div>
+                <h3 className="text-lg font-bold text-white mb-2">Zero-Relay P2P Streaming</h3>
+                <p className="text-sm text-gray-400 leading-relaxed">
+                  Video and audio stream directly between peers using Google STUN networks, eliminating slow intermediary proxies.
+                </p>
               </div>
-              <h3 className="text-base font-bold text-white">Crisp 4K Screen Sharing</h3>
-              <p className="text-xs sm:text-sm text-gray-400 leading-relaxed">
-                Share full screens, windows, or tabs with pristine framerate and audio passthrough. Automatically returns to camera upon stop.
-              </p>
-            </div>
 
-            <div className="p-7 rounded-3xl bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.08] hover:border-emerald-500/40 transition-all duration-300 space-y-4">
-              <div className="h-12 w-12 rounded-2xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center border border-emerald-500/20 shadow-lg shadow-emerald-500/10">
-                <Shield className="h-6 w-6" />
+              {/* Card 2 */}
+              <div className="p-6 rounded-3xl bg-[#0c101c]/80 border border-white/[0.08] hover:border-purple-500/40 transition-all duration-300 shadow-xl group">
+                <div className="h-12 w-12 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 mb-5 group-hover:scale-110 transition-transform">
+                  <Sparkles className="h-6 w-6" />
+                </div>
+                <h3 className="text-lg font-bold text-white mb-2">Active Speaker Waveforms</h3>
+                <p className="text-sm text-gray-400 leading-relaxed">
+                  Real-time Web Audio API energy detection highlights speakers with zero delay and rejects ambient room noise.
+                </p>
               </div>
-              <h3 className="text-base font-bold text-white">Host Security & Controls</h3>
-              <p className="text-xs sm:text-sm text-gray-400 leading-relaxed">
-                Role-based permissions, waiting room admissions, room locking, participant muting, and instant passcode protection.
-              </p>
+
+              {/* Card 3 */}
+              <div className="p-6 rounded-3xl bg-[#0c101c]/80 border border-white/[0.08] hover:border-emerald-500/40 transition-all duration-300 shadow-xl group">
+                <div className="h-12 w-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 mb-5 group-hover:scale-110 transition-transform">
+                  <Shield className="h-6 w-6" />
+                </div>
+                <h3 className="text-lg font-bold text-white mb-2">Security & Waiting Room</h3>
+                <p className="text-sm text-gray-400 leading-relaxed">
+                  Meeting passwords, waiting room gating, instant room lock, and salted JWT session authentication.
+                </p>
+              </div>
             </div>
           </div>
         </div>
       </main>
 
-      {/* Modern Footer */}
-      <footer className="border-t border-white/[0.08] bg-[#04060a] py-8 text-center text-xs text-gray-500">
-        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+      {/* Footer */}
+      <footer className="py-8 border-t border-white/[0.08] bg-[#070912] text-xs text-gray-400 text-center">
+        <div className="max-w-5xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
+            <Video className="h-4 w-4 text-indigo-400" />
             <span className="font-bold text-white">MeetFlow</span>
-            <span>• Next-Gen Real-time Communication</span>
+            <span>• Next-Gen Video Conferencing</span>
           </div>
-          <p>© 2026 MeetFlow. Production-ready WebRTC architecture.</p>
+          <div className="flex items-center gap-6">
+            <Link href="/login" className="hover:text-white transition-colors">
+              Sign In
+            </Link>
+            <Link href="/register" className="hover:text-white transition-colors">
+              Get Started
+            </Link>
+            <span className="text-gray-400">© 2026 MeetFlow Inc.</span>
+          </div>
         </div>
       </footer>
     </div>
