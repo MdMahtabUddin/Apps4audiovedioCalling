@@ -66,3 +66,40 @@ export interface MeetingSettingsItem {
   muteOnEntry: boolean;
   allowReactions: boolean;
 }
+
+export interface Participant {
+  id: string;
+  userId?: string | null;
+  name: string;
+  role: UserRole;
+  avatar?: string | null;
+  isAudioEnabled: boolean;
+  isVideoEnabled: boolean;
+  isScreenSharing: boolean;
+  isApproved: boolean;
+  isMutedByHost?: boolean;
+  joinedAt: string;
+}
+
+export interface PreJoinSettings {
+  displayName: string;
+  audioEnabled: boolean;
+  videoEnabled: boolean;
+  selectedAudioInput?: string;
+  selectedVideoInput?: string;
+  selectedAudioOutput?: string;
+}
+
+export interface MeetingValidationResponse {
+  exists: boolean;
+  id: string;
+  title: string;
+  hostId: string;
+  hostName: string;
+  isHost: boolean;
+  requiresPassword: boolean;
+  isLocked: boolean;
+  waitingRoom: boolean;
+  isActive: boolean;
+  error?: string;
+}

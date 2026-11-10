@@ -33,6 +33,16 @@ interface DevStore {
     createdAt: string;
     updatedAt: string;
   }>;
+  participants: Array<{
+    id: string;
+    meetingId: string;
+    userId?: string | null;
+    guestName?: string | null;
+    role: 'HOST' | 'CO_HOST' | 'PARTICIPANT';
+    isApproved: boolean;
+    joinedAt: string;
+    leftAt?: string | null;
+  }>;
   scheduledMeetings: Array<{
     id: string;
     title: string;
@@ -53,12 +63,14 @@ function loadDevStore(): DevStore {
   try {
     if (fs.existsSync(DATA_FILE)) {
       const content = fs.readFileSync(DATA_FILE, 'utf-8');
-      return JSON.parse(content);
+      const parsed = JSON.parse(content);
+      if (!parsed.participants) parsed.participants = [];
+      return parsed;
     }
   } catch (e) {
     console.error('Failed to load local dev store:', e);
   }
-  return { users: [], meetings: [], scheduledMeetings: [] };
+  return { users: [], meetings: [], participants: [], scheduledMeetings: [] };
 }
 
 function saveDevStore(data: DevStore) {
@@ -111,7 +123,7 @@ export const userService = {
           email: data.email.toLowerCase().trim(),
           passwordHash: data.passwordHash,
           avatar: data.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(data.name)}`,
-          emailVerified: true, // auto-verified for seamless dev
+          emailVerified: true,
         },
       });
     }
@@ -208,6 +220,58 @@ export const userService = {
 };
 
 export const meetingService = {
+  async getById(id: string) {
+    const usePg = await checkPrisma();
+    if (usePg) {
+      const meeting = await prisma.meeting.findUnique({
+        where: { id },
+        include: {
+          host: { select: { id: true, name: true, email: true, avatar: true } },
+          settings: true,
+          _count: { select: { participants: true } },
+        },
+      });
+      if (!meeting) return null;
+      return {
+        id: meeting.id,
+        title: meeting.title,
+        hostId: meeting.hostId,
+        hostName: meeting.host.name,
+        hostEmail: meeting.host.email,
+        hostAvatar: meeting.host.avatar,
+        password: meeting.password,
+        hasPassword: !!meeting.password,
+        isLocked: meeting.isLocked,
+        waitingRoom: meeting.waitingRoom,
+        isActive: meeting.isActive,
+        startTime: meeting.startTime.toISOString(),
+        endTime: meeting.endTime ? meeting.endTime.toISOString() : null,
+        participantCount: meeting._count.participants,
+        settings: meeting.settings,
+        createdAt: meeting.createdAt.toISOString(),
+      };
+    }
+
+    const store = loadDevStore();
+    const m = store.meetings.find((x) => x.id === id);
+    if (!m) return null;
+    const host = store.users.find((u) => u.id === m.hostId);
+    return {
+      ...m,
+      hostName: host ? host.name : 'Meeting Host',
+      hostEmail: host ? host.email : '',
+      hostAvatar: host ? host.avatar : null,
+      hasPassword: !!m.password,
+      participantCount: store.participants.filter((p) => p.meetingId === id).length,
+      settings: {
+        allowChat: true,
+        allowScreenShare: true,
+        muteOnEntry: false,
+        allowReactions: true,
+      },
+    };
+  },
+
   async getRecentAndHistory(userId: string) {
     const usePg = await checkPrisma();
     if (usePg) {
@@ -250,7 +314,7 @@ export const meetingService = {
       .map((m) => ({
         ...m,
         hostName: 'Host',
-        participantCount: 1,
+        participantCount: store.participants.filter((p) => p.meetingId === m.id).length || 1,
       }));
   },
 
@@ -295,6 +359,16 @@ export const meetingService = {
       });
     }
     const store = loadDevStore();
+    const existing = store.meetings.find((m) => m.id === data.id);
+    if (existing) {
+      existing.isActive = true;
+      existing.title = data.title;
+      existing.hostId = data.hostId;
+      existing.password = data.password || null;
+      existing.waitingRoom = data.waitingRoom || false;
+      saveDevStore(store);
+      return existing;
+    }
     const newMeeting = {
       id: data.id,
       title: data.title,
@@ -311,6 +385,97 @@ export const meetingService = {
     store.meetings.push(newMeeting);
     saveDevStore(store);
     return newMeeting;
+  },
+
+  async joinMeeting(data: {
+    meetingId: string;
+    userId?: string | null;
+    name: string;
+    role?: 'HOST' | 'CO_HOST' | 'PARTICIPANT';
+    isApproved?: boolean;
+  }) {
+    const role = data.role || 'PARTICIPANT';
+    const isApproved = data.isApproved !== undefined ? data.isApproved : true;
+
+    const usePg = await checkPrisma();
+    if (usePg) {
+      return prisma.meetingParticipant.create({
+        data: {
+          meetingId: data.meetingId,
+          userId: data.userId || null,
+          guestName: data.name,
+          role,
+          isApproved,
+        },
+      });
+    }
+
+    const store = loadDevStore();
+    const participant = {
+      id: 'part_' + Math.random().toString(36).substring(2, 11),
+      meetingId: data.meetingId,
+      userId: data.userId || null,
+      guestName: data.name,
+      role,
+      isApproved,
+      joinedAt: new Date().toISOString(),
+      leftAt: null,
+    };
+    store.participants.push(participant);
+    saveDevStore(store);
+    return participant;
+  },
+
+  async getParticipants(meetingId: string) {
+    const usePg = await checkPrisma();
+    if (usePg) {
+      return prisma.meetingParticipant.findMany({
+        where: { meetingId, leftAt: null },
+        include: {
+          user: { select: { id: true, name: true, avatar: true } },
+        },
+      });
+    }
+
+    const store = loadDevStore();
+    return store.participants.filter((p) => p.meetingId === meetingId && !p.leftAt);
+  },
+
+  async endMeeting(id: string, hostId: string) {
+    const usePg = await checkPrisma();
+    if (usePg) {
+      return prisma.meeting.updateMany({
+        where: { id, hostId },
+        data: { isActive: false, endTime: new Date() },
+      });
+    }
+
+    const store = loadDevStore();
+    const meeting = store.meetings.find((m) => m.id === id && m.hostId === hostId);
+    if (meeting) {
+      meeting.isActive = false;
+      meeting.endTime = new Date().toISOString();
+      saveDevStore(store);
+    }
+    return meeting;
+  },
+
+  async lockMeeting(id: string, hostId: string, isLocked: boolean) {
+    const usePg = await checkPrisma();
+    if (usePg) {
+      return prisma.meeting.updateMany({
+        where: { id, hostId },
+        data: { isLocked },
+      });
+    }
+
+    const store = loadDevStore();
+    const meeting = store.meetings.find((m) => m.id === id && m.hostId === hostId);
+    if (meeting) {
+      meeting.isLocked = isLocked;
+      saveDevStore(store);
+    }
+    return meeting;
   },
 
   async schedule(data: {
