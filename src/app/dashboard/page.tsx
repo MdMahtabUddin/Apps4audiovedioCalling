@@ -21,6 +21,10 @@ import {
   Share2,
   CalendarDays,
   History,
+  Radio,
+  Zap,
+  Globe,
+  Lock,
 } from 'lucide-react';
 import { Navbar } from '@/components/navbar';
 import { Button } from '@/components/ui/button';
@@ -95,7 +99,6 @@ export default function DashboardPage() {
     router.push(`/meeting/${code}`);
   };
 
-  // Filtered upcoming meetings based on search
   const filteredScheduled = useMemo(() => {
     if (!searchQuery.trim()) return scheduledMeetings;
     const q = searchQuery.toLowerCase();
@@ -106,7 +109,6 @@ export default function DashboardPage() {
     );
   }, [scheduledMeetings, searchQuery]);
 
-  // Filtered past meetings based on search
   const filteredRecent = useMemo(() => {
     if (!searchQuery.trim()) return recentMeetings;
     const q = searchQuery.toLowerCase();
@@ -117,7 +119,6 @@ export default function DashboardPage() {
     );
   }, [recentMeetings, searchQuery]);
 
-  // User's personal meeting ID (PMI) derived consistently from their ID
   const personalRoomId = useMemo(() => {
     if (!user?.id) return 'my-personal-room';
     const clean = user.id.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
@@ -126,41 +127,50 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0b0f19] flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="h-10 w-10 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin" />
-          <p className="text-xs text-gray-400 font-medium">Loading MeetFlow dashboard...</p>
+      <div className="min-h-screen bg-[#06080e] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="relative">
+            <div className="h-12 w-12 rounded-2xl bg-indigo-600/30 border border-indigo-500/40 animate-ping absolute inset-0" />
+            <div className="h-12 w-12 rounded-2xl bg-indigo-600 flex items-center justify-center relative z-10 shadow-xl shadow-indigo-600/50">
+              <Video className="h-6 w-6 text-white animate-pulse" />
+            </div>
+          </div>
+          <p className="text-xs text-gray-400 font-semibold tracking-wider uppercase">Loading MeetFlow Studio...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#0b0f19] text-gray-100 flex flex-col">
+    <div className="min-h-screen bg-[#06080e] text-slate-100 flex flex-col selection:bg-indigo-500 selection:text-white relative">
+      {/* Background ambient light */}
+      <div className="absolute top-0 right-1/4 w-[600px] h-[350px] bg-indigo-600/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-96 left-0 w-[500px] h-[300px] bg-purple-600/10 rounded-full blur-3xl pointer-events-none" />
+
       <Navbar
         user={user}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onQuickNewMeeting={() => setIsNewMeetingOpen(true)}
       />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-        {/* Top Header & Live Clock Banner */}
-        <div className="relative overflow-hidden rounded-3xl border border-gray-800/80 bg-gradient-to-r from-gray-900/90 via-[#11182c]/80 to-gray-900/90 p-6 sm:p-8 backdrop-blur-xl shadow-2xl shadow-black/40">
-          <div className="absolute top-0 right-1/4 w-80 h-80 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 relative z-10">
+        {/* Top Header & Live Google Meet-Style Digital Clock */}
+        <div className="relative overflow-hidden rounded-3xl border border-white/[0.08] bg-gradient-to-r from-[#0d1222]/90 via-[#10172e]/80 to-[#0b0f1a]/90 p-6 sm:p-8 backdrop-blur-2xl shadow-2xl shadow-black/50">
+          <div className="absolute top-0 right-1/3 w-80 h-80 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
 
           <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="space-y-2">
-              <div className="inline-flex items-center gap-2">
+              <div className="flex items-center gap-2">
                 <Badge variant="success" dot>
-                  Host Account Active
+                  Host Studio Online
                 </Badge>
-                <span className="text-xs text-gray-400">• WebRTC HD Ready</span>
+                <span className="text-xs text-gray-400">• WebRTC Opus Engine</span>
               </div>
-              <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-white">
-                Good day, <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-violet-300">{user?.name || 'there'}</span>
+              <h1 className="text-2xl sm:text-4xl font-black tracking-tight text-white">
+                Welcome, <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-violet-300">{user?.name || 'there'}</span>
               </h1>
-              <p className="text-xs sm:text-sm text-gray-400 max-w-xl">
-                Ready to connect? Launch an instant video room, schedule your next team sprint, or test your audio/video devices before joining.
+              <p className="text-xs sm:text-sm text-gray-400 max-w-xl font-normal leading-relaxed">
+                Start an instant meeting, schedule your next team sprint, or test your audio and webcam preview in the studio.
               </p>
             </div>
 
@@ -170,94 +180,94 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* 4 Action Cards Grid (Zoom + Google Meet hybrid) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Action 1: New Meeting */}
+        {/* 4 Signature Action Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+          {/* Card 1: New Meeting */}
           <button
             onClick={() => setIsNewMeetingOpen(true)}
-            className="group text-left p-5 rounded-2xl bg-gradient-to-br from-amber-500/20 via-orange-600/10 to-gray-900 border border-orange-500/30 hover:border-orange-500/60 transition-all hover:scale-[1.02] hover:shadow-xl hover:shadow-orange-500/10 cursor-pointer relative overflow-hidden flex flex-col justify-between h-44"
+            className="group text-left p-6 rounded-3xl bg-gradient-to-br from-amber-500/15 via-orange-600/10 to-[#0d1220] border border-orange-500/25 hover:border-orange-500/60 transition-all hover:scale-[1.02] hover:shadow-2xl hover:shadow-orange-500/15 cursor-pointer relative overflow-hidden flex flex-col justify-between h-48"
           >
-            <div className="h-12 w-12 rounded-xl bg-orange-500 text-white flex items-center justify-center shadow-lg shadow-orange-500/30 group-hover:scale-110 transition-transform">
+            <div className="h-12 w-12 rounded-2xl bg-gradient-to-tr from-amber-500 to-orange-500 text-white flex items-center justify-center shadow-lg shadow-orange-500/30 group-hover:scale-110 transition-transform">
               <Video className="h-6 w-6" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-white group-hover:text-orange-300 transition-colors">
+              <h3 className="text-base sm:text-lg font-bold text-white group-hover:text-orange-300 transition-colors">
                 New Meeting
               </h3>
-              <p className="text-xs text-gray-400 mt-1">Start now or create link for later</p>
+              <p className="text-xs text-gray-400 mt-1">Start now or generate instant link</p>
             </div>
-            <div className="flex items-center gap-1 text-xs font-semibold text-orange-400 group-hover:translate-x-1 transition-transform">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-orange-400 group-hover:translate-x-1 transition-transform">
               Launch room <ArrowRight className="h-3.5 w-3.5" />
             </div>
           </button>
 
-          {/* Action 2: Join Meeting */}
+          {/* Card 2: Join Meeting */}
           <button
             onClick={() => setIsJoinMeetingOpen(true)}
-            className="group text-left p-5 rounded-2xl bg-gradient-to-br from-blue-500/20 via-indigo-600/10 to-gray-900 border border-blue-500/30 hover:border-blue-500/60 transition-all hover:scale-[1.02] hover:shadow-xl hover:shadow-blue-500/10 cursor-pointer relative overflow-hidden flex flex-col justify-between h-44"
+            className="group text-left p-6 rounded-3xl bg-gradient-to-br from-blue-500/15 via-indigo-600/10 to-[#0d1220] border border-blue-500/25 hover:border-blue-500/60 transition-all hover:scale-[1.02] hover:shadow-2xl hover:shadow-blue-500/15 cursor-pointer relative overflow-hidden flex flex-col justify-between h-48"
           >
-            <div className="h-12 w-12 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-500/30 group-hover:scale-110 transition-transform">
+            <div className="h-12 w-12 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-lg shadow-blue-500/30 group-hover:scale-110 transition-transform">
               <LogIn className="h-6 w-6" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-white group-hover:text-blue-300 transition-colors">
+              <h3 className="text-base sm:text-lg font-bold text-white group-hover:text-blue-300 transition-colors">
                 Join Meeting
               </h3>
               <p className="text-xs text-gray-400 mt-1">Via meeting code or room URL</p>
             </div>
-            <div className="flex items-center gap-1 text-xs font-semibold text-blue-400 group-hover:translate-x-1 transition-transform">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-blue-400 group-hover:translate-x-1 transition-transform">
               Enter room <ArrowRight className="h-3.5 w-3.5" />
             </div>
           </button>
 
-          {/* Action 3: Schedule */}
+          {/* Card 3: Schedule */}
           <button
             onClick={() => setIsScheduleOpen(true)}
-            className="group text-left p-5 rounded-2xl bg-gradient-to-br from-violet-500/20 via-purple-600/10 to-gray-900 border border-violet-500/30 hover:border-violet-500/60 transition-all hover:scale-[1.02] hover:shadow-xl hover:shadow-violet-500/10 cursor-pointer relative overflow-hidden flex flex-col justify-between h-44"
+            className="group text-left p-6 rounded-3xl bg-gradient-to-br from-violet-500/15 via-purple-600/10 to-[#0d1220] border border-violet-500/25 hover:border-violet-500/60 transition-all hover:scale-[1.02] hover:shadow-2xl hover:shadow-violet-500/15 cursor-pointer relative overflow-hidden flex flex-col justify-between h-48"
           >
-            <div className="h-12 w-12 rounded-xl bg-violet-600 text-white flex items-center justify-center shadow-lg shadow-violet-500/30 group-hover:scale-110 transition-transform">
+            <div className="h-12 w-12 rounded-2xl bg-gradient-to-tr from-violet-600 to-purple-600 text-white flex items-center justify-center shadow-lg shadow-violet-500/30 group-hover:scale-110 transition-transform">
               <Calendar className="h-6 w-6" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-white group-hover:text-violet-300 transition-colors">
-                Schedule
+              <h3 className="text-base sm:text-lg font-bold text-white group-hover:text-violet-300 transition-colors">
+                Schedule Call
               </h3>
-              <p className="text-xs text-gray-400 mt-1">Plan future conferences</p>
+              <p className="text-xs text-gray-400 mt-1">Plan future video conferences</p>
             </div>
-            <div className="flex items-center gap-1 text-xs font-semibold text-violet-400 group-hover:translate-x-1 transition-transform">
-              Add to calendar <ArrowRight className="h-3.5 w-3.5" />
+            <div className="flex items-center gap-1.5 text-xs font-bold text-violet-400 group-hover:translate-x-1 transition-transform">
+              Add to agenda <ArrowRight className="h-3.5 w-3.5" />
             </div>
           </button>
 
-          {/* Action 4: Hardware & Devices */}
+          {/* Card 4: Audio/Video Test */}
           <button
             onClick={() => setIsSettingsOpen(true)}
-            className="group text-left p-5 rounded-2xl bg-gradient-to-br from-emerald-500/20 via-teal-600/10 to-gray-900 border border-emerald-500/30 hover:border-emerald-500/60 transition-all hover:scale-[1.02] hover:shadow-xl hover:shadow-emerald-500/10 cursor-pointer relative overflow-hidden flex flex-col justify-between h-44"
+            className="group text-left p-6 rounded-3xl bg-gradient-to-br from-emerald-500/15 via-teal-600/10 to-[#0d1220] border border-emerald-500/25 hover:border-emerald-500/60 transition-all hover:scale-[1.02] hover:shadow-2xl hover:shadow-emerald-500/15 cursor-pointer relative overflow-hidden flex flex-col justify-between h-48"
           >
-            <div className="h-12 w-12 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-lg shadow-emerald-500/30 group-hover:scale-110 transition-transform">
+            <div className="h-12 w-12 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-600 text-white flex items-center justify-center shadow-lg shadow-emerald-500/30 group-hover:scale-110 transition-transform">
               <Camera className="h-6 w-6" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-white group-hover:text-emerald-300 transition-colors">
-                Camera & Mic Test
+              <h3 className="text-base sm:text-lg font-bold text-white group-hover:text-emerald-300 transition-colors">
+                Device Studio
               </h3>
               <p className="text-xs text-gray-400 mt-1">Live audio meter & webcam check</p>
             </div>
-            <div className="flex items-center gap-1 text-xs font-semibold text-emerald-400 group-hover:translate-x-1 transition-transform">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-400 group-hover:translate-x-1 transition-transform">
               Test hardware <ArrowRight className="h-3.5 w-3.5" />
             </div>
           </button>
         </div>
 
-        {/* Quick Join Input Pill */}
-        <div className="p-4 rounded-2xl bg-gray-900/60 border border-gray-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center border border-indigo-500/20 shrink-0">
-              <LogIn className="h-4 w-4" />
+        {/* Quick Meeting Code Entry Bar */}
+        <div className="p-4 sm:p-5 rounded-3xl bg-white/[0.03] border border-white/[0.08] backdrop-blur-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="h-10 w-10 rounded-2xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center border border-indigo-500/20 shrink-0">
+              <LogIn className="h-5 w-5" />
             </div>
             <div>
-              <h4 className="text-xs font-semibold text-white">Quick Meeting Entry</h4>
-              <p className="text-[11px] text-gray-400">Type or paste any meeting code to jump straight in</p>
+              <h4 className="text-sm font-bold text-white">Instant Room Connect</h4>
+              <p className="text-xs text-gray-400">Type or paste any meeting code to jump directly into the room</p>
             </div>
           </div>
 
@@ -267,69 +277,68 @@ export default function DashboardPage() {
               placeholder="e.g. abc-defg-hij"
               value={inlineCode}
               onChange={(e) => setInlineCode(e.target.value)}
-              className="flex-1 bg-gray-950/80 border border-gray-800 rounded-xl px-3.5 py-2 text-xs text-gray-100 placeholder:text-gray-500 outline-none focus:border-indigo-500 transition-colors font-mono"
+              className="flex-1 bg-black/40 border border-white/[0.1] rounded-2xl px-4 py-2.5 text-xs sm:text-sm text-gray-100 placeholder:text-gray-500 outline-none focus:border-indigo-500 transition-all font-mono"
             />
-            <Button size="sm" type="submit" disabled={!inlineCode.trim()}>
+            <Button size="md" type="submit" disabled={!inlineCode.trim()}>
               Join Call
             </Button>
           </form>
         </div>
 
-        {/* Main Content: Meetings Section & Sidebar */}
+        {/* Meetings Section & Right Sidebar */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main 2 Cols: Tabs & List */}
+          {/* Main 2 Cols: Tabs & Meeting Items */}
           <div className="lg:col-span-2 space-y-4">
-            {/* Tab Controls & Search */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-800 pb-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/[0.08] pb-3">
               <div className="flex gap-2">
                 <button
                   onClick={() => setActiveTab('upcoming')}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                  className={`flex items-center gap-2 px-4 py-2 rounded-2xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
                     activeTab === 'upcoming'
-                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
-                      : 'text-gray-400 hover:text-white hover:bg-gray-800/60'
+                      ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-lg shadow-indigo-600/30'
+                      : 'text-gray-400 hover:text-white hover:bg-white/[0.06]'
                   }`}
                 >
-                  <CalendarDays className="h-3.5 w-3.5" />
+                  <CalendarDays className="h-4 w-4" />
                   Upcoming ({scheduledMeetings.length})
                 </button>
                 <button
                   onClick={() => setActiveTab('history')}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                  className={`flex items-center gap-2 px-4 py-2 rounded-2xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
                     activeTab === 'history'
-                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
-                      : 'text-gray-400 hover:text-white hover:bg-gray-800/60'
+                      ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-lg shadow-indigo-600/30'
+                      : 'text-gray-400 hover:text-white hover:bg-white/[0.06]'
                   }`}
                 >
-                  <History className="h-3.5 w-3.5" />
+                  <History className="h-4 w-4" />
                   Recent & History ({recentMeetings.length})
                 </button>
               </div>
 
               {/* Search Bar */}
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-500" />
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-500" />
                 <input
                   type="text"
                   placeholder="Filter meetings..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="bg-gray-950/80 border border-gray-800 rounded-xl pl-8 pr-3 py-1.5 text-xs text-gray-200 placeholder:text-gray-500 outline-none focus:border-indigo-500 transition-colors w-full sm:w-48"
+                  className="bg-black/40 border border-white/[0.1] rounded-2xl pl-9 pr-3.5 py-2 text-xs text-gray-200 placeholder:text-gray-500 outline-none focus:border-indigo-500 transition-colors w-full sm:w-56"
                 />
               </div>
             </div>
 
-            {/* Upcoming Tab Content */}
+            {/* Upcoming Tab */}
             {activeTab === 'upcoming' && (
               <div className="space-y-3">
                 {filteredScheduled.length === 0 ? (
-                  <div className="p-10 rounded-2xl border border-dashed border-gray-800 bg-gray-900/30 text-center space-y-3">
+                  <div className="p-12 rounded-3xl border border-dashed border-white/[0.1] bg-white/[0.02] text-center space-y-3">
                     <Calendar className="h-10 w-10 text-gray-600 mx-auto" />
-                    <p className="text-sm font-semibold text-gray-300">
-                      {searchQuery ? 'No meetings matched your search' : 'No scheduled meetings'}
+                    <p className="text-sm font-bold text-gray-300">
+                      {searchQuery ? 'No meetings match your filter' : 'No upcoming scheduled meetings'}
                     </p>
                     <p className="text-xs text-gray-500 max-w-sm mx-auto">
-                      Schedule a conference in advance to set agendas, durations, passcodes, and waiting rooms.
+                      Plan ahead, set passcodes, and prepare meetings with waiting room controls for your team.
                     </p>
                     <Button size="sm" variant="secondary" onClick={() => setIsScheduleOpen(true)}>
                       Schedule a Meeting
@@ -339,7 +348,7 @@ export default function DashboardPage() {
                   filteredScheduled.map((item) => (
                     <div
                       key={item.id}
-                      className="p-4 rounded-2xl border border-gray-800 bg-gray-900/50 hover:bg-gray-900/80 hover:border-gray-700/80 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm"
+                      className="p-5 rounded-3xl border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06] hover:border-indigo-500/40 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm"
                     >
                       <div className="space-y-1.5">
                         <div className="flex items-center gap-2">
@@ -349,7 +358,7 @@ export default function DashboardPage() {
                           )}
                         </div>
                         <div className="flex flex-wrap items-center gap-3 text-xs text-gray-400">
-                          <span className="flex items-center gap-1 text-indigo-300">
+                          <span className="flex items-center gap-1.5 text-indigo-300 font-medium">
                             <Clock className="h-3.5 w-3.5 text-indigo-400" />
                             {new Date(item.date).toLocaleDateString()} at {item.startTime}
                           </span>
@@ -366,7 +375,7 @@ export default function DashboardPage() {
                             size="sm"
                             variant="secondary"
                             onClick={() => handleCopyLink(item.meetingId!)}
-                            title="Copy meeting link"
+                            title="Copy link"
                           >
                             {copiedId === item.meetingId ? (
                               <Check className="h-3.5 w-3.5 text-emerald-400" />
@@ -388,14 +397,14 @@ export default function DashboardPage() {
               </div>
             )}
 
-            {/* History Tab Content */}
+            {/* History Tab */}
             {activeTab === 'history' && (
               <div className="space-y-3">
                 {filteredRecent.length === 0 ? (
-                  <div className="p-10 rounded-2xl border border-dashed border-gray-800 bg-gray-900/30 text-center space-y-3">
+                  <div className="p-12 rounded-3xl border border-dashed border-white/[0.1] bg-white/[0.02] text-center space-y-3">
                     <History className="h-10 w-10 text-gray-600 mx-auto" />
-                    <p className="text-sm font-semibold text-gray-300">
-                      {searchQuery ? 'No meetings matched your search' : 'No past meetings recorded'}
+                    <p className="text-sm font-bold text-gray-300">
+                      {searchQuery ? 'No past meetings match your filter' : 'No meeting history yet'}
                     </p>
                     <p className="text-xs text-gray-500 max-w-sm mx-auto">
                       Calls you host or join will appear here with participant records and timestamps.
@@ -405,7 +414,7 @@ export default function DashboardPage() {
                   filteredRecent.map((item) => (
                     <div
                       key={item.id}
-                      className="p-4 rounded-2xl border border-gray-800 bg-gray-900/50 hover:bg-gray-900/80 hover:border-gray-700/80 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm"
+                      className="p-5 rounded-3xl border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06] hover:border-indigo-500/40 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm"
                     >
                       <div className="space-y-1.5">
                         <div className="flex items-center gap-2">
@@ -459,10 +468,10 @@ export default function DashboardPage() {
             )}
           </div>
 
-          {/* Right 1 Col: User Personal Room & Engine Overview */}
+          {/* Right 1 Col: PMI VIP Card & Engine Health */}
           <div className="space-y-6">
-            {/* Personal Meeting Room (PMI) Card */}
-            <Card className="bg-gradient-to-br from-indigo-950/40 via-gray-900 to-gray-950 border-indigo-500/20">
+            {/* Personal Meeting Room (PMI) VIP Card */}
+            <Card className="bg-gradient-to-br from-indigo-950/50 via-[#0e1424] to-[#070a12] border-indigo-500/30 shadow-2xl">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm flex items-center gap-2">
@@ -472,18 +481,18 @@ export default function DashboardPage() {
                   <Badge variant="indigo">Permanent</Badge>
                 </div>
                 <CardDescription className="text-xs">
-                  Your dedicated room for one-on-one syncs and standups
+                  Your dedicated personal room URL for standups and 1:1 syncs
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="p-3 rounded-xl bg-gray-950 border border-gray-800 flex items-center justify-between gap-2">
+              <CardContent className="space-y-3.5">
+                <div className="p-3.5 rounded-2xl bg-black/50 border border-white/[0.08] flex items-center justify-between gap-2">
                   <span className="text-xs font-mono text-indigo-300 truncate">{personalRoomId}</span>
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="h-7 w-7 p-0"
+                    className="h-8 w-8 p-0 shrink-0"
                     onClick={() => handleCopyLink(personalRoomId)}
-                    title="Copy Personal Room Link"
+                    title="Copy Personal Link"
                   >
                     {copiedId === personalRoomId ? (
                       <Check className="h-3.5 w-3.5 text-emerald-400" />
@@ -495,7 +504,7 @@ export default function DashboardPage() {
 
                 <Button
                   size="sm"
-                  className="w-full text-xs"
+                  className="w-full text-xs font-bold"
                   onClick={() => router.push(`/meeting/${personalRoomId}`)}
                 >
                   Start Personal Room Call
@@ -510,18 +519,18 @@ export default function DashboardPage() {
                   <CardTitle className="text-sm">User Profile</CardTitle>
                   <button
                     onClick={() => setIsSettingsOpen(true)}
-                    className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-colors cursor-pointer"
+                    className="p-2 rounded-xl text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer"
                   >
                     <Settings className="h-4 w-4" />
                   </button>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3.5">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={user.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=user'}
                       alt={user.name}
-                      className="h-12 w-12 rounded-full border border-indigo-500/40 object-cover bg-gray-800 shrink-0"
+                      className="h-12 w-12 rounded-full border border-indigo-400/40 object-cover bg-gray-800 shrink-0 shadow-md"
                     />
                     <div className="min-w-0">
                       <h4 className="text-sm font-bold text-white truncate">{user.name}</h4>
@@ -532,7 +541,7 @@ export default function DashboardPage() {
                     </div>
                   </div>
 
-                  <div className="pt-2 border-t border-gray-800/80 space-y-2 text-xs">
+                  <div className="pt-2 border-t border-white/[0.08] space-y-2 text-xs">
                     <div className="flex justify-between text-gray-400">
                       <span>Total Meetings Hosted</span>
                       <span className="font-semibold text-gray-200">{recentMeetings.length}</span>
@@ -546,24 +555,24 @@ export default function DashboardPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="w-full text-xs"
+                    className="w-full text-xs font-bold"
                     onClick={() => setIsSettingsOpen(true)}
                   >
-                    Profile & Hardware Settings
+                    Studio & Hardware Settings
                   </Button>
                 </CardContent>
               </Card>
             )}
 
-            {/* Platform Feature Status */}
-            <Card className="bg-gradient-to-br from-gray-900/60 to-[#121829] border-gray-800">
+            {/* Infrastructure Health */}
+            <Card className="bg-gradient-to-br from-white/[0.02] to-white/[0.01] border-white/[0.08]">
               <CardHeader className="pb-2">
                 <CardTitle className="text-xs flex items-center gap-2 text-indigo-300">
                   <ShieldCheck className="h-4 w-4 text-indigo-400" />
-                  WebRTC Infrastructure
+                  Enterprise WebRTC Mesh
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2 text-[11px] text-gray-400">
+              <CardContent className="space-y-2.5 text-[11px] text-gray-400">
                 <div className="flex items-center justify-between">
                   <span>Signaling Gateway</span>
                   <span className="text-emerald-400 font-semibold">Socket.IO Ready</span>
@@ -573,8 +582,8 @@ export default function DashboardPage() {
                   <span className="text-emerald-400 font-semibold">STUN Configured</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span>Media Streams</span>
-                  <span className="text-emerald-400 font-semibold">Opus + VP8/H.264</span>
+                  <span>Opus Codec</span>
+                  <span className="text-emerald-400 font-semibold">48kHz Full-Band</span>
                 </div>
               </CardContent>
             </Card>
