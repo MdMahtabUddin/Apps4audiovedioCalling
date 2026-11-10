@@ -114,6 +114,51 @@ export const userService = {
     return store.users.find((u) => u.id === id) || null;
   },
 
+  async getOrCreateGuestHost() {
+    const GUEST_HOST_ID = 'usr_guest_host_system';
+    const GUEST_EMAIL = 'guest@meetflow.internal';
+    const usePg = await checkPrisma();
+    if (usePg) {
+      try {
+        const existing = await prisma.user.findFirst({
+          where: { OR: [{ id: GUEST_HOST_ID }, { email: GUEST_EMAIL }] },
+        });
+        if (existing) return existing;
+        return await prisma.user.create({
+          data: {
+            id: GUEST_HOST_ID,
+            name: 'Meeting Host',
+            email: GUEST_EMAIL,
+            passwordHash: 'guest-disabled-password',
+            avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Host',
+            emailVerified: true,
+          },
+        });
+      } catch (err) {
+        console.warn('PostgreSQL guest host create warning, using fallback user:', err);
+      }
+    }
+    const store = loadDevStore();
+    let guestUser = store.users.find((u) => u.id === GUEST_HOST_ID || u.email === GUEST_EMAIL);
+    if (!guestUser) {
+      guestUser = {
+        id: GUEST_HOST_ID,
+        name: 'Meeting Host',
+        email: GUEST_EMAIL,
+        passwordHash: 'guest-disabled-password',
+        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Host',
+        emailVerified: true,
+        resetToken: null,
+        resetTokenExpiry: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      store.users.push(guestUser);
+      saveDevStore(store);
+    }
+    return guestUser;
+  },
+
   async create(data: { name: string; email: string; passwordHash: string; avatar?: string }) {
     const usePg = await checkPrisma();
     if (usePg) {

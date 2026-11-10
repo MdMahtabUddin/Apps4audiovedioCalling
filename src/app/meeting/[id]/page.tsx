@@ -11,6 +11,7 @@ import { PreJoinScreen } from '@/components/meeting/pre-join-screen';
 import { WaitingRoomScreen } from '@/components/meeting/waiting-room-screen';
 import { MeetingRoomView } from '@/components/meeting/meeting-room-view';
 import { MeetingValidationResponse, UserProfile } from '@/types';
+import { generateMeetingId } from '@/lib/utils';
 
 function MeetingContainer({ meetingId }: { meetingId: string }) {
   const router = useRouter();
@@ -79,12 +80,25 @@ function MeetingContainer({ meetingId }: { meetingId: string }) {
             </p>
           </div>
 
-          <Link href="/dashboard" className="block w-full">
-            <Button variant="secondary" className="w-full text-xs font-bold">
-              <ArrowLeft className="h-3.5 w-3.5 mr-1" />
-              Return to Dashboard
+          <div className="flex flex-col gap-2.5">
+            <Button
+              className="w-full text-xs font-bold shadow-lg shadow-indigo-600/30"
+              onClick={() => {
+                const newId = generateMeetingId();
+                router.push(`/meeting/${newId}`);
+              }}
+            >
+              <Video className="h-4 w-4 mr-1.5" />
+              Start New Instant Meeting
             </Button>
-          </Link>
+
+            <Link href="/" className="block w-full">
+              <Button variant="secondary" className="w-full text-xs font-bold">
+                <ArrowLeft className="h-3.5 w-3.5 mr-1" />
+                Return to Home
+              </Button>
+            </Link>
+          </div>
         </div>
       </div>
     );

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth/session';
-import { meetingService } from '@/lib/db';
+import { meetingService, userService } from '@/lib/db';
 
 export async function GET(
   req: NextRequest,
@@ -12,12 +12,18 @@ export async function GET(
 
     let meeting = await meetingService.getById(id);
 
-    // If meeting doesn't exist yet but was clicked via valid code, create instant session if user is logged in
-    if (!meeting && session) {
+    // If meeting doesn't exist yet, automatically initialize as an instant meeting session
+    if (!meeting) {
+      let hostId = session?.userId;
+      if (!hostId) {
+        const guestHost = await userService.getOrCreateGuestHost();
+        hostId = guestHost.id;
+      }
+
       await meetingService.create({
         id,
         title: 'Instant Meeting',
-        hostId: session.userId,
+        hostId,
       });
       meeting = await meetingService.getById(id);
     }
