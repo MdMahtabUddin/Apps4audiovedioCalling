@@ -1,4 +1,5 @@
 import { prisma } from './prisma';
+import { ensureDatabaseSchema } from './init-db';
 import fs from 'fs';
 import path from 'path';
 
@@ -84,13 +85,24 @@ function saveDevStore(data: DevStore) {
 // Check if PostgreSQL is available and Prisma models exist
 let isPrismaAvailable: boolean | null = null;
 async function checkPrisma(): Promise<boolean> {
-  if (isPrismaAvailable !== null) return isPrismaAvailable;
+  if (isPrismaAvailable === true) return true;
   try {
     await prisma.user.count();
     isPrismaAvailable = true;
     return true;
   } catch (err) {
-    console.warn('Prisma check failed, falling back to local store:', err);
+    console.warn('Prisma check failed, attempting auto schema initialization...', err);
+    try {
+      const initialized = await ensureDatabaseSchema();
+      if (initialized) {
+        await prisma.user.count();
+        isPrismaAvailable = true;
+        return true;
+      }
+    } catch (schemaErr) {
+      console.error('Schema auto-init failed:', schemaErr);
+    }
+    console.warn('Prisma check failed, falling back to local store');
     isPrismaAvailable = false;
     return false;
   }
