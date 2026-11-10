@@ -81,12 +81,12 @@ function saveDevStore(data: DevStore) {
   }
 }
 
-// Check if PostgreSQL is available
+// Check if PostgreSQL is available and tables exist
 let isPrismaAvailable: boolean | null = null;
 async function checkPrisma(): Promise<boolean> {
   if (isPrismaAvailable !== null) return isPrismaAvailable;
   try {
-    await prisma.$queryRaw`SELECT 1`;
+    await prisma.$queryRaw`SELECT 1 FROM "users" LIMIT 1`;
     isPrismaAvailable = true;
     return true;
   } catch {
