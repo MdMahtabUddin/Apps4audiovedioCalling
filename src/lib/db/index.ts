@@ -1,0 +1,362 @@
+import { prisma } from './prisma';
+import fs from 'fs';
+import path from 'path';
+
+export { prisma };
+
+// Development local persistence fallback when PostgreSQL is not yet running
+const DATA_FILE = path.join(process.cwd(), '.meetflow-dev-data.json');
+
+interface DevStore {
+  users: Array<{
+    id: string;
+    name: string;
+    email: string;
+    passwordHash: string;
+    avatar?: string | null;
+    emailVerified: boolean;
+    resetToken?: string | null;
+    resetTokenExpiry?: string | null;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+  meetings: Array<{
+    id: string;
+    title: string;
+    hostId: string;
+    password?: string | null;
+    isLocked: boolean;
+    waitingRoom: boolean;
+    isActive: boolean;
+    startTime: string;
+    endTime?: string | null;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+  scheduledMeetings: Array<{
+    id: string;
+    title: string;
+    hostId: string;
+    date: string;
+    startTime: string;
+    duration: number;
+    timeZone: string;
+    password?: string | null;
+    waitingRoom: boolean;
+    meetingId?: string | null;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+}
+
+function loadDevStore(): DevStore {
+  try {
+    if (fs.existsSync(DATA_FILE)) {
+      const content = fs.readFileSync(DATA_FILE, 'utf-8');
+      return JSON.parse(content);
+    }
+  } catch (e) {
+    console.error('Failed to load local dev store:', e);
+  }
+  return { users: [], meetings: [], scheduledMeetings: [] };
+}
+
+function saveDevStore(data: DevStore) {
+  try {
+    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), 'utf-8');
+  } catch (e) {
+    console.error('Failed to save local dev store:', e);
+  }
+}
+
+// Check if PostgreSQL is available
+let isPrismaAvailable: boolean | null = null;
+async function checkPrisma(): Promise<boolean> {
+  if (isPrismaAvailable !== null) return isPrismaAvailable;
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    isPrismaAvailable = true;
+    return true;
+  } catch {
+    isPrismaAvailable = false;
+    return false;
+  }
+}
+
+export const userService = {
+  async findByEmail(email: string) {
+    const usePg = await checkPrisma();
+    if (usePg) {
+      return prisma.user.findUnique({ where: { email: email.toLowerCase().trim() } });
+    }
+    const store = loadDevStore();
+    return store.users.find((u) => u.email.toLowerCase() === email.toLowerCase().trim()) || null;
+  },
+
+  async findById(id: string) {
+    const usePg = await checkPrisma();
+    if (usePg) {
+      return prisma.user.findUnique({ where: { id } });
+    }
+    const store = loadDevStore();
+    return store.users.find((u) => u.id === id) || null;
+  },
+
+  async create(data: { name: string; email: string; passwordHash: string; avatar?: string }) {
+    const usePg = await checkPrisma();
+    if (usePg) {
+      return prisma.user.create({
+        data: {
+          name: data.name,
+          email: data.email.toLowerCase().trim(),
+          passwordHash: data.passwordHash,
+          avatar: data.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(data.name)}`,
+          emailVerified: true, // auto-verified for seamless dev
+        },
+      });
+    }
+    const store = loadDevStore();
+    const newUser = {
+      id: 'usr_' + Math.random().toString(36).substring(2, 11),
+      name: data.name,
+      email: data.email.toLowerCase().trim(),
+      passwordHash: data.passwordHash,
+      avatar: data.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(data.name)}`,
+      emailVerified: true,
+      resetToken: null,
+      resetTokenExpiry: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    store.users.push(newUser);
+    saveDevStore(store);
+    return newUser;
+  },
+
+  async updateProfile(id: string, data: { name?: string; avatar?: string; emailVerified?: boolean }) {
+    const usePg = await checkPrisma();
+    if (usePg) {
+      return prisma.user.update({
+        where: { id },
+        data,
+      });
+    }
+    const store = loadDevStore();
+    const idx = store.users.findIndex((u) => u.id === id);
+    if (idx === -1) throw new Error('User not found');
+    store.users[idx] = {
+      ...store.users[idx],
+      ...data,
+      updatedAt: new Date().toISOString(),
+    };
+    saveDevStore(store);
+    return store.users[idx];
+  },
+
+  async updatePassword(id: string, passwordHash: string) {
+    const usePg = await checkPrisma();
+    if (usePg) {
+      return prisma.user.update({
+        where: { id },
+        data: { passwordHash },
+      });
+    }
+    const store = loadDevStore();
+    const idx = store.users.findIndex((u) => u.id === id);
+    if (idx === -1) throw new Error('User not found');
+    store.users[idx].passwordHash = passwordHash;
+    store.users[idx].updatedAt = new Date().toISOString();
+    saveDevStore(store);
+    return store.users[idx];
+  },
+
+  async setResetToken(email: string, token: string, expiry: Date) {
+    const usePg = await checkPrisma();
+    if (usePg) {
+      return prisma.user.update({
+        where: { email: email.toLowerCase().trim() },
+        data: { resetToken: token, resetTokenExpiry: expiry },
+      });
+    }
+    const store = loadDevStore();
+    const user = store.users.find((u) => u.email.toLowerCase() === email.toLowerCase().trim());
+    if (user) {
+      user.resetToken = token;
+      user.resetTokenExpiry = expiry.toISOString();
+      saveDevStore(store);
+    }
+    return user;
+  },
+
+  async findByResetToken(token: string) {
+    const usePg = await checkPrisma();
+    if (usePg) {
+      return prisma.user.findFirst({
+        where: {
+          resetToken: token,
+          resetTokenExpiry: { gt: new Date() },
+        },
+      });
+    }
+    const store = loadDevStore();
+    const now = new Date().toISOString();
+    return (
+      store.users.find((u) => u.resetToken === token && u.resetTokenExpiry && u.resetTokenExpiry > now) ||
+      null
+    );
+  },
+};
+
+export const meetingService = {
+  async getRecentAndHistory(userId: string) {
+    const usePg = await checkPrisma();
+    if (usePg) {
+      const meetings = await prisma.meeting.findMany({
+        where: {
+          OR: [
+            { hostId: userId },
+            { participants: { some: { userId } } },
+          ],
+        },
+        orderBy: { startTime: 'desc' },
+        take: 10,
+        include: {
+          host: { select: { id: true, name: true, email: true } },
+          _count: { select: { participants: true } },
+        },
+      });
+      return meetings.map((m) => ({
+        id: m.id,
+        title: m.title,
+        hostId: m.hostId,
+        hostName: m.host.name,
+        hostEmail: m.host.email,
+        password: m.password,
+        isLocked: m.isLocked,
+        waitingRoom: m.waitingRoom,
+        isActive: m.isActive,
+        startTime: m.startTime.toISOString(),
+        endTime: m.endTime ? m.endTime.toISOString() : null,
+        participantCount: m._count.participants,
+        createdAt: m.createdAt.toISOString(),
+      }));
+    }
+
+    const store = loadDevStore();
+    return store.meetings
+      .filter((m) => m.hostId === userId)
+      .slice(-10)
+      .reverse()
+      .map((m) => ({
+        ...m,
+        hostName: 'Host',
+        participantCount: 1,
+      }));
+  },
+
+  async getScheduledMeetings(userId: string) {
+    const usePg = await checkPrisma();
+    if (usePg) {
+      return prisma.scheduledMeeting.findMany({
+        where: { hostId: userId },
+        orderBy: { date: 'asc' },
+        take: 10,
+      });
+    }
+    const store = loadDevStore();
+    return store.scheduledMeetings.filter((s) => s.hostId === userId);
+  },
+
+  async create(data: {
+    id: string;
+    title: string;
+    hostId: string;
+    password?: string | null;
+    waitingRoom?: boolean;
+  }) {
+    const usePg = await checkPrisma();
+    if (usePg) {
+      return prisma.meeting.create({
+        data: {
+          id: data.id,
+          title: data.title,
+          hostId: data.hostId,
+          password: data.password || null,
+          waitingRoom: data.waitingRoom || false,
+          settings: {
+            create: {
+              allowChat: true,
+              allowScreenShare: true,
+              muteOnEntry: false,
+              allowReactions: true,
+            },
+          },
+        },
+      });
+    }
+    const store = loadDevStore();
+    const newMeeting = {
+      id: data.id,
+      title: data.title,
+      hostId: data.hostId,
+      password: data.password || null,
+      isLocked: false,
+      waitingRoom: data.waitingRoom || false,
+      isActive: true,
+      startTime: new Date().toISOString(),
+      endTime: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    store.meetings.push(newMeeting);
+    saveDevStore(store);
+    return newMeeting;
+  },
+
+  async schedule(data: {
+    title: string;
+    hostId: string;
+    date: Date;
+    startTime: string;
+    duration: number;
+    timeZone: string;
+    password?: string | null;
+    waitingRoom?: boolean;
+    meetingId?: string;
+  }) {
+    const usePg = await checkPrisma();
+    if (usePg) {
+      return prisma.scheduledMeeting.create({
+        data: {
+          title: data.title,
+          hostId: data.hostId,
+          date: data.date,
+          startTime: data.startTime,
+          duration: data.duration,
+          timeZone: data.timeZone,
+          password: data.password || null,
+          waitingRoom: data.waitingRoom || false,
+          meetingId: data.meetingId || null,
+        },
+      });
+    }
+    const store = loadDevStore();
+    const newScheduled = {
+      id: 'sch_' + Math.random().toString(36).substring(2, 11),
+      title: data.title,
+      hostId: data.hostId,
+      date: data.date.toISOString(),
+      startTime: data.startTime,
+      duration: data.duration,
+      timeZone: data.timeZone,
+      password: data.password || null,
+      waitingRoom: data.waitingRoom || false,
+      meetingId: data.meetingId || null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    store.scheduledMeetings.push(newScheduled);
+    saveDevStore(store);
+    return newScheduled;
+  },
+};

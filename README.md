@@ -1,36 +1,74 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# VedioConferencingApplication-
 
-## Getting Started
+## MeetFlow - Next.js Enterprise WebRTC Video Conferencing Platform
 
-First, run the development server:
+A production-ready video conferencing web application built with **Next.js (App Router)**, **TypeScript**, **Tailwind CSS**, **Prisma ORM**, **PostgreSQL**, **WebRTC**, and **Socket.IO**.
 
+---
+
+### Core Tech Stack
+
+- **Framework**: Next.js 16 (App Router) & React 19
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS & Lucide Icons
+- **Real-time Media**: WebRTC (Mesh Architecture, STUN/TURN NAT traversal)
+- **Signaling**: Socket.IO
+- **Database & ORM**: PostgreSQL with Prisma ORM
+- **Authentication**: Salted Bcrypt Password Hashing + Cryptographically Signed JWT Sessions (HttpOnly, Secure Cookies)
+
+---
+
+### Phase 1 Features Implemented
+
+1. **User Authentication & Profile**
+   - User Registration with password strength indicators
+   - Secure Login & JWT-based session cookies
+   - Logout & token invalidation
+   - Password reset via time-limited reset tokens
+   - Profile management with customizable avatar presets
+   - Password change with old credential validation
+
+2. **Dashboard**
+   - Live digital clock & date display inspired by Google Meet
+   - Quick meeting action tiles (New Meeting, Join Meeting, Schedule Meeting, Hardware Check)
+   - Personal Meeting Room (PMI) with permanent link
+   - Search & filter past and upcoming meetings
+   - Recent meeting history and scheduled syncs overview
+
+3. **In-App Audio & Video Hardware Testing**
+   - Live webcam preview with horizontal mirroring toggle
+   - Real-time microphone input volume meter (Web Audio API)
+   - Speaker test tone chime generator
+   - Custom default preferences (mute on join, video off on join, 1080p HD)
+
+---
+
+### Getting Started
+
+#### 1. Clone & Install Dependencies
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/MdMahtabUddin/VedioConferencingApplication-.git
+cd VedioConferencingApplication-
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+#### 2. Environment Variables
+Create `.env` using `.env.example`:
+```env
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/meetflow?schema=public"
+JWT_SECRET="your-secure-jwt-secret-key"
+NEXT_PUBLIC_APP_URL="http://localhost:3000"
+STUN_SERVER="stun:stun.l.google.com:19302"
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+#### 3. Run Prisma & Start Dev Server
+```bash
+npx prisma generate
+npm run dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+#### 4. Run Phase 1 Integration Tests
+```bash
+npm run build
+npm run test:phase1
+```
