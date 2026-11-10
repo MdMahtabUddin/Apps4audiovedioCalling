@@ -81,15 +81,16 @@ function saveDevStore(data: DevStore) {
   }
 }
 
-// Check if PostgreSQL is available and tables exist
+// Check if PostgreSQL is available and Prisma models exist
 let isPrismaAvailable: boolean | null = null;
 async function checkPrisma(): Promise<boolean> {
   if (isPrismaAvailable !== null) return isPrismaAvailable;
   try {
-    await prisma.$queryRaw`SELECT 1 FROM "users" LIMIT 1`;
+    await prisma.user.count();
     isPrismaAvailable = true;
     return true;
-  } catch {
+  } catch (err) {
+    console.warn('Prisma check failed, falling back to local store:', err);
     isPrismaAvailable = false;
     return false;
   }
