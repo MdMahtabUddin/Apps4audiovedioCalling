@@ -1,22 +1,23 @@
 import { execSync } from 'child_process';
 
 const dbUrl =
-  process.env.POSTGRES_URL_NON_POOLING ||
   process.env.POSTGRES_URL ||
   process.env.PRISMA_DATABASE_URL ||
   process.env.DATABASE_URL;
 
+console.log('🔄 Checking database connection and schema sync...');
+
 if (dbUrl && !dbUrl.includes('localhost:5432')) {
   try {
-    console.log('🔄 Syncing Prisma schema with remote PostgreSQL database...');
+    console.log('🔄 Running prisma db push to sync all PostgreSQL tables...');
     execSync('npx prisma db push --skip-generate --accept-data-loss', {
       env: { ...process.env, DATABASE_URL: dbUrl },
       stdio: 'inherit',
     });
-    console.log('✅ Remote PostgreSQL database schema synced successfully');
+    console.log('✅ Remote PostgreSQL tables synced successfully!');
   } catch (error) {
-    console.warn('⚠️ Prisma db push note (continuing build):', error.message);
+    console.error('⚠️ Prisma db push note:', error.message);
   }
 } else {
-  console.log('ℹ️ Skipping remote DB push during local development build');
+  console.log('ℹ️ Skipping remote DB push for local dev build');
 }
