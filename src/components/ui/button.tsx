@@ -2,20 +2,21 @@ import React from 'react';
 import { cn } from '@/lib/utils';
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'outline' | 'danger' | 'ghost' | 'glass';
+  variant?: 'primary' | 'secondary' | 'outline' | 'danger' | 'ghost' | 'glass' | 'orange';
   size?: 'sm' | 'md' | 'lg' | 'icon';
   isLoading?: boolean;
 }
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant = 'primary', size = 'md', isLoading = false, children, disabled, ...props }, ref) => {
-    const base = 'inline-flex items-center justify-center font-semibold rounded-2xl transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-indigo-500/40 select-none';
+    const base = 'inline-flex items-center justify-center font-semibold rounded-2xl transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-[#0066FF]/40 select-none';
 
     const variants = {
-      primary: 'bg-gradient-to-r from-indigo-600 via-indigo-500 to-indigo-600 hover:from-indigo-500 hover:to-indigo-500 text-white shadow-lg shadow-indigo-600/25 active:scale-[0.98] border border-indigo-400/30 hover:shadow-indigo-500/35',
+      primary: 'bg-gradient-to-r from-[#0066FF] via-[#0057B7] to-[#0066FF] hover:from-[#1E78FF] hover:to-[#0052CC] text-white shadow-lg shadow-[#0066FF]/25 active:scale-[0.98] border border-[#388BFF]/40 hover:shadow-[#0066FF]/40',
+      orange: 'bg-gradient-to-r from-[#FF7A00] via-[#F26B00] to-[#FF7A00] hover:from-[#FF8A1E] hover:to-[#E66200] text-white shadow-lg shadow-[#FF7A00]/30 active:scale-[0.98] border border-[#FFA149]/40 hover:shadow-[#FF7A00]/45 font-bold',
       secondary: 'bg-white/[0.06] hover:bg-white/[0.1] text-gray-200 border border-white/10 active:scale-[0.98] backdrop-blur-md',
-      glass: 'bg-indigo-950/40 hover:bg-indigo-900/50 text-indigo-200 border border-indigo-500/30 shadow-lg shadow-indigo-950/40 active:scale-[0.98]',
-      outline: 'bg-transparent border border-white/10 hover:border-white/20 hover:bg-white/[0.04] text-gray-300 active:scale-[0.98]',
+      glass: 'bg-[#0A162D]/70 hover:bg-[#0F2244]/80 text-[#388BFF] border border-[#0066FF]/30 shadow-lg shadow-[#0066FF]/10 active:scale-[0.98]',
+      outline: 'bg-transparent border border-white/10 hover:border-[#0066FF]/40 hover:bg-[#0066FF]/05 text-gray-300 hover:text-white active:scale-[0.98]',
       danger: 'bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white shadow-lg shadow-red-600/25 active:scale-[0.98] border border-red-400/30',
       ghost: 'bg-transparent hover:bg-white/[0.06] text-gray-300 hover:text-white',
     };

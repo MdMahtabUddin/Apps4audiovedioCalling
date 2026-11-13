@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'MeetFlow - Real-time Video Conferencing',
-  description: 'Production-ready video conferencing platform with WebRTC and real-time collaboration',
+  title: 'MetroMeet — Enterprise Video Infrastructure by MetroNet',
+  description: 'Ultra low-latency video conferencing platform powered by MetroNet optical backbone network with WebRTC mesh, waiting room security, and crystal-clear Opus audio.',
 };
 
 export default function RootLayout({
@@ -25,7 +25,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} dark`}>
-      <body className="min-h-screen bg-[#0b0f19] text-gray-100 antialiased selection:bg-indigo-500 selection:text-white">
+      <body className="min-h-screen bg-[#050a14] text-gray-100 antialiased selection:bg-[#0066FF] selection:text-white">
         <ToastProvider>{children}</ToastProvider>
       </body>
     </html>

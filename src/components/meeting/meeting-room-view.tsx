@@ -29,6 +29,8 @@ import { useMeetingSocket } from '@/lib/socket/use-meeting-socket';
 import { useToast } from '@/components/ui/toast';
 import { RemoteVideoTile } from './remote-video-tile';
 import { ParticipantDrawer } from './participant-drawer';
+import { WaitingRoomScreen } from './waiting-room-screen';
+import { BrandLogo } from '@/components/ui/brand-logo';
 
 export function MeetingRoomView() {
   const toast = useToast();
@@ -58,13 +60,16 @@ export function MeetingRoomView() {
     stopScreenShare,
   } = useVideo();
 
-  // Phase 4 & Phase 5 Socket.IO Signaling & Controls
+  // Phase 4 & Phase 5 Socket.IO Signaling, Controls & Waiting Room
   const {
     connectionStatus,
     participants: socketParticipants,
     currentRole,
     isRoomLocked,
     isHandRaised,
+    isWaitingForAdmission,
+    waitingParticipants,
+    waitingHostName,
     activeReaction: remoteReaction,
     sendReaction,
     toggleHandRaise,
@@ -73,6 +78,9 @@ export function MeetingRoomView() {
     kickParticipant,
     assignRole,
     toggleRoomLock,
+    admitParticipant,
+    denyParticipant,
+    admitAll,
     endMeetingForAll,
   } = useMeetingSocket({
     meetingId,
@@ -159,6 +167,16 @@ export function MeetingRoomView() {
 
   const isLocalSpeaking = activeSpeakerId === 'local' && micVolume > 20;
 
+  if (isWaitingForAdmission) {
+    return (
+      <WaitingRoomScreen
+        meetingTitle={title || 'MetroMeet Session'}
+        hostName={waitingHostName}
+        onLeave={leaveRoom}
+      />
+    );
+  }
+
   return (
     <div className="h-screen w-screen bg-[#06080e] text-slate-100 flex flex-col overflow-hidden select-none relative">
       {/* Reaction Float Animation */}
@@ -169,14 +187,15 @@ export function MeetingRoomView() {
       )}
 
       {/* Top Meeting Header Bar */}
-      <header className="h-16 px-4 sm:px-6 border-b border-white/[0.08] bg-[#0c101c]/80 backdrop-blur-xl flex items-center justify-between z-20 shrink-0">
+      <header className="h-16 px-4 sm:px-6 border-b border-[#0066FF]/20 bg-[#091222]/90 backdrop-blur-xl flex items-center justify-between z-20 shrink-0">
         <div className="flex items-center gap-3">
+          <BrandLogo size="sm" showTagline={false} className="mr-2 hidden md:inline-flex" />
           <div className="flex flex-col">
             <div className="flex items-center gap-2">
               <h2 className="text-sm sm:text-base font-bold text-white tracking-tight">{title}</h2>
               <span className="text-xs text-gray-400 font-mono hidden sm:inline">({meetingId})</span>
               {isHost && (
-                <Badge variant="indigo" dot>
+                <Badge variant="blue" dot>
                   Host
                 </Badge>
               )}
@@ -190,8 +209,8 @@ export function MeetingRoomView() {
                     connectionStatus === 'connected'
                       ? 'bg-emerald-400 animate-pulse'
                       : connectionStatus === 'connecting' || connectionStatus === 'reconnecting'
-                      ? 'bg-amber-400 animate-pulse'
-                      : 'bg-indigo-400'
+                      ? 'bg-[#FF7A00] animate-pulse'
+                      : 'bg-[#0066FF]'
                   }`}
                 />
                 <span className="capitalize">{connectionStatus}</span>
@@ -200,6 +219,28 @@ export function MeetingRoomView() {
             </div>
           </div>
         </div>
+
+        {/* Center / Right Notification Banner for Knock Requests */}
+        {waitingParticipants.length > 0 && (isHost || currentRole === 'CO_HOST') && (
+          <div className="hidden sm:flex items-center gap-2 bg-[#FF7A00]/20 border border-[#FF7A00]/40 px-3 py-1.5 rounded-xl shadow-lg shadow-[#FF7A00]/10 animate-pulse">
+            <span className="text-xs text-[#FFA033] font-bold flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full bg-[#FF7A00] animate-ping" />
+              {waitingParticipants.length} waiting to join
+            </span>
+            <button
+              onClick={() => admitParticipant(waitingParticipants[0].socketId)}
+              className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold transition-all cursor-pointer shadow-sm"
+            >
+              Admit {waitingParticipants[0].displayName.split(' ')[0]}
+            </button>
+            <button
+              onClick={() => setShowParticipantsDrawer(true)}
+              className="text-[11px] text-[#388BFF] hover:underline font-semibold cursor-pointer"
+            >
+              View All
+            </button>
+          </div>
+        )}
 
         {/* Top Right Header Controls */}
         <div className="flex items-center gap-2">
@@ -555,6 +596,7 @@ export function MeetingRoomView() {
         isOpen={showParticipantsDrawer}
         onClose={() => setShowParticipantsDrawer(false)}
         participants={socketParticipants}
+        waitingParticipants={waitingParticipants}
         localUser={{
           name: isHost ? 'Host' : 'Participant',
           role: currentRole,
@@ -573,6 +615,9 @@ export function MeetingRoomView() {
         onKickParticipant={kickParticipant}
         onAssignRole={assignRole}
         onToggleLocalHandRaise={toggleHandRaise}
+        onAdmitParticipant={admitParticipant}
+        onDenyParticipant={denyParticipant}
+        onAdmitAll={admitAll}
       />
     </div>
   );

@@ -1,10 +1,10 @@
 'use client';
 
 import React from 'react';
-import { useRouter } from 'next/navigation';
-import { ShieldCheck, Clock, LogOut, Video } from 'lucide-react';
+import { ShieldCheck, PhoneCall, LogOut, Volume2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { BrandLogo } from '@/components/ui/brand-logo';
 
 interface WaitingRoomScreenProps {
   meetingTitle: string;
@@ -14,38 +14,63 @@ interface WaitingRoomScreenProps {
 
 export function WaitingRoomScreen({ meetingTitle, hostName, onLeave }: WaitingRoomScreenProps) {
   return (
-    <div className="min-h-screen bg-[#06080e] text-slate-100 flex items-center justify-center p-4 relative overflow-hidden">
-      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[300px] bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+    <div className="min-h-screen bg-[#050a14] text-slate-100 flex items-center justify-center p-4 relative overflow-hidden">
+      {/* MetroNet Brand Ambient Backlight */}
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-gradient-to-r from-[#0066FF]/20 to-[#FF7A00]/20 rounded-full blur-3xl pointer-events-none" />
 
-      <div className="w-full max-w-md p-8 rounded-3xl bg-[#0c101c]/90 border border-white/[0.08] backdrop-blur-2xl shadow-2xl text-center space-y-6 relative z-10">
-        <div className="relative inline-block">
-          <div className="h-16 w-16 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30 flex items-center justify-center mx-auto shadow-lg shadow-amber-500/20">
-            <Clock className="h-8 w-8 animate-pulse" />
+      <div className="w-full max-w-md p-8 rounded-3xl bg-[#091222]/90 border border-[#0066FF]/20 backdrop-blur-2xl shadow-2xl text-center space-y-6 relative z-10 glow-border">
+        {/* Brand Logo with Audio Chime */}
+        <div className="flex justify-center pb-1">
+          <BrandLogo size="md" showTagline={true} />
+        </div>
+
+        {/* Animated Radar Pulse Ring in MetroNet Orange & Blue */}
+        <div className="relative inline-block py-2">
+          {/* Radar waves */}
+          <div className="absolute inset-0 m-auto h-20 w-20 rounded-full bg-[#FF7A00]/20 animate-radar pointer-events-none" />
+          <div className="absolute inset-0 m-auto h-28 w-28 rounded-full bg-[#0066FF]/15 animate-radar [animation-delay:0.8s] pointer-events-none" />
+
+          {/* Center Phone / Calling Icon */}
+          <div className="relative h-20 w-20 rounded-full bg-gradient-to-tr from-[#0057B7] to-[#FF7A00] text-white flex items-center justify-center mx-auto shadow-xl shadow-[#0066FF]/30 border-2 border-white/20">
+            <PhoneCall className="h-9 w-9 animate-bounce text-white drop-shadow-md" />
           </div>
         </div>
 
+        {/* Meeting Information */}
         <div className="space-y-2">
-          <Badge variant="warning" dot>
-            Waiting Room
-          </Badge>
-          <h2 className="text-xl font-bold text-white tracking-tight">{meetingTitle}</h2>
-          <p className="text-xs text-gray-400 leading-relaxed max-w-sm mx-auto">
-            Please wait, the meeting host (<strong className="text-white">{hostName}</strong>) has been notified and will let you in shortly.
-          </p>
-        </div>
-
-        <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.06] text-xs text-gray-400 text-left space-y-1.5">
-          <div className="flex items-center gap-2 text-gray-300">
-            <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
-            <span className="font-semibold">Security Protected</span>
+          <div className="flex items-center justify-center gap-2">
+            <Badge variant="orange" dot>
+              Waiting for Host Approval
+            </Badge>
           </div>
-          <p className="text-[11px] text-gray-400">
-            Your camera and microphone are inactive while waiting. They will resume your pre-join preferences when admitted.
+
+          <h2 className="text-xl font-bold text-white tracking-tight">{meetingTitle}</h2>
+
+          <p className="text-xs text-gray-300 leading-relaxed max-w-sm mx-auto">
+            Please wait while the meeting host (<strong className="text-[#388BFF] font-semibold">{hostName}</strong>) accepts your request to join.
           </p>
         </div>
 
+        {/* Audio Ringtone Notice & Security Badge */}
+        <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.06] text-xs text-gray-400 text-left space-y-2">
+          <div className="flex items-center justify-between text-gray-300">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4 text-emerald-400" />
+              <span className="font-semibold text-white">MetroNet Encrypted Lobby</span>
+            </div>
+            <span className="flex items-center gap-1 text-[11px] text-[#FFA033]">
+              <Volume2 className="h-3.5 w-3.5 animate-pulse" />
+              Ringing...
+            </span>
+          </div>
+          <p className="text-[11px] text-gray-400 leading-normal">
+            Your camera and microphone are muted while waiting. As soon as the host admits you, your audio/video will activate smoothly.
+          </p>
+        </div>
+
+        {/* Cancel / Leave Button */}
         <Button variant="secondary" className="w-full text-xs font-bold" onClick={onLeave}>
-          <LogOut className="h-3.5 w-3.5 mr-1" />
+          <LogOut className="h-3.5 w-3.5 mr-1.5" />
           Leave Waiting Room
         </Button>
       </div>

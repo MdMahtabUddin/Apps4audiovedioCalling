@@ -1,12 +1,14 @@
 @import "tailwindcss";
 
 :root {
-  --background: #06080e;
+  --background: #050a14;
   --foreground: #f8fafc;
-  --card: #0b0f19;
-  --card-border: rgba(255, 255, 255, 0.08);
-  --primary: #6366f1;
-  --primary-hover: #4f46e5;
+  --card: #091222;
+  --card-border: rgba(0, 102, 255, 0.12);
+  --primary: #0066FF;
+  --primary-hover: #0052CC;
+  --accent-orange: #FF7A00;
+  --accent-orange-hover: #E66A00;
 }
 
 body {
@@ -16,28 +18,28 @@ body {
   min-height: 100vh;
   overflow-x: hidden;
   background-image: 
-    radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.08) 0px, transparent 50%),
-    radial-gradient(at 100% 0%, rgba(168, 85, 247, 0.08) 0px, transparent 50%),
-    radial-gradient(at 50% 100%, rgba(14, 165, 233, 0.05) 0px, transparent 50%);
+    radial-gradient(at 0% 0%, rgba(0, 102, 255, 0.14) 0px, transparent 55%),
+    radial-gradient(at 100% 0%, rgba(255, 122, 0, 0.10) 0px, transparent 50%),
+    radial-gradient(at 50% 100%, rgba(0, 80, 200, 0.08) 0px, transparent 60%);
   background-attachment: fixed;
 }
 
-/* Glassmorphism utility classes */
+/* MetroNet Corporate Glassmorphism */
 .glass-panel {
-  background: rgba(13, 17, 28, 0.75);
+  background: rgba(9, 18, 34, 0.82);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  border: 1px solid rgba(0, 102, 255, 0.14);
+  box-shadow: 0 12px 40px -10px rgba(0, 10, 30, 0.6);
 }
 
 .glass-panel-hover {
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .glass-panel-hover:hover {
-  background: rgba(18, 24, 38, 0.88);
-  border-color: rgba(99, 102, 241, 0.4);
-  box-shadow: 0 16px 40px -10px rgba(99, 102, 241, 0.18);
+  background: rgba(14, 25, 48, 0.92);
+  border-color: rgba(0, 102, 255, 0.4);
+  box-shadow: 0 16px 40px -10px rgba(0, 102, 255, 0.25);
   transform: translateY(-3px);
 }
 
@@ -49,8 +51,12 @@ body {
 }
 
 /* Glowing text and borders */
-.text-glow {
-  text-shadow: 0 0 24px rgba(99, 102, 241, 0.5);
+.text-glow-blue {
+  text-shadow: 0 0 24px rgba(0, 102, 255, 0.6);
+}
+
+.text-glow-orange {
+  text-shadow: 0 0 24px rgba(255, 122, 0, 0.6);
 }
 
 .glow-border {
@@ -62,14 +68,14 @@ body {
   inset: -1px;
   border-radius: inherit;
   padding: 1px;
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.6), rgba(168, 85, 247, 0.4), transparent 70%);
+  background: linear-gradient(135deg, rgba(0, 102, 255, 0.7), rgba(255, 122, 0, 0.5), transparent 75%);
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
   pointer-events: none;
 }
 
-/* International Standard Animations */
+/* MetroNet Aurora Animation (Sapphire Blue to Sunset Orange) */
 @keyframes aurora {
   0% {
     background-position: 0% 50%;
@@ -83,9 +89,9 @@ body {
 }
 
 .animate-aurora {
-  background: linear-gradient(120deg, rgba(99, 102, 241, 0.15), rgba(168, 85, 247, 0.15), rgba(56, 189, 248, 0.15));
+  background: linear-gradient(120deg, rgba(0, 102, 255, 0.2), rgba(255, 122, 0, 0.16), rgba(0, 160, 255, 0.18));
   background-size: 200% 200%;
-  animation: aurora 15s ease infinite;
+  animation: aurora 12s ease infinite;
 }
 
 @keyframes float {
@@ -150,18 +156,38 @@ body {
 .soundwave-bar-3 { animation: soundwave-3 0.9s ease-in-out infinite 0.25s; }
 .soundwave-bar-4 { animation: soundwave-4 0.75s ease-in-out infinite 0.1s; }
 
-/* Pulse Glow */
+/* Active Speaker Ring */
 @keyframes pulse-glow {
   0%, 100% {
-    box-shadow: 0 0 15px rgba(16, 185, 129, 0.3), inset 0 0 10px rgba(16, 185, 129, 0.2);
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.4), inset 0 0 10px rgba(16, 185, 129, 0.2);
   }
   50% {
-    box-shadow: 0 0 25px rgba(16, 185, 129, 0.6), inset 0 0 15px rgba(16, 185, 129, 0.4);
+    box-shadow: 0 0 25px rgba(16, 185, 129, 0.8), inset 0 0 15px rgba(16, 185, 129, 0.5);
   }
 }
 
 .active-speaker-ring {
   animation: pulse-glow 1.5s ease-in-out infinite;
+}
+
+/* Radar pulse for waiting room / calling */
+@keyframes radar-pulse {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.9;
+  }
+  50% {
+    transform: scale(1.4);
+    opacity: 0.3;
+  }
+  100% {
+    transform: scale(1.8);
+    opacity: 0;
+  }
+}
+
+.animate-radar {
+  animation: radar-pulse 2.2s cubic-bezier(0, 0, 0.2, 1) infinite;
 }
 
 /* Custom scrollbars */
@@ -170,12 +196,12 @@ body {
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #080b12;
+  background: #050a14;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(0, 102, 255, 0.25);
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 122, 0, 0.45);
 }

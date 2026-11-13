@@ -2,7 +2,7 @@ import React from 'react';
 import { cn } from '@/lib/utils';
 
 export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
-  variant?: 'default' | 'success' | 'warning' | 'danger' | 'indigo' | 'outline';
+  variant?: 'default' | 'success' | 'warning' | 'danger' | 'indigo' | 'blue' | 'orange' | 'outline';
   dot?: boolean;
 }
 
@@ -18,7 +18,9 @@ export function Badge({
     success: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
     warning: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
     danger: 'bg-red-500/10 text-red-400 border-red-500/20',
-    indigo: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
+    indigo: 'bg-[#0066FF]/15 text-[#388BFF] border-[#0066FF]/30',
+    blue: 'bg-[#0066FF]/15 text-[#388BFF] border-[#0066FF]/30',
+    orange: 'bg-[#FF7A00]/15 text-[#FFA033] border-[#FF7A00]/30',
     outline: 'bg-transparent text-gray-300 border-gray-700',
   };
 
@@ -27,7 +29,9 @@ export function Badge({
     success: 'bg-emerald-400',
     warning: 'bg-amber-400',
     danger: 'bg-red-400',
-    indigo: 'bg-indigo-400',
+    indigo: 'bg-[#0066FF]',
+    blue: 'bg-[#0066FF]',
+    orange: 'bg-[#FF7A00]',
     outline: 'bg-gray-400',
   };
 

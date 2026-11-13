@@ -6,18 +6,13 @@ import { useRouter } from 'next/navigation';
 import {
   Video,
   LogOut,
-  User,
   Settings,
-  Calendar,
-  Shield,
-  Clock,
-  Sparkles,
-  ChevronDown,
   Zap,
   Radio,
+  ChevronDown,
 } from 'lucide-react';
 import { UserProfile } from '@/types';
-import { Badge } from '@/components/ui/badge';
+import { BrandLogo } from '@/components/ui/brand-logo';
 import { useToast } from '@/components/ui/toast';
 
 interface NavbarProps {
@@ -49,41 +44,21 @@ export function Navbar({ user, onOpenSettings, onQuickNewMeeting }: NavbarProps)
   };
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-white/[0.08] bg-[#06080e]/80 backdrop-blur-2xl transition-all">
+    <header className="sticky top-0 z-40 w-full border-b border-[#0066FF]/20 bg-[#050a14]/85 backdrop-blur-2xl transition-all">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between">
-        {/* Brand */}
+        {/* Brand Logo with MetroNet Corporate Identity */}
         <div className="flex items-center gap-6">
-          <Link href={user ? '/dashboard' : '/'} className="flex items-center gap-3 group">
-            <div className="relative">
-              <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl blur opacity-30 group-hover:opacity-60 transition duration-300" />
-              <div className="relative h-10 w-10 sm:h-11 sm:w-11 rounded-2xl bg-gradient-to-br from-indigo-600 via-indigo-500 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-600/30 group-hover:scale-105 transition-all">
-                <Video className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
-              </div>
-            </div>
-            <div className="flex flex-col">
-              <div className="flex items-center gap-1.5">
-                <span className="text-xl sm:text-2xl font-black tracking-tight text-white">
-                  Meet<span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-violet-400">Flow</span>
-                </span>
-                <span className="hidden sm:inline-flex px-1.5 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-[10px] font-bold tracking-wider uppercase">
-                  v2.0
-                </span>
-              </div>
-              <span className="text-[10px] text-gray-400 -mt-0.5 font-medium tracking-wide">
-                Ultra Low-Latency WebRTC
-              </span>
-            </div>
-          </Link>
+          <BrandLogo size="md" showTagline={true} href={user ? '/dashboard' : '/'} />
 
           {user && (
             <div className="hidden lg:flex items-center gap-2 pl-4 border-l border-white/[0.08]">
-              <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[11px] font-semibold text-emerald-400">
-                <Radio className="h-3 w-3 animate-pulse text-emerald-400" />
-                <span>WebRTC Mesh Active</span>
+              <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#0066FF]/15 border border-[#0066FF]/30 text-[11px] font-semibold text-[#388BFF]">
+                <Radio className="h-3 w-3 animate-pulse text-[#FF7A00]" />
+                <span>MetroNet Backbone 100G</span>
               </div>
               <div className="flex items-center gap-1 text-[11px] text-gray-400 font-mono px-2 py-1 rounded-lg bg-white/[0.03]">
-                <Zap className="h-3 w-3 text-amber-400" />
-                <span>14ms</span>
+                <Zap className="h-3 w-3 text-[#FFA033]" />
+                <span>12ms</span>
               </div>
             </div>
           )}
@@ -96,9 +71,9 @@ export function Navbar({ user, onOpenSettings, onQuickNewMeeting }: NavbarProps)
               {onQuickNewMeeting && (
                 <button
                   onClick={onQuickNewMeeting}
-                  className="hidden sm:inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600/20 to-purple-600/20 hover:from-indigo-600/30 hover:to-purple-600/30 text-indigo-300 border border-indigo-500/30 text-xs font-bold transition-all hover:scale-105 cursor-pointer shadow-sm"
+                  className="hidden sm:inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-[#0066FF] to-[#0052CC] hover:from-[#1E78FF] hover:to-[#0047B3] text-white text-xs font-bold transition-all hover:scale-105 cursor-pointer shadow-md shadow-[#0066FF]/25 border border-[#388BFF]/40"
                 >
-                  <Video className="h-3.5 w-3.5 text-indigo-400" />
+                  <Video className="h-3.5 w-3.5" />
                   <span>Start Call</span>
                 </button>
               )}
@@ -107,22 +82,24 @@ export function Navbar({ user, onOpenSettings, onQuickNewMeeting }: NavbarProps)
               <div className="relative">
                 <button
                   onClick={() => setDropdownOpen(!dropdownOpen)}
-                  className="flex items-center gap-3 p-1.5 sm:px-3 sm:py-2 rounded-2xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] transition-all cursor-pointer"
+                  className="flex items-center gap-3 p-1.5 sm:px-3 sm:py-2 rounded-2xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] transition-all cursor-pointer select-none"
                 >
                   <div className="relative">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={user.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=user'}
-                      alt={user.name}
-                      className="h-8 w-8 sm:h-9 sm:w-9 rounded-full border border-indigo-400/40 object-cover bg-gray-800"
-                    />
+                    <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-xl bg-gradient-to-tr from-[#0057B7] to-[#FF7A00] flex items-center justify-center text-white text-xs font-black shadow-md shadow-[#0066FF]/20">
+                      {user.avatar ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={user.avatar} alt={user.name} className="h-full w-full rounded-xl object-cover" />
+                      ) : (
+                        user.name.slice(0, 2).toUpperCase()
+                      )}
+                    </div>
                     <span
-                      className={`absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-[#06080e] ${
+                      className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full ${
                         status === 'Available'
                           ? 'bg-emerald-400 ring-2 ring-emerald-400/20'
                           : status === 'Busy'
-                          ? 'bg-amber-400 ring-2 ring-amber-400/20'
-                          : 'bg-indigo-400 ring-2 ring-indigo-400/20'
+                          ? 'bg-[#FF7A00] ring-2 ring-[#FF7A00]/20'
+                          : 'bg-[#0066FF] ring-2 ring-[#0066FF]/20'
                       }`}
                     />
                   </div>
@@ -138,7 +115,7 @@ export function Navbar({ user, onOpenSettings, onQuickNewMeeting }: NavbarProps)
                 {dropdownOpen && (
                   <>
                     <div className="fixed inset-0 z-40" onClick={() => setDropdownOpen(false)} />
-                    <div className="absolute right-0 mt-2 w-64 rounded-3xl border border-white/[0.1] bg-[#0c101c] p-2.5 shadow-2xl shadow-black/80 z-50 animate-in fade-in zoom-in-95 duration-150">
+                    <div className="absolute right-0 mt-2 w-64 rounded-3xl border border-[#0066FF]/30 bg-[#091222] p-2.5 shadow-2xl shadow-black/80 z-50 animate-in fade-in zoom-in-95 duration-150">
                       <div className="px-3 py-2.5 border-b border-white/[0.08] mb-1.5">
                         <p className="text-xs font-bold text-white">{user.name}</p>
                         <p className="text-[11px] text-gray-400 truncate">{user.email}</p>
@@ -154,15 +131,15 @@ export function Navbar({ user, onOpenSettings, onQuickNewMeeting }: NavbarProps)
                                   : 'Available'
                               )
                             }
-                            className="text-[10px] px-2.5 py-1 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] text-indigo-300 font-semibold transition-colors flex items-center gap-1.5 cursor-pointer"
+                            className="text-[10px] px-2.5 py-1 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] text-[#388BFF] font-semibold transition-colors flex items-center gap-1.5 cursor-pointer"
                           >
                             <span
                               className={`h-1.5 w-1.5 rounded-full ${
                                 status === 'Available'
                                   ? 'bg-emerald-400'
                                   : status === 'Busy'
-                                  ? 'bg-amber-400'
-                                  : 'bg-indigo-400'
+                                  ? 'bg-[#FF7A00]'
+                                  : 'bg-[#0066FF]'
                               }`}
                             />
                             {status}
@@ -178,7 +155,7 @@ export function Navbar({ user, onOpenSettings, onQuickNewMeeting }: NavbarProps)
                           }}
                           className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs text-gray-300 hover:text-white hover:bg-white/[0.06] rounded-xl transition-colors cursor-pointer font-medium"
                         >
-                          <Settings className="h-4 w-4 text-indigo-400" />
+                          <Settings className="h-4 w-4 text-[#388BFF]" />
                           Audio/Video Studio & Settings
                         </button>
                       )}
@@ -206,7 +183,7 @@ export function Navbar({ user, onOpenSettings, onQuickNewMeeting }: NavbarProps)
               </Link>
               <Link
                 href="/register"
-                className="text-xs sm:text-sm font-bold text-white bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 px-4 sm:px-5 py-2 sm:py-2.5 rounded-2xl shadow-lg shadow-indigo-600/30 transition-all hover:scale-105 border border-indigo-400/30"
+                className="text-xs sm:text-sm font-bold text-white bg-gradient-to-r from-[#FF7A00] to-[#E66200] hover:from-[#FF8A1E] hover:to-[#D45700] px-4 sm:px-5 py-2 sm:py-2.5 rounded-2xl shadow-lg shadow-[#FF7A00]/25 transition-all hover:scale-105 border border-[#FFA149]/30"
               >
                 Get Started
               </Link>

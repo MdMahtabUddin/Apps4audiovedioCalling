@@ -20,6 +20,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { BrandLogo } from '@/components/ui/brand-logo';
 import { useVideo } from '@/lib/webrtc/video-provider';
 import { useMeeting } from '@/lib/meeting/meeting-provider';
 import { MeetingValidationResponse } from '@/types';
@@ -106,14 +107,14 @@ export function PreJoinScreen({ meetingInfo, initialName = '', onJoinSuccess }: 
   };
 
   return (
-    <div className="min-h-screen bg-[#06080e] text-slate-100 flex items-center justify-center p-4 sm:p-6 lg:p-10 relative overflow-hidden">
-      {/* Background glow effects */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[350px] bg-gradient-to-tr from-indigo-600/15 via-purple-600/10 to-transparent rounded-full blur-3xl pointer-events-none" />
+    <div className="min-h-screen bg-[#050a14] text-slate-100 flex items-center justify-center p-4 sm:p-6 lg:p-10 relative overflow-hidden">
+      {/* MetroNet Background glow effects */}
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[350px] bg-gradient-to-tr from-[#0066FF]/20 via-[#FF7A00]/15 to-transparent rounded-full blur-3xl pointer-events-none" />
 
       <div className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-12 gap-8 items-center relative z-10">
         {/* Left Side: Video Preview & Controls (7 Cols) */}
         <div className="lg:col-span-7 flex flex-col items-center space-y-4">
-          <div className="relative w-full aspect-video rounded-3xl bg-[#0c101c] border border-white/[0.1] shadow-2xl overflow-hidden flex items-center justify-center">
+          <div className="relative w-full aspect-video rounded-3xl bg-[#091222] border border-[#0066FF]/30 shadow-2xl overflow-hidden flex items-center justify-center glow-border">
             {/* Live Video */}
             <video
               ref={videoRef}
@@ -256,14 +257,18 @@ export function PreJoinScreen({ meetingInfo, initialName = '', onJoinSuccess }: 
         </div>
 
         {/* Right Side: Meeting Information & Join Form (5 Cols) */}
-        <div className="lg:col-span-5 p-7 sm:p-8 rounded-3xl bg-[#0c101c]/80 border border-white/[0.08] backdrop-blur-2xl shadow-2xl space-y-6">
+        <div className="lg:col-span-5 p-7 sm:p-8 rounded-3xl bg-[#091222]/90 border border-[#0066FF]/25 backdrop-blur-2xl shadow-2xl space-y-6 glow-border">
+          <div className="pb-2">
+            <BrandLogo size="md" showTagline={true} />
+          </div>
+
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold tracking-wider uppercase text-indigo-400 px-2 py-0.5 rounded-md bg-indigo-500/10 border border-indigo-500/20">
+              <span className="text-[10px] font-bold tracking-wider uppercase text-[#388BFF] px-2 py-0.5 rounded-md bg-[#0066FF]/15 border border-[#0066FF]/30">
                 Ready to Join
               </span>
               {meetingInfo.waitingRoom && (
-                <Badge variant="warning">Waiting Room Enabled</Badge>
+                <Badge variant="orange">Waiting Room Enabled</Badge>
               )}
             </div>
             <h2 className="text-2xl font-black tracking-tight text-white">{meetingInfo.title}</h2>
@@ -305,8 +310,9 @@ export function PreJoinScreen({ meetingInfo, initialName = '', onJoinSuccess }: 
 
             <Button
               type="submit"
+              variant="orange"
               size="lg"
-              className="w-full text-base font-bold shadow-xl shadow-indigo-600/30 mt-2"
+              className="w-full text-base font-bold shadow-xl shadow-[#FF7A00]/30 mt-2"
               isLoading={isJoining}
             >
               Join Meeting Now

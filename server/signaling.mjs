@@ -1,7 +1,8 @@
 /**
- * MeetFlow Real-time WebRTC Signaling Gateway (Phase 4 & Phase 5)
- * High-performance WebSocket server using Socket.IO for peer negotiation,
- * room orchestration, host controls, role management, hand raising, and room lock.
+ * MeetFlow / MetroMeet Real-time WebRTC Signaling Gateway
+ * High-performance WebSocket server with MetroNet enterprise waiting room,
+ * host knocking/admission approval, ringtone coordination, role management,
+ * and media state synchronization.
  */
 
 import http from 'http';
@@ -9,15 +10,18 @@ import { Server } from 'socket.io';
 
 const PORT = process.env.SIGNALING_PORT || 3001;
 
-// In-memory room store: Map<meetingId, { isLocked: boolean, hostSocketId: string, participants: Map<socketId, ParticipantInfo> }>
+// In-memory room store: Map<meetingId, RoomState>
 export const rooms = new Map();
 
 function getOrCreateRoom(meetingId, hostSocketId = null) {
   if (!rooms.has(meetingId)) {
     rooms.set(meetingId, {
       isLocked: false,
+      waitingRoomEnabled: true, // Default enabled for secure corporate meetings
       hostSocketId: hostSocketId,
+      hostName: 'Host',
       participants: new Map(),
+      waitingQueue: new Map(), // socketId -> WaitingParticipantInfo
     });
   }
   return rooms.get(meetingId);
@@ -40,11 +44,12 @@ export function createSignalingServer(serverInstance) {
 
     console.log(`[Signaling] Socket connected: ${socket.id}`);
 
-    // 1. Join Room
+    // 1. Join Room / Request Admission
     socket.on('join-room', ({ meetingId, userId, displayName, role = 'PARTICIPANT', isAudioEnabled = true, isVideoEnabled = true }) => {
       const room = getOrCreateRoom(meetingId, role === 'HOST' ? socket.id : null);
+      currentMeetingId = meetingId;
 
-      // Check room lock: if locked and not the host, reject join
+      // A. Check Room Lock
       if (room.isLocked && role !== 'HOST' && room.hostSocketId !== socket.id) {
         socket.emit('room-locked-error', {
           message: 'This meeting is currently locked by the host.',
@@ -52,9 +57,10 @@ export function createSignalingServer(serverInstance) {
         return;
       }
 
-      currentMeetingId = meetingId;
+      // If user is HOST, register immediately and record host details
       if (role === 'HOST') {
         room.hostSocketId = socket.id;
+        room.hostName = displayName || 'Host';
       }
 
       currentUser = {
@@ -69,28 +75,148 @@ export function createSignalingServer(serverInstance) {
         joinedAt: Date.now(),
       };
 
+      // B. Waiting Room & Host Admission Check:
+      // If waiting room is enabled and user is not HOST and not the room's host socket
+      if (room.waitingRoomEnabled && role !== 'HOST' && room.hostSocketId !== socket.id) {
+        room.waitingQueue.set(socket.id, currentUser);
+        console.log(`[Signaling] ${currentUser.displayName} (${socket.id}) placed in waiting queue for ${meetingId}`);
+
+        // Notify newcomer they are in waiting room
+        socket.emit('waiting-for-admission', {
+          meetingId,
+          hostName: room.hostName,
+          position: room.waitingQueue.size,
+        });
+
+        // Notify host(s) in meeting room
+        io.to(meetingId).emit('participant-knock-request', {
+          socketId: socket.id,
+          userId: currentUser.userId,
+          displayName: currentUser.displayName,
+          requestedAt: Date.now(),
+          waitingCount: room.waitingQueue.size,
+        });
+        return;
+      }
+
+      // C. Active Call Admission
       socket.join(meetingId);
 
-      // Collect existing participants in the room before adding the new one
       const existing = Array.from(room.participants.values());
+      const waitingList = Array.from(room.waitingQueue.values());
 
-      // Add current user to room store
       room.participants.set(socket.id, currentUser);
 
-      console.log(`[Signaling] ${currentUser.displayName} (${socket.id}) joined meeting: ${meetingId}. Total: ${room.participants.size}`);
+      console.log(`[Signaling] ${currentUser.displayName} (${socket.id}) admitted to meeting: ${meetingId}. Total: ${room.participants.size}`);
 
-      // Send existing participants list and room state to newcomer
+      // Send existing participants list, waiting queue, and room status
       socket.emit('room-users', {
         participants: existing,
         self: currentUser,
         isLocked: room.isLocked,
+        waitingRoomEnabled: room.waitingRoomEnabled,
+        waitingQueue: waitingList,
       });
 
-      // Announce arrival to all other peers in the room
+      // Announce arrival to all other peers
       socket.to(meetingId).emit('participant-joined', currentUser);
     });
 
-    // 2. WebRTC SDP Offer Relay
+    // 2. Host Admits Participant from Waiting Room (Phase 5 + MetroNet Admission)
+    socket.on('admit-participant', ({ targetSocketId }) => {
+      if (!currentMeetingId) return;
+      const room = rooms.get(currentMeetingId);
+      if (!room) return;
+
+      const waitingUser = room.waitingQueue.get(targetSocketId);
+      if (waitingUser) {
+        room.waitingQueue.delete(targetSocketId);
+
+        const targetSocket = io.sockets.sockets.get(targetSocketId);
+        if (targetSocket) {
+          targetSocket.join(currentMeetingId);
+
+          const existing = Array.from(room.participants.values());
+          room.participants.set(targetSocketId, waitingUser);
+
+          // Tell candidate they have been admitted
+          targetSocket.emit('admitted-to-room', {
+            participants: existing,
+            self: waitingUser,
+            isLocked: room.isLocked,
+          });
+
+          // Announce to all other attendees in meeting
+          socket.to(currentMeetingId).emit('participant-joined', waitingUser);
+
+          // Broadcast updated waiting queue to host
+          io.to(currentMeetingId).emit('waiting-queue-updated', {
+            waitingQueue: Array.from(room.waitingQueue.values()),
+          });
+        }
+      }
+    });
+
+    // 3. Host Denies Participant from Waiting Room
+    socket.on('deny-participant', ({ targetSocketId }) => {
+      if (!currentMeetingId) return;
+      const room = rooms.get(currentMeetingId);
+      if (!room) return;
+
+      if (room.waitingQueue.has(targetSocketId)) {
+        room.waitingQueue.delete(targetSocketId);
+
+        io.to(targetSocketId).emit('denied-from-room', {
+          reason: 'The meeting host has declined your request to join.',
+        });
+
+        // Broadcast updated waiting queue to host
+        io.to(currentMeetingId).emit('waiting-queue-updated', {
+          waitingQueue: Array.from(room.waitingQueue.values()),
+        });
+      }
+    });
+
+    // 4. Host Admits All Waiting Participants
+    socket.on('admit-all', () => {
+      if (!currentMeetingId) return;
+      const room = rooms.get(currentMeetingId);
+      if (!room) return;
+
+      for (const [targetSocketId, waitingUser] of room.waitingQueue.entries()) {
+        const targetSocket = io.sockets.sockets.get(targetSocketId);
+        if (targetSocket) {
+          targetSocket.join(currentMeetingId);
+          const existing = Array.from(room.participants.values());
+          room.participants.set(targetSocketId, waitingUser);
+
+          targetSocket.emit('admitted-to-room', {
+            participants: existing,
+            self: waitingUser,
+            isLocked: room.isLocked,
+          });
+
+          socket.to(currentMeetingId).emit('participant-joined', waitingUser);
+        }
+      }
+
+      room.waitingQueue.clear();
+      io.to(currentMeetingId).emit('waiting-queue-updated', { waitingQueue: [] });
+    });
+
+    // 5. Host Toggles Waiting Room Setting
+    socket.on('toggle-waiting-room', ({ enabled }) => {
+      if (!currentMeetingId) return;
+      const room = rooms.get(currentMeetingId);
+      if (!room) return;
+
+      room.waitingRoomEnabled = !!enabled;
+      io.to(currentMeetingId).emit('waiting-room-toggled', {
+        waitingRoomEnabled: room.waitingRoomEnabled,
+      });
+    });
+
+    // 6. WebRTC SDP Offer Relay
     socket.on('signal-offer', ({ targetSocketId, offer }) => {
       if (!targetSocketId || !offer) return;
       io.to(targetSocketId).emit('signal-offer', {
@@ -100,7 +226,7 @@ export function createSignalingServer(serverInstance) {
       });
     });
 
-    // 3. WebRTC SDP Answer Relay
+    // 7. WebRTC SDP Answer Relay
     socket.on('signal-answer', ({ targetSocketId, answer }) => {
       if (!targetSocketId || !answer) return;
       io.to(targetSocketId).emit('signal-answer', {
@@ -109,7 +235,7 @@ export function createSignalingServer(serverInstance) {
       });
     });
 
-    // 4. ICE Candidate Relay
+    // 8. ICE Candidate Relay
     socket.on('ice-candidate', ({ targetSocketId, candidate }) => {
       if (!targetSocketId || !candidate) return;
       io.to(targetSocketId).emit('ice-candidate', {
@@ -118,7 +244,7 @@ export function createSignalingServer(serverInstance) {
       });
     });
 
-    // 5. Media State Broadcast (Mute/Unmute audio or camera)
+    // 9. Media State Broadcast
     socket.on('media-state', ({ isAudioEnabled, isVideoEnabled }) => {
       if (!currentMeetingId) return;
       if (currentUser) {
@@ -132,7 +258,7 @@ export function createSignalingServer(serverInstance) {
       });
     });
 
-    // 6. Real-time Emoji Reactions Broadcast
+    // 10. Real-time Emoji Reactions
     socket.on('send-reaction', ({ emoji }) => {
       if (!currentMeetingId) return;
       io.to(currentMeetingId).emit('reaction-received', {
@@ -142,7 +268,7 @@ export function createSignalingServer(serverInstance) {
       });
     });
 
-    // 7. Toggle Hand Raise (Phase 5)
+    // 11. Toggle Hand Raise
     socket.on('toggle-hand-raise', ({ isHandRaised }) => {
       if (!currentMeetingId || !currentUser) return;
       currentUser.isHandRaised = isHandRaised !== undefined ? isHandRaised : !currentUser.isHandRaised;
@@ -157,7 +283,7 @@ export function createSignalingServer(serverInstance) {
       });
     });
 
-    // 8. Host Remote Mute Single Participant (Phase 5)
+    // 12. Host Remote Mute Single Participant
     socket.on('mute-participant', ({ targetSocketId }) => {
       if (!currentMeetingId || !targetSocketId) return;
       const room = rooms.get(currentMeetingId);
@@ -177,7 +303,7 @@ export function createSignalingServer(serverInstance) {
       }
     });
 
-    // 9. Host Mute All Participants (Phase 5)
+    // 13. Host Mute All Participants
     socket.on('mute-all', () => {
       if (!currentMeetingId) return;
       const room = rooms.get(currentMeetingId);
@@ -198,7 +324,7 @@ export function createSignalingServer(serverInstance) {
       }
     });
 
-    // 10. Host Kick Participant (Phase 5)
+    // 14. Host Kick Participant
     socket.on('kick-participant', ({ targetSocketId, reason }) => {
       if (!currentMeetingId || !targetSocketId) return;
       const room = rooms.get(currentMeetingId);
@@ -225,7 +351,7 @@ export function createSignalingServer(serverInstance) {
       }
     });
 
-    // 11. Host Assign Role (Co-Host / Participant) (Phase 5)
+    // 15. Host Assign Role
     socket.on('assign-role', ({ targetSocketId, newRole }) => {
       if (!currentMeetingId || !targetSocketId || !newRole) return;
       const room = rooms.get(currentMeetingId);
@@ -244,7 +370,7 @@ export function createSignalingServer(serverInstance) {
       }
     });
 
-    // 12. Host Lock / Unlock Meeting (Phase 5)
+    // 16. Host Lock / Unlock Meeting
     socket.on('lock-meeting', ({ isLocked }) => {
       if (!currentMeetingId) return;
       const room = rooms.get(currentMeetingId);
@@ -257,7 +383,7 @@ export function createSignalingServer(serverInstance) {
       });
     });
 
-    // 13. Host Ends Meeting
+    // 17. Host Ends Meeting
     socket.on('end-meeting', () => {
       if (!currentMeetingId) return;
       io.to(currentMeetingId).emit('meeting-ended', {
@@ -266,20 +392,31 @@ export function createSignalingServer(serverInstance) {
       rooms.delete(currentMeetingId);
     });
 
-    // 14. Disconnect & Cleanup
+    // 18. Disconnect & Cleanup
     socket.on('disconnect', () => {
       console.log(`[Signaling] Socket disconnected: ${socket.id}`);
       if (currentMeetingId && rooms.has(currentMeetingId)) {
         const room = rooms.get(currentMeetingId);
-        room.participants.delete(socket.id);
 
-        socket.to(currentMeetingId).emit('participant-left', {
-          socketId: socket.id,
-          userId: currentUser?.userId,
-          displayName: currentUser?.displayName,
-        });
+        // Remove from waiting queue if pending
+        if (room.waitingQueue.has(socket.id)) {
+          room.waitingQueue.delete(socket.id);
+          io.to(currentMeetingId).emit('waiting-queue-updated', {
+            waitingQueue: Array.from(room.waitingQueue.values()),
+          });
+        }
 
-        if (room.participants.size === 0) {
+        // Remove from active participants
+        if (room.participants.has(socket.id)) {
+          room.participants.delete(socket.id);
+          socket.to(currentMeetingId).emit('participant-left', {
+            socketId: socket.id,
+            userId: currentUser?.userId,
+            displayName: currentUser?.displayName,
+          });
+        }
+
+        if (room.participants.size === 0 && room.waitingQueue.size === 0) {
           rooms.delete(currentMeetingId);
         }
       }
@@ -298,12 +435,12 @@ if (process.argv[1]?.endsWith('signaling.mjs')) {
       return;
     }
     res.writeHead(200);
-    res.end('MeetFlow Signaling Server Running');
+    res.end('MetroMeet Signaling Server Running');
   });
 
   createSignalingServer(server);
 
   server.listen(PORT, () => {
-    console.log(`🚀 MeetFlow WebRTC Signaling Server listening on port ${PORT}`);
+    console.log(`🚀 MetroMeet WebRTC Signaling Server listening on port ${PORT}`);
   });
 }

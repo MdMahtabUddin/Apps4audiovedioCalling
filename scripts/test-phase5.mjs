@@ -62,6 +62,9 @@ async function runPhase5Tests() {
   const aliceRoomState = await aliceJoinPromise;
   assert(aliceRoomState.self.role === 'HOST', '3. Alice registered as HOST in meeting room');
 
+  // Disable waiting room for in-meeting peer tests
+  alice.emit('toggle-waiting-room', { enabled: false });
+
   // 3. Guests (Bob and Charlie) connect & join room
   const bob = Client(SIGNALING_URL, { transports: ['websocket'] });
   const charlie = Client(SIGNALING_URL, { transports: ['websocket'] });
