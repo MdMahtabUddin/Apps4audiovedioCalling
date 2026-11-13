@@ -11,6 +11,7 @@ import {
   PhoneOff,
   Copy,
   Check,
+  X,
   Lock,
   Unlock,
   Radio,
@@ -95,8 +96,6 @@ export function MeetingRoomView() {
 
   // Resilient HTTPS Polling for Guest Knocks (Works on Vercel Serverless without port 3001)
   useEffect(() => {
-    if (!isHost && currentRole !== 'CO_HOST') return;
-
     let previousCount = 0;
     const fetchKnocks = async () => {
       try {
@@ -123,9 +122,9 @@ export function MeetingRoomView() {
     };
 
     fetchKnocks();
-    const interval = setInterval(fetchKnocks, 2000);
+    const interval = setInterval(fetchKnocks, 1200);
     return () => clearInterval(interval);
-  }, [meetingId, isHost, currentRole]);
+  }, [meetingId]);
 
   // Combined Waiting List: Socket.IO + HTTPS Fallback
   const activeWaitingList = useMemo(() => {
@@ -272,6 +271,55 @@ export function MeetingRoomView() {
       {activeReaction && (
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-8xl z-50 animate-bounce pointer-events-none drop-shadow-2xl">
           {activeReaction}
+        </div>
+      )}
+
+      {/* Prominent Floating Admission Alert (Visible on Mobile & Desktop) */}
+      {activeWaitingList.length > 0 && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[94%] max-w-md p-3.5 rounded-2xl bg-[#091222]/95 border-2 border-[#FF7A00] shadow-2xl shadow-[#FF7A00]/40 backdrop-blur-2xl flex items-center justify-between gap-3 animate-in slide-in-from-top-4 duration-300">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="h-10 w-10 rounded-xl bg-gradient-to-tr from-[#FF7A00] to-[#E65100] text-white flex items-center justify-center shrink-0 shadow-md shadow-[#FF7A00]/30">
+              <Users className="h-5 w-5 animate-pulse" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-[#FF7A00] animate-ping" />
+                <p className="text-sm font-black text-white truncate">
+                  {activeWaitingList[0].displayName}
+                </p>
+              </div>
+              <p className="text-[11px] text-[#FFA033] font-semibold">
+                Requesting to join meeting
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              onClick={() => handleAdmitCandidate(activeWaitingList[0].socketId)}
+              className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-lg shadow-emerald-600/30 transition-all active:scale-95 cursor-pointer"
+            >
+              <Check className="h-4 w-4" />
+              <span>Admit</span>
+            </button>
+
+            {activeWaitingList.length > 1 && (
+              <button
+                onClick={handleAdmitAllCandidates}
+                className="px-2.5 py-1.5 rounded-xl bg-[#0066FF] hover:bg-[#1E78FF] text-white font-bold text-xs transition-all cursor-pointer"
+              >
+                All
+              </button>
+            )}
+
+            <button
+              onClick={() => handleDenyCandidate(activeWaitingList[0].socketId)}
+              className="p-1.5 rounded-xl bg-white/[0.08] hover:bg-rose-500/20 text-gray-400 hover:text-rose-300 transition-all cursor-pointer"
+              title="Decline"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       )}
 
@@ -579,16 +627,23 @@ export function MeetingRoomView() {
           <button
             onClick={() => setShowParticipantsDrawer(!showParticipantsDrawer)}
             className={`relative h-11 w-11 sm:h-12 sm:w-12 rounded-2xl flex items-center justify-center transition-all cursor-pointer shadow-lg ${
-              showParticipantsDrawer
-                ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-600/30'
+              activeWaitingList.length > 0
+                ? 'bg-[#FF7A00] text-black font-bold ring-4 ring-[#FF7A00]/40 shadow-xl shadow-[#FF7A00]/40 animate-pulse'
+                : showParticipantsDrawer
+                ? 'bg-[#0066FF] hover:bg-[#1E78FF] text-white shadow-[#0066FF]/30'
                 : 'bg-white/[0.08] hover:bg-white/[0.14] text-white'
             }`}
-            title="Manage Participants"
+            title={activeWaitingList.length > 0 ? `${activeWaitingList.length} person waiting to join!` : "Manage Participants"}
           >
             <Users className="h-5 w-5" />
-            <span className="absolute -top-1 -right-1 h-5 min-w-5 px-1 bg-indigo-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-[#070912]">
+            <span className="absolute -top-1 -right-1 h-5 min-w-5 px-1 bg-[#0066FF] text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-[#070912]">
               {totalParticipants}
             </span>
+            {activeWaitingList.length > 0 && (
+              <span className="absolute -bottom-1 -right-1 px-1.5 py-0.5 bg-emerald-500 text-white text-[9px] font-black rounded-full animate-bounce shadow">
+                +{activeWaitingList.length}
+              </span>
+            )}
           </button>
 
           {/* Reactions Toggle */}
