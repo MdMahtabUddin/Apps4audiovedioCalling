@@ -84,7 +84,7 @@ function saveDevStore(data: DevStore) {
 
 // Check if PostgreSQL is available and Prisma models exist
 let isPrismaAvailable: boolean | null = null;
-async function checkPrisma(): Promise<boolean> {
+export async function checkPrisma(): Promise<boolean> {
   if (isPrismaAvailable === true) return true;
   try {
     await prisma.user.count();

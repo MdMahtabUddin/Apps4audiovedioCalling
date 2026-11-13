@@ -39,6 +39,7 @@ import { ChatAndNotesDrawer } from './chat-and-notes-drawer';
 import { BrandLogo } from '@/components/ui/brand-logo';
 import { soundEngine } from '@/lib/audio/sound-engine';
 import { useMeetingRecorder } from '@/lib/recording/use-meeting-recorder';
+import { useResilientSignaling } from '@/lib/webrtc/use-resilient-signaling';
 
 export function MeetingRoomView() {
   const toast = useToast();
@@ -67,6 +68,11 @@ export function MeetingRoomView() {
     toggleVideo,
     startScreenShare,
     stopScreenShare,
+    connectToPeer,
+    handlePeerOffer,
+    handlePeerAnswer,
+    handlePeerIceCandidate,
+    registerIceCandidateHandler,
   } = useVideo();
 
   // Phase 4 & Phase 5 Socket.IO Signaling, Controls & Waiting Room
@@ -375,21 +381,29 @@ export function MeetingRoomView() {
       // Don't include current user in remote tiles
       if (myParticipantId && p.id === myParticipantId) return;
 
+      const peerStream = remoteStreams.get(p.id);
+
       // Check if this participant is already registered in map by id or name
-      const exists = Array.from(map.values()).some(
+      const existingEntry = Array.from(map.values()).find(
         (existing) =>
           existing.id === p.id ||
           existing.displayName.trim().toLowerCase() === p.displayName.trim().toLowerCase()
       );
 
-      if (!exists) {
+      if (existingEntry) {
+        if (!existingEntry.stream && peerStream) {
+          existingEntry.stream = peerStream;
+          existingEntry.isVideoEnabled = peerStream.getVideoTracks().some((t) => t.enabled);
+        }
+      } else {
         map.set(p.id, {
           id: p.id,
           displayName: p.displayName || p.name || 'Participant',
           role: p.role,
           avatar: p.avatar,
+          stream: peerStream,
           isAudioEnabled: true,
-          isVideoEnabled: false,
+          isVideoEnabled: peerStream ? peerStream.getVideoTracks().some((t) => t.enabled) : false,
         });
       }
     });
@@ -398,6 +412,37 @@ export function MeetingRoomView() {
   }, [remotePeers, socketParticipants, apiParticipants, myParticipantId]);
 
   const totalParticipants = 1 + unifiedRemoteList.length;
+
+  // Unique Peer ID for resilient signaling & WebRTC handshake
+  const currentPeerId = useMemo(() => {
+    if (myParticipantId) return myParticipantId;
+    if (typeof window !== 'undefined') {
+      let cached = sessionStorage.getItem(`metromeet_peer_${meetingId}`);
+      if (!cached) {
+        cached = isHost ? `host_${meetingId}` : `peer_${Math.random().toString(36).slice(2, 9)}`;
+        sessionStorage.setItem(`metromeet_peer_${meetingId}`, cached);
+      }
+      return cached;
+    }
+    return isHost ? `host_${meetingId}` : `peer_${meetingId}`;
+  }, [myParticipantId, isHost, meetingId]);
+
+  const remotePeerIds = useMemo(() => {
+    return unifiedRemoteList.map((p) => p.id);
+  }, [unifiedRemoteList]);
+
+  // Activate Resilient HTTPS WebRTC Signaling (Directly exchanges SDP & ICE candidates over port 443)
+  useResilientSignaling({
+    meetingId,
+    myPeerId: currentPeerId,
+    isHost,
+    remotePeerIds,
+    connectToPeer,
+    handlePeerOffer,
+    handlePeerAnswer,
+    handlePeerIceCandidate,
+    registerIceCandidateHandler,
+  });
 
   const drawerParticipants = useMemo(() => {
     return unifiedRemoteList.map((p) => ({
