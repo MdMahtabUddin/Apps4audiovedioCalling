@@ -94,7 +94,7 @@ export async function POST(
     }
 
     const role = isHost ? 'HOST' : 'PARTICIPANT';
-    const isApproved = isHost || !activeMeeting.waitingRoom;
+    const isApproved = isHost; // Host is auto-approved, incoming guests wait for host admission
 
     const participant = await meetingService.joinMeeting({
       meetingId: id,

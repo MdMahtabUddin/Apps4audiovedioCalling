@@ -499,6 +499,86 @@ export const meetingService = {
     return store.participants.filter((p) => p.meetingId === meetingId && !p.leftAt);
   },
 
+  async getWaitingParticipants(meetingId: string) {
+    const usePg = await checkPrisma();
+    if (usePg) {
+      return prisma.meetingParticipant.findMany({
+        where: { meetingId, isApproved: false, leftAt: null },
+        include: {
+          user: { select: { id: true, name: true, avatar: true } },
+        },
+        orderBy: { joinedAt: 'asc' },
+      });
+    }
+    const store = loadDevStore();
+    return store.participants.filter(
+      (p) => p.meetingId === meetingId && !p.isApproved && !p.leftAt
+    );
+  },
+
+  async getParticipantById(id: string) {
+    const usePg = await checkPrisma();
+    if (usePg) {
+      return prisma.meetingParticipant.findUnique({
+        where: { id },
+      });
+    }
+    const store = loadDevStore();
+    return store.participants.find((p) => p.id === id) || null;
+  },
+
+  async admitParticipant(participantId: string) {
+    const usePg = await checkPrisma();
+    if (usePg) {
+      return prisma.meetingParticipant.update({
+        where: { id: participantId },
+        data: { isApproved: true },
+      });
+    }
+    const store = loadDevStore();
+    const p = store.participants.find((x) => x.id === participantId);
+    if (p) {
+      p.isApproved = true;
+      saveDevStore(store);
+    }
+    return p;
+  },
+
+  async denyParticipant(participantId: string) {
+    const usePg = await checkPrisma();
+    if (usePg) {
+      return prisma.meetingParticipant.update({
+        where: { id: participantId },
+        data: { leftAt: new Date() },
+      });
+    }
+    const store = loadDevStore();
+    const p = store.participants.find((x) => x.id === participantId);
+    if (p) {
+      p.leftAt = new Date().toISOString();
+      saveDevStore(store);
+    }
+    return p;
+  },
+
+  async admitAllWaiting(meetingId: string) {
+    const usePg = await checkPrisma();
+    if (usePg) {
+      return prisma.meetingParticipant.updateMany({
+        where: { meetingId, isApproved: false, leftAt: null },
+        data: { isApproved: true },
+      });
+    }
+    const store = loadDevStore();
+    store.participants.forEach((p) => {
+      if (p.meetingId === meetingId && !p.isApproved && !p.leftAt) {
+        p.isApproved = true;
+      }
+    });
+    saveDevStore(store);
+    return true;
+  },
+
   async endMeeting(id: string, hostId: string) {
     const usePg = await checkPrisma();
     if (usePg) {

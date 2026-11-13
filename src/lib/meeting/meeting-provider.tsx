@@ -1,8 +1,10 @@
 'use client';
 
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { UserRole, Participant, MeetingSettingsItem } from '@/types';
+import { soundEngine } from '@/lib/audio/sound-engine';
+import { useToast } from '@/components/ui/toast';
 
 export interface MeetingContextType {
   meetingId: string;
@@ -15,6 +17,7 @@ export interface MeetingContextType {
   waitingRoom: boolean;
   isWaitingApproval: boolean;
   isJoined: boolean;
+  myParticipantId: string | null;
   participants: Participant[];
   settings: MeetingSettingsItem;
   joinRoom: (displayName: string, password?: string) => Promise<{ success: boolean; error?: string }>;
@@ -40,6 +43,7 @@ export function MeetingProvider({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const toast = useToast();
   const [title, setTitle] = useState('Meeting');
   const [hostId, setHostId] = useState('');
   const [hostName, setHostName] = useState('Host');
@@ -49,6 +53,7 @@ export function MeetingProvider({
   const [waitingRoom, setWaitingRoom] = useState(false);
   const [isWaitingApproval, setIsWaitingApproval] = useState(false);
   const [isJoined, setIsJoined] = useState(false);
+  const [myParticipantId, setMyParticipantId] = useState<string | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [settings, setSettings] = useState<MeetingSettingsItem>(defaultSettings);
 
@@ -73,14 +78,17 @@ export function MeetingProvider({
         setMyRole(data.participant.role);
         setIsLocked(data.meeting.isLocked);
         setWaitingRoom(data.meeting.waitingRoom);
+        if (data.participant?.id) setMyParticipantId(data.participant.id);
         if (data.meeting.settings) setSettings(data.meeting.settings);
 
         if (data.status === 'WAITING_ROOM') {
           setIsWaitingApproval(true);
           setIsJoined(false);
+          soundEngine.startCallingRingtone();
         } else {
           setIsWaitingApproval(false);
           setIsJoined(true);
+          soundEngine.stopCallingRingtone();
         }
 
         return { success: true };
@@ -94,14 +102,54 @@ export function MeetingProvider({
     [meetingId]
   );
 
+  // Polling for admission while in Waiting Room
+  useEffect(() => {
+    if (!isWaitingApproval || !myParticipantId) return;
+
+    soundEngine.startCallingRingtone();
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/meetings/${meetingId}/knocks?participantId=${myParticipantId}`);
+        if (!res.ok) return;
+
+        const data = await res.json();
+        if (data.status === 'APPROVED') {
+          clearInterval(interval);
+          soundEngine.stopCallingRingtone();
+          soundEngine.playAdmittedChime();
+          setIsWaitingApproval(false);
+          setIsJoined(true);
+          toast.success('The host admitted you to the meeting!');
+        } else if (data.status === 'DENIED') {
+          clearInterval(interval);
+          soundEngine.stopCallingRingtone();
+          setIsWaitingApproval(false);
+          setIsJoined(false);
+          toast.error('The host declined your request to join.');
+          router.push('/');
+        }
+      } catch (e) {
+        console.warn('Knock check polling note:', e);
+      }
+    }, 1500);
+
+    return () => {
+      clearInterval(interval);
+      soundEngine.stopCallingRingtone();
+    };
+  }, [isWaitingApproval, myParticipantId, meetingId, toast, router]);
+
   const leaveRoom = useCallback(() => {
+    soundEngine.stopCallingRingtone();
     setIsJoined(false);
     setIsWaitingApproval(false);
-    router.push('/dashboard');
+    router.push('/');
   }, [router]);
 
   const endRoom = useCallback(async () => {
     try {
+      soundEngine.stopCallingRingtone();
       await fetch(`/api/meetings/${meetingId}/end`, { method: 'POST' });
       setIsJoined(false);
       router.push('/dashboard');
@@ -112,7 +160,6 @@ export function MeetingProvider({
   }, [meetingId, router]);
 
   const toggleLock = useCallback(async () => {
-    // Toggles room lock for host
     setIsLocked((prev) => !prev);
   }, []);
 
@@ -129,6 +176,7 @@ export function MeetingProvider({
         waitingRoom,
         isWaitingApproval,
         isJoined,
+        myParticipantId,
         participants,
         settings,
         joinRoom,

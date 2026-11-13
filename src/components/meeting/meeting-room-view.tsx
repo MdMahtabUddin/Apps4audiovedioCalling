@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Mic,
   MicOff,
@@ -31,6 +31,7 @@ import { RemoteVideoTile } from './remote-video-tile';
 import { ParticipantDrawer } from './participant-drawer';
 import { WaitingRoomScreen } from './waiting-room-screen';
 import { BrandLogo } from '@/components/ui/brand-logo';
+import { soundEngine } from '@/lib/audio/sound-engine';
 
 export function MeetingRoomView() {
   const toast = useToast();
@@ -90,6 +91,94 @@ export function MeetingRoomView() {
   });
 
   const [showParticipantsDrawer, setShowParticipantsDrawer] = useState(false);
+  const [httpKnocks, setHttpKnocks] = useState<Array<{ socketId: string; displayName: string; userId: string; requestedAt: number }>>([]);
+
+  // Resilient HTTPS Polling for Guest Knocks (Works on Vercel Serverless without port 3001)
+  useEffect(() => {
+    if (!isHost && currentRole !== 'CO_HOST') return;
+
+    let previousCount = 0;
+    const fetchKnocks = async () => {
+      try {
+        const res = await fetch(`/api/meetings/${meetingId}/knocks`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.waitingList) {
+          const list = data.waitingList.map((p: any) => ({
+            socketId: p.id,
+            displayName: p.displayName,
+            userId: p.userId || p.id,
+            requestedAt: new Date(p.joinedAt).getTime(),
+          }));
+          setHttpKnocks(list);
+
+          if (list.length > previousCount) {
+            soundEngine.playKnockChime();
+          }
+          previousCount = list.length;
+        }
+      } catch (err) {
+        console.warn('Knocks polling note:', err);
+      }
+    };
+
+    fetchKnocks();
+    const interval = setInterval(fetchKnocks, 2000);
+    return () => clearInterval(interval);
+  }, [meetingId, isHost, currentRole]);
+
+  // Combined Waiting List: Socket.IO + HTTPS Fallback
+  const activeWaitingList = useMemo(() => {
+    const map = new Map<string, { socketId: string; displayName: string; userId: string; requestedAt: number }>();
+    waitingParticipants.forEach((p) => map.set(p.socketId, p));
+    httpKnocks.forEach((p) => map.set(p.socketId, p));
+    return Array.from(map.values());
+  }, [waitingParticipants, httpKnocks]);
+
+  const handleAdmitCandidate = async (participantId: string) => {
+    admitParticipant(participantId);
+    try {
+      await fetch(`/api/meetings/${meetingId}/knocks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'ADMIT', participantId }),
+      });
+      setHttpKnocks((prev) => prev.filter((p) => p.socketId !== participantId));
+      toast.success('Admitted participant');
+    } catch (e) {
+      console.warn('Admit error:', e);
+    }
+  };
+
+  const handleDenyCandidate = async (participantId: string) => {
+    denyParticipant(participantId);
+    try {
+      await fetch(`/api/meetings/${meetingId}/knocks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'DENY', participantId }),
+      });
+      setHttpKnocks((prev) => prev.filter((p) => p.socketId !== participantId));
+      toast.info('Declined participant request');
+    } catch (e) {
+      console.warn('Deny error:', e);
+    }
+  };
+
+  const handleAdmitAllCandidates = async () => {
+    admitAll();
+    try {
+      await fetch(`/api/meetings/${meetingId}/knocks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'ADMIT_ALL' }),
+      });
+      setHttpKnocks([]);
+      toast.success('Admitted all waiting participants');
+    } catch (e) {
+      console.warn('Admit all error:', e);
+    }
+  };
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const screenVideoRef = useRef<HTMLVideoElement>(null);
@@ -221,17 +310,17 @@ export function MeetingRoomView() {
         </div>
 
         {/* Center / Right Notification Banner for Knock Requests */}
-        {waitingParticipants.length > 0 && (isHost || currentRole === 'CO_HOST') && (
+        {activeWaitingList.length > 0 && (isHost || currentRole === 'CO_HOST') && (
           <div className="hidden sm:flex items-center gap-2 bg-[#FF7A00]/20 border border-[#FF7A00]/40 px-3 py-1.5 rounded-xl shadow-lg shadow-[#FF7A00]/10 animate-pulse">
             <span className="text-xs text-[#FFA033] font-bold flex items-center gap-1.5">
               <span className="h-2 w-2 rounded-full bg-[#FF7A00] animate-ping" />
-              {waitingParticipants.length} waiting to join
+              {activeWaitingList.length} waiting to join
             </span>
             <button
-              onClick={() => admitParticipant(waitingParticipants[0].socketId)}
+              onClick={() => handleAdmitCandidate(activeWaitingList[0].socketId)}
               className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold transition-all cursor-pointer shadow-sm"
             >
-              Admit {waitingParticipants[0].displayName.split(' ')[0]}
+              Admit {activeWaitingList[0].displayName.split(' ')[0]}
             </button>
             <button
               onClick={() => setShowParticipantsDrawer(true)}
@@ -596,7 +685,7 @@ export function MeetingRoomView() {
         isOpen={showParticipantsDrawer}
         onClose={() => setShowParticipantsDrawer(false)}
         participants={socketParticipants}
-        waitingParticipants={waitingParticipants}
+        waitingParticipants={activeWaitingList}
         localUser={{
           name: isHost ? 'Host' : 'Participant',
           role: currentRole,
@@ -615,9 +704,9 @@ export function MeetingRoomView() {
         onKickParticipant={kickParticipant}
         onAssignRole={assignRole}
         onToggleLocalHandRaise={toggleHandRaise}
-        onAdmitParticipant={admitParticipant}
-        onDenyParticipant={denyParticipant}
-        onAdmitAll={admitAll}
+        onAdmitParticipant={handleAdmitCandidate}
+        onDenyParticipant={handleDenyCandidate}
+        onAdmitAll={handleAdmitAllCandidates}
       />
     </div>
   );

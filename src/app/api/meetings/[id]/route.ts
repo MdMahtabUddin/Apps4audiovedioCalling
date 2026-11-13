@@ -80,7 +80,7 @@ export async function GET(
       isHost,
       requiresPassword: !!activeMeeting.hasPassword && !isHost,
       isLocked: activeMeeting.isLocked && !isHost,
-      waitingRoom: activeMeeting.waitingRoom && !isHost,
+      waitingRoom: !isHost,
       isActive: activeMeeting.isActive,
       participantCount: activeMeeting.participantCount,
       settings: activeMeeting.settings,
