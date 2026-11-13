@@ -21,6 +21,10 @@ import {
   Volume2,
   Wifi,
   WifiOff,
+  Disc,
+  Square,
+  MessageSquare,
+  FileText,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -31,8 +35,10 @@ import { useToast } from '@/components/ui/toast';
 import { RemoteVideoTile } from './remote-video-tile';
 import { ParticipantDrawer } from './participant-drawer';
 import { WaitingRoomScreen } from './waiting-room-screen';
+import { ChatAndNotesDrawer } from './chat-and-notes-drawer';
 import { BrandLogo } from '@/components/ui/brand-logo';
 import { soundEngine } from '@/lib/audio/sound-engine';
+import { useMeetingRecorder } from '@/lib/recording/use-meeting-recorder';
 
 export function MeetingRoomView() {
   const toast = useToast();
@@ -93,8 +99,33 @@ export function MeetingRoomView() {
   });
 
   const [showParticipantsDrawer, setShowParticipantsDrawer] = useState(false);
+  const [showChatAndNotes, setShowChatAndNotes] = useState(false);
   const [httpKnocks, setHttpKnocks] = useState<Array<{ socketId: string; displayName: string; userId: string; requestedAt: number }>>([]);
   const [apiParticipants, setApiParticipants] = useState<Array<{ id: string; userId?: string; displayName: string; name: string; role: string; avatar?: string | null }>>([]);
+
+  // Phase 6 In-Meeting Audio & Video Recording Engine
+  const {
+    isRecording,
+    recordingDuration,
+    startRecording,
+    stopRecording,
+  } = useMeetingRecorder(title || `MetroMeet-${meetingId}`);
+
+  const handleToggleRecording = async () => {
+    if (isRecording) {
+      stopRecording();
+      toast.success('Meeting recording saved! Check your downloads.');
+    } else {
+      const remoteAudioList = Array.from(remoteStreams.values());
+      const streamToRecord = isScreenSharing && screenStream ? screenStream : localStream;
+      const started = await startRecording(streamToRecord, remoteAudioList);
+      if (started) {
+        toast.success('Recording started: Capturing Audio & Video');
+      } else {
+        toast.warning('Recording was canceled');
+      }
+    }
+  };
 
   // Resilient HTTPS Polling for Active Room Participants
   const fetchParticipants = useCallback(async () => {
@@ -517,6 +548,19 @@ export function MeetingRoomView() {
 
         {/* Top Right Header Controls */}
         <div className="flex items-center gap-2">
+          {isRecording && (
+            <div className="flex items-center gap-2 px-3 py-1 rounded-xl bg-rose-600/20 border border-rose-500/50 text-rose-300 font-mono text-xs shadow-lg shadow-rose-600/20 animate-pulse">
+              <span className="h-2 w-2 rounded-full bg-rose-500 animate-ping" />
+              <span className="font-bold">REC {recordingDuration}</span>
+              <button
+                onClick={handleToggleRecording}
+                className="ml-1 px-1.5 py-0.5 rounded bg-rose-600 hover:bg-rose-500 text-white font-sans text-[10px] font-bold cursor-pointer transition-transform active:scale-95"
+              >
+                Stop
+              </button>
+            </div>
+          )}
+
           {isHost && (
             <button
               onClick={toggleLock}
@@ -711,6 +755,25 @@ export function MeetingRoomView() {
                     {/* Ambient Glow */}
                     <div className="absolute inset-0 bg-gradient-to-tr from-[#0066FF]/15 via-transparent to-[#FF7A00]/15 pointer-events-none" />
 
+                    {/* Dedicated unmuted audio element for voice clarity */}
+                    {remoteStreams.get(participant.id) && (
+                      <audio
+                        ref={(el) => {
+                          if (el) {
+                            const str = remoteStreams.get(participant.id);
+                            if (str && el.srcObject !== str) {
+                              el.srcObject = str;
+                              el.volume = 1.0;
+                              el.play().catch(() => {});
+                            }
+                          }
+                        }}
+                        autoPlay
+                        playsInline
+                        className="hidden"
+                      />
+                    )}
+
                     {/* Participant Avatar with MetroNet Pulse Aura */}
                     <div className="relative mb-3.5">
                       <div className="absolute -inset-2.5 rounded-full bg-gradient-to-r from-[#0066FF] to-[#FF7A00] opacity-40 blur-lg animate-pulse" />
@@ -866,6 +929,32 @@ export function MeetingRoomView() {
             )}
           </div>
 
+          {/* Audio & Video Recording Toggle Button */}
+          <button
+            onClick={handleToggleRecording}
+            className={`h-11 w-11 sm:h-12 sm:w-12 rounded-2xl flex items-center justify-center transition-all cursor-pointer shadow-lg ${
+              isRecording
+                ? 'bg-rose-600 hover:bg-rose-500 text-white ring-4 ring-rose-600/40 shadow-xl shadow-rose-600/40 animate-pulse'
+                : 'bg-white/[0.08] hover:bg-white/[0.14] text-white'
+            }`}
+            title={isRecording ? `Stop Recording (${recordingDuration})` : 'Record Audio & Video'}
+          >
+            {isRecording ? <Square className="h-4 w-4 fill-white" /> : <Disc className="h-5 w-5 text-rose-400" />}
+          </button>
+
+          {/* Meeting Chat & Notepad Drawer Toggle */}
+          <button
+            onClick={() => setShowChatAndNotes(!showChatAndNotes)}
+            className={`relative h-11 w-11 sm:h-12 sm:w-12 rounded-2xl flex items-center justify-center transition-all cursor-pointer shadow-lg ${
+              showChatAndNotes
+                ? 'bg-gradient-to-r from-[#FF7A00] to-[#E65100] text-white shadow-xl shadow-[#FF7A00]/40'
+                : 'bg-white/[0.08] hover:bg-white/[0.14] text-white'
+            }`}
+            title="Chat & Meeting Notepad"
+          >
+            <MessageSquare className="h-5 w-5" />
+          </button>
+
           {/* Leave / End Meeting Button */}
           <button
             onClick={() => {
@@ -957,6 +1046,15 @@ export function MeetingRoomView() {
         onAdmitParticipant={handleAdmitCandidate}
         onDenyParticipant={handleDenyCandidate}
         onAdmitAll={handleAdmitAllCandidates}
+      />
+
+      {/* In-Meeting Group Chat & Collaborative Notepad Drawer */}
+      <ChatAndNotesDrawer
+        isOpen={showChatAndNotes}
+        onClose={() => setShowChatAndNotes(false)}
+        meetingId={meetingId}
+        meetingTitle={title}
+        localUserName={isHost ? 'Person 1 (Host)' : 'Person 2'}
       />
     </div>
   );

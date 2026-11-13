@@ -24,14 +24,38 @@ export function RemoteVideoTile({
   isVideoEnabled = true,
 }: RemoteVideoTileProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
   const displayName = name || `Participant (${peerId.slice(0, 5)})`;
 
   useEffect(() => {
     if (videoRef.current && stream) {
       videoRef.current.srcObject = stream;
       videoRef.current.play().catch((err) => {
-        console.warn(`[RemoteVideoTile] Auto-play was prevented for peer ${peerId}:`, err);
+        console.warn(`[RemoteVideoTile] Auto-play video prevented for peer ${peerId}:`, err);
       });
+    }
+  }, [stream, peerId]);
+
+  // Dedicated unmuted audio element with auto-resume on first interaction
+  useEffect(() => {
+    if (audioRef.current && stream) {
+      audioRef.current.srcObject = stream;
+      audioRef.current.volume = 1.0;
+      const playPromise = audioRef.current.play();
+      if (playPromise !== undefined) {
+        playPromise.catch((err) => {
+          console.warn(`[RemoteVideoTile] Audio autoplay deferred for ${peerId}:`, err);
+          const resumeAudio = () => {
+            audioRef.current?.play().catch(() => {});
+            window.removeEventListener('click', resumeAudio);
+            window.removeEventListener('touchstart', resumeAudio);
+            window.removeEventListener('keydown', resumeAudio);
+          };
+          window.addEventListener('click', resumeAudio);
+          window.addEventListener('touchstart', resumeAudio);
+          window.addEventListener('keydown', resumeAudio);
+        });
+      }
     }
   }, [stream, peerId]);
 
@@ -45,6 +69,14 @@ export function RemoteVideoTile({
           : 'border-2 border-white/[0.08] hover:border-indigo-500/40 shadow-xl'
       }`}
     >
+      {/* High-priority dedicated audio playback element */}
+      <audio
+        ref={audioRef}
+        autoPlay
+        playsInline
+        className="hidden"
+      />
+
       {/* Remote Video Track */}
       <video
         ref={videoRef}

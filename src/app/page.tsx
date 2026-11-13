@@ -168,7 +168,7 @@ export default function HomePage() {
     soundEngine.playAdmittedChime();
     setShowSimulatedKnock(false);
     setAdmittedGuest(true);
-    toast.success('Admitted Jonayed (Dhaka Hub) to meeting');
+    toast.success('Admitted Person 2 to meeting');
   };
 
   const handleSimulatedDeny = () => {
@@ -368,7 +368,7 @@ export default function HomePage() {
                       <div className="flex items-center gap-1.5">
                         <span className="h-2 w-2 rounded-full bg-[#FF7A00] animate-ping" />
                         <p className="text-xs sm:text-sm font-bold text-white">
-                          Jonayed (Dhaka Hub) <span className="font-normal text-gray-300">is waiting in lobby</span>
+                          Person 2 <span className="font-normal text-gray-300">is waiting in lobby</span>
                         </p>
                       </div>
                       <p className="text-[10px] text-[#FFA033]">Knock notification • Waiting room admission required</p>
@@ -400,17 +400,17 @@ export default function HomePage() {
                   <div className="text-center space-y-3">
                     <div className="relative inline-block">
                       <div className="h-20 w-20 rounded-full bg-gradient-to-tr from-[#0057B7] to-[#FF7A00] border-2 border-white/30 flex items-center justify-center mx-auto text-white font-black text-2xl shadow-xl shadow-[#0066FF]/50">
-                        MN
+                        P1
                       </div>
                       <span className="absolute bottom-1 right-1 h-4 w-4 rounded-full bg-emerald-400 border-2 border-[#0E2042] animate-ping" />
                       <span className="absolute bottom-1 right-1 h-4 w-4 rounded-full bg-emerald-400 border-2 border-[#0E2042]" />
                     </div>
                     <div>
                       <p className="text-sm font-bold text-white flex items-center justify-center gap-1.5">
-                        <span>Mahtab Uddin</span>
+                        <span>Person 1</span>
                         <span className="px-1.5 py-0.5 rounded text-[9px] bg-[#FF7A00] text-white font-black uppercase">Host</span>
                       </p>
-                      <p className="text-[11px] text-[#388BFF] font-medium">MetroNet Principal Architect</p>
+                      <p className="text-[11px] text-[#388BFF] font-medium">Meeting Host (Executive)</p>
                     </div>
                   </div>
 
@@ -489,21 +489,21 @@ export default function HomePage() {
                   </div>
                 </div>
 
-                {/* Tile 3: Admitted Participant or Sarah Miller */}
+                {/* Tile 3: Remote Participant (Person 2) */}
                 <div className="relative aspect-video rounded-2xl bg-gradient-to-br from-[#121E36] via-[#0E1A30] to-[#091222] border border-white/[0.08] flex items-center justify-center overflow-hidden">
                   <div className="text-center space-y-3">
                     <div className="relative inline-block">
                       <div className="h-20 w-20 rounded-full bg-gradient-to-tr from-[#FF7A00] to-[#E65100] border-2 border-white/30 flex items-center justify-center mx-auto text-white font-extrabold text-2xl shadow-xl shadow-orange-600/30">
-                        {admittedGuest ? 'JD' : 'SM'}
+                        P2
                       </div>
                       <span className="absolute bottom-1 right-1 h-4 w-4 rounded-full bg-emerald-400 border-2 border-[#0E1A30]" />
                     </div>
                     <div>
                       <p className="text-sm font-bold text-white">
-                        {admittedGuest ? 'Jonayed (Admitted)' : 'Sarah Miller'}
+                        Person 2
                       </p>
                       <p className="text-[11px] text-gray-400">
-                        {admittedGuest ? 'Dhaka Hub Infrastructure' : 'Head of Global Operations'}
+                        Remote Participant
                       </p>
                     </div>
                   </div>

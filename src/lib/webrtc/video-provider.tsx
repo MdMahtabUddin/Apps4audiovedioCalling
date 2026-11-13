@@ -209,12 +209,19 @@ export function VideoProvider({ children }: { children: React.ReactNode }) {
     async (wantAudio = true, wantVideo = true): Promise<MediaStream | null> => {
       stopAllMedia();
       try {
+        const audioConstraints: boolean | MediaTrackConstraints = wantAudio
+          ? {
+              echoCancellation: { ideal: true },
+              noiseSuppression: { ideal: true },
+              autoGainControl: { ideal: true },
+              sampleRate: { ideal: 48000 },
+              channelCount: { ideal: 1 },
+              ...(selectedAudioInput ? { deviceId: { exact: selectedAudioInput } } : {}),
+            }
+          : false;
+
         const constraints: MediaStreamConstraints = {
-          audio: wantAudio
-            ? selectedAudioInput
-              ? { deviceId: { exact: selectedAudioInput } }
-              : true
-            : false,
+          audio: audioConstraints,
           video: wantVideo
             ? selectedVideoInput
               ? { deviceId: { exact: selectedVideoInput }, width: { ideal: 1280 }, height: { ideal: 720 } }

@@ -197,6 +197,19 @@ export class WebRTCMeshManager {
     return pc;
   }
 
+  private optimizeAudioSDP(sdp: string): string {
+    if (!sdp) return sdp;
+    try {
+      // Set 128kbps high-fidelity bitrate and enable inband FEC for crystal-clear voice transmission
+      return sdp.replace(/(a=fmtp:\d+ [^\r\n]+)/gi, (match) => {
+        if (match.includes('maxaveragebitrate')) return match;
+        return `${match};stereo=1;sprop-stereo=1;useinbandfec=1;maxaveragebitrate=128000;cbr=0`;
+      });
+    } catch {
+      return sdp;
+    }
+  }
+
   /**
    * Initiate WebRTC handshake: create SDP offer.
    */
@@ -206,8 +219,10 @@ export class WebRTCMeshManager {
       offerToReceiveAudio: true,
       offerToReceiveVideo: true,
     });
-    await pc.setLocalDescription(offer);
-    return offer;
+    const sdp = this.optimizeAudioSDP(offer.sdp || '');
+    const enhancedOffer: RTCSessionDescriptionInit = { type: offer.type, sdp };
+    await pc.setLocalDescription(enhancedOffer);
+    return enhancedOffer;
   }
 
   /**
@@ -224,8 +239,10 @@ export class WebRTCMeshManager {
     await this.flushPendingCandidates(peerId);
 
     const answer = await pc.createAnswer();
-    await pc.setLocalDescription(answer);
-    return answer;
+    const sdp = this.optimizeAudioSDP(answer.sdp || '');
+    const enhancedAnswer: RTCSessionDescriptionInit = { type: answer.type, sdp };
+    await pc.setLocalDescription(enhancedAnswer);
+    return enhancedAnswer;
   }
 
   /**
