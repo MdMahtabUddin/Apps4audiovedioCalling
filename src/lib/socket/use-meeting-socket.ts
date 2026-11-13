@@ -10,9 +10,11 @@ export interface SocketParticipant {
   socketId: string;
   userId: string;
   displayName: string;
-  role: string;
+  role: 'HOST' | 'CO_HOST' | 'PARTICIPANT' | string;
   isAudioEnabled: boolean;
   isVideoEnabled: boolean;
+  isHandRaised?: boolean;
+  handRaisedAt?: number | null;
   joinedAt: number;
 }
 
@@ -40,6 +42,7 @@ export function useMeetingSocket({
     handlePeerIceCandidate,
     registerIceCandidateHandler,
     disconnectPeer,
+    toggleAudio,
     isAudioEnabled,
     isVideoEnabled,
   } = useVideo();
@@ -48,8 +51,16 @@ export function useMeetingSocket({
   const [connectionStatus, setConnectionStatus] = useState<
     'disconnected' | 'connecting' | 'connected' | 'reconnecting'
   >('disconnected');
+  const [currentRole, setCurrentRole] = useState<string>(role);
   const [participants, setParticipants] = useState<SocketParticipant[]>([]);
+  const [isRoomLocked, setIsRoomLocked] = useState<boolean>(false);
+  const [isHandRaised, setIsHandRaised] = useState<boolean>(false);
   const [activeReaction, setActiveReaction] = useState<{ emoji: string; sender: string } | null>(null);
+
+  // Sync role prop
+  useEffect(() => {
+    setCurrentRole(role);
+  }, [role]);
 
   // Determine signaling gateway URL
   const getSignalingUrl = useCallback(() => {
@@ -59,7 +70,6 @@ export function useMeetingSocket({
     if (typeof window !== 'undefined') {
       const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
       const hostname = window.location.hostname;
-      // In production deployment with custom domain / same host or port 3001
       if (hostname === 'localhost' || hostname === '127.0.0.1') {
         return `${protocol}//${hostname}:3001`;
       }
@@ -99,7 +109,7 @@ export function useMeetingSocket({
         meetingId,
         userId: userId || `usr_${(socket.id || 'peer').slice(0, 5)}`,
         displayName: displayName || 'Participant',
-        role,
+        role: currentRole,
         isAudioEnabled,
         isVideoEnabled,
       });
@@ -116,27 +126,42 @@ export function useMeetingSocket({
 
     socket.on('connect_error', (err) => {
       console.warn('[Socket] Connection note:', err.message);
-      // Keep connection status informative without crashing
+    });
+
+    // Room locked error upon joining
+    socket.on('room-locked-error', ({ message }: { message: string }) => {
+      toast.error(message || 'Meeting is locked by the host.');
+      router.push('/dashboard');
     });
 
     // 1. Initial Room Users List
-    socket.on('room-users', async ({ participants: existingPeers }: { participants: SocketParticipant[] }) => {
-      console.log(`[Socket] Discovered ${existingPeers.length} existing peers in room:`, existingPeers);
-      setParticipants(existingPeers);
+    socket.on(
+      'room-users',
+      async ({
+        participants: existingPeers,
+        isLocked,
+      }: {
+        participants: SocketParticipant[];
+        isLocked?: boolean;
+      }) => {
+        console.log(`[Socket] Discovered ${existingPeers.length} existing peers in room:`, existingPeers);
+        setParticipants(existingPeers);
+        if (isLocked !== undefined) setIsRoomLocked(isLocked);
 
-      // Create WebRTC Offer for each existing participant
-      for (const peer of existingPeers) {
-        try {
-          const offer = await connectToPeer(peer.socketId);
-          socket.emit('signal-offer', {
-            targetSocketId: peer.socketId,
-            offer,
-          });
-        } catch (err) {
-          console.warn(`[Socket] Failed to initiate WebRTC offer to ${peer.socketId}:`, err);
+        // Create WebRTC Offer for each existing participant
+        for (const peer of existingPeers) {
+          try {
+            const offer = await connectToPeer(peer.socketId);
+            socket.emit('signal-offer', {
+              targetSocketId: peer.socketId,
+              offer,
+            });
+          } catch (err) {
+            console.warn(`[Socket] Failed to initiate WebRTC offer to ${peer.socketId}:`, err);
+          }
         }
       }
-    });
+    );
 
     // 2. WebRTC SDP Offer Received
     socket.on('signal-offer', async ({ callerSocketId, callerInfo, offer }) => {
@@ -217,6 +242,64 @@ export function useMeetingSocket({
       router.push('/dashboard');
     });
 
+    // 10. Hand Raise Updated (Phase 5)
+    socket.on(
+      'participant-hand-raised',
+      ({
+        socketId,
+        displayName: peerName,
+        isHandRaised: raised,
+      }: {
+        socketId: string;
+        displayName: string;
+        isHandRaised: boolean;
+      }) => {
+        if (socketId === socket.id) {
+          setIsHandRaised(raised);
+        } else {
+          setParticipants((prev) =>
+            prev.map((p) => (p.socketId === socketId ? { ...p, isHandRaised: raised } : p))
+          );
+          if (raised) {
+            toast.info(`✋ ${peerName} raised their hand`);
+          }
+        }
+      }
+    );
+
+    // 11. Force Mute by Host (Phase 5)
+    socket.on('force-mute-audio', ({ mutedBy }: { mutedBy?: string }) => {
+      if (isAudioEnabled) {
+        toggleAudio();
+      }
+      toast.warning(`You were muted by ${mutedBy || 'the host'}.`);
+    });
+
+    // 12. Participant Kicked by Host (Phase 5)
+    socket.on('participant-kicked', ({ reason }: { reason?: string }) => {
+      toast.error(reason || 'You have been removed from the meeting.');
+      router.push('/dashboard');
+    });
+
+    // 13. Role Updated (Phase 5)
+    socket.on('role-updated', ({ role: updatedRole }: { role: string }) => {
+      setCurrentRole(updatedRole);
+      toast.success(`Your meeting role was updated to ${updatedRole}`);
+    });
+
+    // 14. Room Participant Role Changed (Phase 5)
+    socket.on('participant-role-changed', ({ socketId, role: updatedRole }: { socketId: string; role: string }) => {
+      setParticipants((prev) =>
+        prev.map((p) => (p.socketId === socketId ? { ...p, role: updatedRole } : p))
+      );
+    });
+
+    // 15. Room Lock Changed (Phase 5)
+    socket.on('room-lock-changed', ({ isLocked }: { isLocked: boolean }) => {
+      setIsRoomLocked(isLocked);
+      toast.info(isLocked ? '🔒 Meeting has been locked by the host.' : '🔓 Meeting has been unlocked.');
+    });
+
     // Wire local ICE candidates to socket signaling
     registerIceCandidateHandler((targetPeerId, candidate) => {
       socket.emit('ice-candidate', {
@@ -234,7 +317,7 @@ export function useMeetingSocket({
     meetingId,
     userId,
     displayName,
-    role,
+    currentRole,
     connectToPeer,
     handlePeerOffer,
     handlePeerAnswer,
@@ -242,6 +325,9 @@ export function useMeetingSocket({
     registerIceCandidateHandler,
     disconnectPeer,
     getSignalingUrl,
+    toggleAudio,
+    isAudioEnabled,
+    isVideoEnabled,
     toast,
     router,
   ]);
@@ -263,6 +349,45 @@ export function useMeetingSocket({
     }
   }, []);
 
+  const toggleHandRaise = useCallback(() => {
+    if (socketRef.current && socketRef.current.connected) {
+      const nextState = !isHandRaised;
+      setIsHandRaised(nextState);
+      socketRef.current.emit('toggle-hand-raise', { isHandRaised: nextState });
+    }
+  }, [isHandRaised]);
+
+  const muteParticipant = useCallback((targetSocketId: string) => {
+    if (socketRef.current && socketRef.current.connected) {
+      socketRef.current.emit('mute-participant', { targetSocketId });
+    }
+  }, []);
+
+  const muteAll = useCallback(() => {
+    if (socketRef.current && socketRef.current.connected) {
+      socketRef.current.emit('mute-all');
+      toast.info('All participants have been muted.');
+    }
+  }, [toast]);
+
+  const kickParticipant = useCallback((targetSocketId: string, reason?: string) => {
+    if (socketRef.current && socketRef.current.connected) {
+      socketRef.current.emit('kick-participant', { targetSocketId, reason });
+    }
+  }, []);
+
+  const assignRole = useCallback((targetSocketId: string, newRole: 'HOST' | 'CO_HOST' | 'PARTICIPANT' | string) => {
+    if (socketRef.current && socketRef.current.connected) {
+      socketRef.current.emit('assign-role', { targetSocketId, newRole });
+    }
+  }, []);
+
+  const toggleRoomLock = useCallback((locked: boolean) => {
+    if (socketRef.current && socketRef.current.connected) {
+      socketRef.current.emit('lock-meeting', { isLocked: locked });
+    }
+  }, []);
+
   const endMeetingForAll = useCallback(() => {
     if (socketRef.current && socketRef.current.connected) {
       socketRef.current.emit('end-meeting');
@@ -274,8 +399,17 @@ export function useMeetingSocket({
   return {
     connectionStatus,
     participants,
+    currentRole,
+    isRoomLocked,
+    isHandRaised,
     activeReaction,
     sendReaction,
+    toggleHandRaise,
+    muteParticipant,
+    muteAll,
+    kickParticipant,
+    assignRole,
+    toggleRoomLock,
     endMeetingForAll,
     getSocket,
   };

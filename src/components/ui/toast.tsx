@@ -1,9 +1,9 @@
 'use client';
 
 import React, { createContext, useContext, useState, useCallback } from 'react';
-import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Info, AlertTriangle, X } from 'lucide-react';
 
-export type ToastType = 'success' | 'error' | 'info';
+export type ToastType = 'success' | 'error' | 'info' | 'warning';
 
 export interface Toast {
   id: string;
@@ -16,6 +16,7 @@ interface ToastContextType {
     success: (msg: string) => void;
     error: (msg: string) => void;
     info: (msg: string) => void;
+    warning: (msg: string) => void;
   };
 }
 
@@ -43,6 +44,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     success: (msg: string) => addToast(msg, 'success'),
     error: (msg: string) => addToast(msg, 'error'),
     info: (msg: string) => addToast(msg, 'info'),
+    warning: (msg: string) => addToast(msg, 'warning'),
   };
 
   return (
@@ -58,12 +60,15 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                 ? 'bg-gray-900/90 border-emerald-500/30 text-emerald-300'
                 : t.type === 'error'
                 ? 'bg-gray-900/90 border-red-500/30 text-red-300'
+                : t.type === 'warning'
+                ? 'bg-gray-900/90 border-amber-500/30 text-amber-300'
                 : 'bg-gray-900/90 border-indigo-500/30 text-indigo-300'
             }`}
           >
             <div className="flex items-center gap-2.5 text-xs font-medium">
               {t.type === 'success' && <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />}
               {t.type === 'error' && <AlertCircle className="h-4 w-4 text-red-400 shrink-0" />}
+              {t.type === 'warning' && <AlertTriangle className="h-4 w-4 text-amber-400 shrink-0" />}
               {t.type === 'info' && <Info className="h-4 w-4 text-indigo-400 shrink-0" />}
               <span className="text-gray-200">{t.message}</span>
             </div>

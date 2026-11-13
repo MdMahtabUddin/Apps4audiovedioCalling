@@ -16,6 +16,7 @@ import {
   Radio,
   Share2,
   Users,
+  Hand,
   Volume2,
   Wifi,
   WifiOff,
@@ -27,6 +28,7 @@ import { useVideo } from '@/lib/webrtc/video-provider';
 import { useMeetingSocket } from '@/lib/socket/use-meeting-socket';
 import { useToast } from '@/components/ui/toast';
 import { RemoteVideoTile } from './remote-video-tile';
+import { ParticipantDrawer } from './participant-drawer';
 
 export function MeetingRoomView() {
   const toast = useToast();
@@ -56,12 +58,21 @@ export function MeetingRoomView() {
     stopScreenShare,
   } = useVideo();
 
-  // Phase 4 Socket.IO Real-Time Signaling Gateway
+  // Phase 4 & Phase 5 Socket.IO Signaling & Controls
   const {
     connectionStatus,
     participants: socketParticipants,
+    currentRole,
+    isRoomLocked,
+    isHandRaised,
     activeReaction: remoteReaction,
     sendReaction,
+    toggleHandRaise,
+    muteParticipant,
+    muteAll,
+    kickParticipant,
+    assignRole,
+    toggleRoomLock,
     endMeetingForAll,
   } = useMeetingSocket({
     meetingId,
@@ -69,6 +80,8 @@ export function MeetingRoomView() {
     role: isHost ? 'HOST' : 'PARTICIPANT',
     isJoined: true,
   });
+
+  const [showParticipantsDrawer, setShowParticipantsDrawer] = useState(false);
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const screenVideoRef = useRef<HTMLVideoElement>(null);
@@ -419,6 +432,35 @@ export function MeetingRoomView() {
             <MonitorUp className="h-5 w-5" />
           </button>
 
+          {/* Raise Hand Toggle */}
+          <button
+            onClick={toggleHandRaise}
+            className={`h-11 w-11 sm:h-12 sm:w-12 rounded-2xl flex items-center justify-center transition-all cursor-pointer shadow-lg ${
+              isHandRaised
+                ? 'bg-amber-500 hover:bg-amber-400 text-black shadow-amber-500/30 font-bold ring-2 ring-amber-400'
+                : 'bg-white/[0.08] hover:bg-white/[0.14] text-white'
+            }`}
+            title={isHandRaised ? 'Lower Hand' : 'Raise Hand'}
+          >
+            <Hand className="h-5 w-5" />
+          </button>
+
+          {/* Participants Drawer Toggle */}
+          <button
+            onClick={() => setShowParticipantsDrawer(!showParticipantsDrawer)}
+            className={`relative h-11 w-11 sm:h-12 sm:w-12 rounded-2xl flex items-center justify-center transition-all cursor-pointer shadow-lg ${
+              showParticipantsDrawer
+                ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-600/30'
+                : 'bg-white/[0.08] hover:bg-white/[0.14] text-white'
+            }`}
+            title="Manage Participants"
+          >
+            <Users className="h-5 w-5" />
+            <span className="absolute -top-1 -right-1 h-5 min-w-5 px-1 bg-indigo-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-[#070912]">
+              {totalParticipants}
+            </span>
+          </button>
+
           {/* Reactions Toggle */}
           <div className="relative">
             <button
@@ -508,6 +550,30 @@ export function MeetingRoomView() {
           </div>
         </div>
       )}
+      {/* Participant Management Drawer */}
+      <ParticipantDrawer
+        isOpen={showParticipantsDrawer}
+        onClose={() => setShowParticipantsDrawer(false)}
+        participants={socketParticipants}
+        localUser={{
+          name: isHost ? 'Host' : 'Participant',
+          role: currentRole,
+          isAudioEnabled,
+          isVideoEnabled,
+          isHandRaised,
+        }}
+        currentUserRole={currentRole}
+        isRoomLocked={isRoomLocked || isLocked}
+        onToggleRoomLock={(locked) => {
+          toggleRoomLock(locked);
+          toggleLock();
+        }}
+        onMuteParticipant={muteParticipant}
+        onMuteAll={muteAll}
+        onKickParticipant={kickParticipant}
+        onAssignRole={assignRole}
+        onToggleLocalHandRaise={toggleHandRaise}
+      />
     </div>
   );
 }
