@@ -21,9 +21,12 @@ export function BrandLogo({
 }: BrandLogoProps) {
   const [isHovered, setIsHovered] = useState(false);
 
-  const handleClick = () => {
+  const handleClick = (e: React.MouseEvent) => {
     if (withSound) {
       soundEngine.playIntroChime();
+    }
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('metromeet:play-splash'));
     }
   };
 

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   Mic,
   MicOff,
@@ -44,6 +44,7 @@ export function MeetingRoomView() {
     leaveRoom,
     endRoom,
     toggleLock,
+    myParticipantId,
   } = useMeeting();
 
   const {
@@ -93,6 +94,27 @@ export function MeetingRoomView() {
 
   const [showParticipantsDrawer, setShowParticipantsDrawer] = useState(false);
   const [httpKnocks, setHttpKnocks] = useState<Array<{ socketId: string; displayName: string; userId: string; requestedAt: number }>>([]);
+  const [apiParticipants, setApiParticipants] = useState<Array<{ id: string; userId?: string; displayName: string; name: string; role: string; avatar?: string | null }>>([]);
+
+  // Resilient HTTPS Polling for Active Room Participants
+  const fetchParticipants = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/meetings/${meetingId}/participants`);
+      if (!res.ok) return;
+      const data = await res.json();
+      if (Array.isArray(data.participants)) {
+        setApiParticipants(data.participants);
+      }
+    } catch (e) {
+      console.warn('Fetch participants error:', e);
+    }
+  }, [meetingId]);
+
+  useEffect(() => {
+    fetchParticipants();
+    const interval = setInterval(fetchParticipants, 1500);
+    return () => clearInterval(interval);
+  }, [fetchParticipants]);
 
   // Resilient HTTPS Polling for Guest Knocks (Works on Vercel Serverless without port 3001)
   useEffect(() => {
@@ -136,6 +158,25 @@ export function MeetingRoomView() {
 
   const handleAdmitCandidate = async (participantId: string) => {
     admitParticipant(participantId);
+
+    // Instant optimistic insertion into participant list so name & card immediately show up in grid!
+    const candidate = activeWaitingList.find((p) => p.socketId === participantId);
+    if (candidate) {
+      setApiParticipants((prev) => {
+        if (prev.some((p) => p.id === participantId)) return prev;
+        return [
+          ...prev,
+          {
+            id: participantId,
+            userId: candidate.userId,
+            name: candidate.displayName,
+            displayName: candidate.displayName,
+            role: 'PARTICIPANT',
+          },
+        ];
+      });
+    }
+
     try {
       await fetch(`/api/meetings/${meetingId}/knocks`, {
         method: 'POST',
@@ -143,7 +184,8 @@ export function MeetingRoomView() {
         body: JSON.stringify({ action: 'ADMIT', participantId }),
       });
       setHttpKnocks((prev) => prev.filter((p) => p.socketId !== participantId));
-      toast.success('Admitted participant');
+      fetchParticipants();
+      toast.success(`Admitted ${candidate?.displayName || 'participant'}`);
     } catch (e) {
       console.warn('Admit error:', e);
     }
@@ -166,6 +208,20 @@ export function MeetingRoomView() {
 
   const handleAdmitAllCandidates = async () => {
     admitAll();
+    const waitingSnapshot = [...activeWaitingList];
+    setApiParticipants((prev) => {
+      const newItems = waitingSnapshot
+        .filter((c) => !prev.some((p) => p.id === c.socketId))
+        .map((c) => ({
+          id: c.socketId,
+          userId: c.userId,
+          name: c.displayName,
+          displayName: c.displayName,
+          role: 'PARTICIPANT',
+        }));
+      return [...prev, ...newItems];
+    });
+
     try {
       await fetch(`/api/meetings/${meetingId}/knocks`, {
         method: 'POST',
@@ -173,6 +229,7 @@ export function MeetingRoomView() {
         body: JSON.stringify({ action: 'ADMIT_ALL' }),
       });
       setHttpKnocks([]);
+      fetchParticipants();
       toast.success('Admitted all waiting participants');
     } catch (e) {
       console.warn('Admit all error:', e);
@@ -243,7 +300,86 @@ export function MeetingRoomView() {
 
   // Convert remoteStreams Map to array for rendering
   const remotePeers = Array.from(remoteStreams.entries());
-  const totalParticipants = 1 + Math.max(remotePeers.length, socketParticipants.length);
+
+  // Unified list of remote participants (combines WebRTC streams, Socket.IO, and HTTPS DB participants)
+  const unifiedRemoteList = useMemo(() => {
+    const map = new Map<string, {
+      id: string;
+      displayName: string;
+      role: string;
+      avatar?: string | null;
+      stream?: MediaStream;
+      isAudioEnabled?: boolean;
+      isVideoEnabled?: boolean;
+    }>();
+
+    // 1. WebRTC Remote Streams (Direct P2P audio/video)
+    remotePeers.forEach(([peerId, stream]) => {
+      const sockInfo = socketParticipants.find((p) => p.socketId === peerId);
+      map.set(peerId, {
+        id: peerId,
+        displayName: sockInfo?.displayName || 'Participant',
+        role: sockInfo?.role || 'PARTICIPANT',
+        stream,
+        isAudioEnabled: sockInfo?.isAudioEnabled ?? true,
+        isVideoEnabled: sockInfo?.isVideoEnabled ?? true,
+      });
+    });
+
+    // 2. Socket.IO Participants
+    socketParticipants.forEach((p) => {
+      if (!map.has(p.socketId)) {
+        map.set(p.socketId, {
+          id: p.socketId,
+          displayName: p.displayName,
+          role: p.role,
+          isAudioEnabled: p.isAudioEnabled,
+          isVideoEnabled: p.isVideoEnabled,
+        });
+      }
+    });
+
+    // 3. Database / HTTPS Synced Participants
+    apiParticipants.forEach((p) => {
+      // Don't include current user in remote tiles
+      if (myParticipantId && p.id === myParticipantId) return;
+
+      // Check if this participant is already registered in map by id or name
+      const exists = Array.from(map.values()).some(
+        (existing) =>
+          existing.id === p.id ||
+          existing.displayName.trim().toLowerCase() === p.displayName.trim().toLowerCase()
+      );
+
+      if (!exists) {
+        map.set(p.id, {
+          id: p.id,
+          displayName: p.displayName || p.name || 'Participant',
+          role: p.role,
+          avatar: p.avatar,
+          isAudioEnabled: true,
+          isVideoEnabled: false,
+        });
+      }
+    });
+
+    return Array.from(map.values());
+  }, [remotePeers, socketParticipants, apiParticipants, myParticipantId]);
+
+  const totalParticipants = 1 + unifiedRemoteList.length;
+
+  const drawerParticipants = useMemo(() => {
+    return unifiedRemoteList.map((p) => ({
+      socketId: p.id,
+      userId: p.id,
+      displayName: p.displayName,
+      role: p.role,
+      isAudioEnabled: p.isAudioEnabled ?? true,
+      isVideoEnabled: p.isVideoEnabled ?? false,
+      isHandRaised: false,
+      joinedAt: Date.now(),
+    }));
+  }, [unifiedRemoteList]);
 
   // Grid layout class based on participant count
   const getGridClasses = () => {
@@ -533,28 +669,87 @@ export function MeetingRoomView() {
                 </div>
 
                 {/* Single participant invitation prompt */}
-                {remotePeers.length === 0 && (
-                  <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10 text-xs text-indigo-300 font-medium flex items-center gap-1.5">
-                    <Share2 className="h-3.5 w-3.5 text-indigo-400" />
+                {unifiedRemoteList.length === 0 && (
+                  <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10 text-xs text-[#388BFF] font-medium flex items-center gap-1.5 shadow-lg">
+                    <Share2 className="h-3.5 w-3.5 text-[#388BFF]" />
                     <span>Share link to invite participants</span>
                   </div>
                 )}
               </div>
 
-              {/* Remote Participants Cards */}
-              {remotePeers.map(([peerId, stream]) => {
-                const info = socketParticipants.find((p) => p.socketId === peerId);
+              {/* Remote Participants Cards (Instant Dynamic Rendering) */}
+              {unifiedRemoteList.map((participant) => {
+                if (participant.stream) {
+                  return (
+                    <RemoteVideoTile
+                      key={participant.id}
+                      peerId={participant.id}
+                      name={participant.displayName}
+                      stream={participant.stream}
+                      isSpeaking={activeSpeakerId === participant.id}
+                      quality={networkQuality.get(participant.id)}
+                      isAudioEnabled={participant.isAudioEnabled ?? true}
+                      isVideoEnabled={participant.isVideoEnabled ?? true}
+                    />
+                  );
+                }
+
+                const initials =
+                  participant.displayName
+                    .split(' ')
+                    .map((n) => n[0])
+                    .filter(Boolean)
+                    .slice(0, 2)
+                    .join('')
+                    .toUpperCase() || 'P';
+
                 return (
-                  <RemoteVideoTile
-                    key={peerId}
-                    peerId={peerId}
-                    name={info?.displayName}
-                    stream={stream}
-                    isSpeaking={activeSpeakerId === peerId}
-                    quality={networkQuality.get(peerId)}
-                    isAudioEnabled={info?.isAudioEnabled ?? true}
-                    isVideoEnabled={info?.isVideoEnabled ?? true}
-                  />
+                  <div
+                    key={participant.id}
+                    className="relative w-full aspect-video rounded-3xl bg-gradient-to-br from-[#091222] via-[#050a14] to-[#0c182c] border-2 border-[#0066FF]/35 shadow-2xl overflow-hidden flex flex-col items-center justify-center p-6 transition-all duration-300 hover:border-[#FF7A00]/50 group animate-in zoom-in-95"
+                  >
+                    {/* Ambient Glow */}
+                    <div className="absolute inset-0 bg-gradient-to-tr from-[#0066FF]/15 via-transparent to-[#FF7A00]/15 pointer-events-none" />
+
+                    {/* Participant Avatar with MetroNet Pulse Aura */}
+                    <div className="relative mb-3.5">
+                      <div className="absolute -inset-2.5 rounded-full bg-gradient-to-r from-[#0066FF] to-[#FF7A00] opacity-40 blur-lg animate-pulse" />
+                      <div className="relative h-20 w-20 sm:h-24 sm:w-24 rounded-full bg-gradient-to-tr from-[#0057B7] to-[#002D62] text-white flex items-center justify-center text-2xl sm:text-3xl font-black shadow-2xl shadow-[#0066FF]/50 border-2 border-white/20">
+                        {initials}
+                      </div>
+                    </div>
+
+                    {/* Participant Name & Badges */}
+                    <div className="text-center space-y-1.5 relative z-10 max-w-[85%]">
+                      <h3 className="text-base sm:text-lg font-bold text-white tracking-tight truncate drop-shadow-md">
+                        {participant.displayName}
+                      </h3>
+                      <div className="flex items-center justify-center gap-2 flex-wrap">
+                        <span
+                          className={`text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
+                            participant.role === 'HOST'
+                              ? 'bg-[#FF7A00]/20 text-[#FFA033] border border-[#FF7A00]/40'
+                              : 'bg-[#0066FF]/20 text-[#388BFF] border border-[#0066FF]/40'
+                          }`}
+                        >
+                          {participant.role}
+                        </span>
+                        <span className="text-[10px] text-emerald-400 font-bold flex items-center gap-1.5 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-ping" />
+                          Connected
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Bottom Status Bar */}
+                    <div className="absolute bottom-3 left-4 right-4 flex items-center justify-between text-xs text-gray-400">
+                      <div className="flex items-center gap-1.5 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-xl border border-white/10 shadow-sm">
+                        <Volume2 className="h-3.5 w-3.5 text-emerald-400" />
+                        <span className="text-[11px] text-gray-300 font-semibold">Audio Ready</span>
+                      </div>
+                      <span className="text-[10px] text-gray-400 font-medium">MetroNet Low-Latency</span>
+                    </div>
+                  </div>
                 );
               })}
             </div>
@@ -739,7 +934,7 @@ export function MeetingRoomView() {
       <ParticipantDrawer
         isOpen={showParticipantsDrawer}
         onClose={() => setShowParticipantsDrawer(false)}
-        participants={socketParticipants}
+        participants={drawerParticipants}
         waitingParticipants={activeWaitingList}
         localUser={{
           name: isHost ? 'Host' : 'Participant',

@@ -8,16 +8,38 @@ export async function GET(
   try {
     const { id } = await params;
     const participants = await meetingService.getParticipants(id);
+    const meeting = await meetingService.getById(id);
 
-    return NextResponse.json({
-      participants: participants.map((p) => ({
+    const approvedList = participants
+      .filter((p: any) => p.isApproved)
+      .map((p: any) => ({
         id: p.id,
         userId: p.userId,
-        name: p.guestName,
+        name: p.guestName || p.user?.name || 'Participant',
+        displayName: p.guestName || p.user?.name || 'Participant',
         role: p.role,
+        avatar: p.user?.avatar || null,
         isApproved: p.isApproved,
         joinedAt: p.joinedAt,
-      })),
+      }));
+
+    // If host is not present in approved participants, inject host
+    if (meeting && !approvedList.some((p: any) => p.userId === meeting.hostId || p.role === 'HOST')) {
+      approvedList.unshift({
+        id: `host_${meeting.hostId}`,
+        userId: meeting.hostId,
+        name: meeting.hostName || 'Host',
+        displayName: meeting.hostName || 'Host',
+        role: 'HOST',
+        avatar: meeting.hostAvatar || null,
+        isApproved: true,
+        joinedAt: meeting.startTime || new Date().toISOString(),
+      });
+    }
+
+    return NextResponse.json({
+      participants: approvedList,
+      count: approvedList.length,
     });
   } catch (error) {
     console.error('Fetch participants error:', error);
