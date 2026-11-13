@@ -22,6 +22,17 @@ import {
 } from 'lucide-react';
 import { SocketParticipant, WaitingParticipant } from '@/lib/socket/use-meeting-socket';
 
+function formatJoinTime(time?: number | string | null): string {
+  if (!time) return 'Just now';
+  try {
+    const d = new Date(time);
+    if (isNaN(d.getTime())) return 'Just now';
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  } catch {
+    return 'Just now';
+  }
+}
+
 interface ParticipantDrawerProps {
   isOpen: boolean;
   onClose: () => void;
@@ -109,11 +120,11 @@ export function ParticipantDrawer({
           <div>
             <h2 className="text-base font-bold text-white flex items-center gap-2">
               Participants
-              <span className="text-xs px-2 py-0.5 rounded-full bg-[#0066FF]/20 text-[#388BFF] font-semibold border border-[#0066FF]/30">
-                {totalCount}
+              <span className="text-xs px-2 py-0.5 rounded-full bg-[#0066FF]/20 text-[#388BFF] font-semibold border border-[#0066FF]/30 font-mono">
+                {totalCount} / 50
               </span>
             </h2>
-            <p className="text-[11px] text-gray-400">MetroMeet Live Session</p>
+            <p className="text-[11px] text-gray-400">MetroMeet Live Session (Max 50 Attendees)</p>
           </div>
         </div>
 
@@ -366,7 +377,7 @@ export function ParticipantDrawer({
                       </span>
                     )}
                   </div>
-                  <p className="text-[11px] text-gray-500">Attendee</p>
+                  <p className="text-[11px] text-gray-400 font-mono">Joined at {formatJoinTime(p.joinedAt)}</p>
                 </div>
               </div>
 

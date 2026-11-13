@@ -12,6 +12,7 @@ interface RemoteVideoTileProps {
   quality?: NetworkQuality;
   isAudioEnabled?: boolean;
   isVideoEnabled?: boolean;
+  joinedAt?: string | number | null;
 }
 
 export function RemoteVideoTile({
@@ -22,6 +23,7 @@ export function RemoteVideoTile({
   quality,
   isAudioEnabled = true,
   isVideoEnabled = true,
+  joinedAt,
 }: RemoteVideoTileProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -97,30 +99,21 @@ export function RemoteVideoTile({
         </div>
       )}
 
-      {/* Top Right: Network Quality Pill */}
-      <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-black/60 backdrop-blur-md border border-white/10 text-[11px] font-mono text-gray-300">
-        {quality ? (
-          <>
-            <span
-              className={`h-2 w-2 rounded-full ${
-                quality.status === 'good'
-                  ? 'bg-emerald-400'
-                  : quality.status === 'fair'
-                  ? 'bg-amber-400'
-                  : 'bg-rose-500 animate-pulse'
-              }`}
-            />
-            <span>{quality.rttMs}ms</span>
-          </>
-        ) : (
-          <>
-            <Wifi className="h-3 w-3 text-emerald-400" />
-            <span>P2P</span>
-          </>
+      {/* Top Right: Glowing LIVE Badge */}
+      <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-black/75 backdrop-blur-md border border-emerald-500/35 text-[11px] font-bold text-white shadow-lg shadow-black/60">
+        <span className="flex h-2 w-2 relative">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+        </span>
+        <span className="tracking-wider uppercase text-emerald-400 font-extrabold">LIVE</span>
+        {quality && (
+          <span className="text-[10px] text-gray-400 font-mono pl-1 border-l border-white/20">
+            {quality.rttMs}ms
+          </span>
         )}
       </div>
 
-      {/* Bottom Bar Info */}
+      {/* Bottom Bar Info with Join Time */}
       <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between pointer-events-none">
         <div className="px-3 py-1.5 rounded-xl bg-black/70 backdrop-blur-md border border-white/10 text-xs font-semibold text-white flex items-center gap-2 shadow-lg">
           <span className="truncate max-w-[120px] sm:max-w-[180px]">{displayName}</span>
@@ -132,6 +125,14 @@ export function RemoteVideoTile({
             </span>
           )}
         </div>
+
+        {joinedAt && (
+          <div className="px-2.5 py-1 rounded-xl bg-black/60 backdrop-blur-md border border-white/10 text-[10px] font-mono text-gray-300">
+            {typeof joinedAt === 'number'
+              ? new Date(joinedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+              : new Date(String(joinedAt)).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </div>
+        )}
       </div>
     </div>
   );

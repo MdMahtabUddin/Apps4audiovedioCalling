@@ -25,6 +25,7 @@ import {
   Square,
   MessageSquare,
   FileText,
+  Clock,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -107,7 +108,7 @@ export function MeetingRoomView() {
   const [showParticipantsDrawer, setShowParticipantsDrawer] = useState(false);
   const [showChatAndNotes, setShowChatAndNotes] = useState(false);
   const [httpKnocks, setHttpKnocks] = useState<Array<{ socketId: string; displayName: string; userId: string; requestedAt: number }>>([]);
-  const [apiParticipants, setApiParticipants] = useState<Array<{ id: string; userId?: string; displayName: string; name: string; role: string; avatar?: string | null }>>([]);
+  const [apiParticipants, setApiParticipants] = useState<Array<{ id: string; userId?: string; displayName: string; name: string; role: string; avatar?: string | null; joinedAt?: string | number | null }>>([]);
 
   // Phase 6 In-Meeting Audio & Video Recording Engine
   const {
@@ -209,6 +210,7 @@ export function MeetingRoomView() {
             name: candidate.displayName,
             displayName: candidate.displayName,
             role: 'PARTICIPANT',
+            joinedAt: new Date().toISOString(),
           },
         ];
       });
@@ -255,6 +257,7 @@ export function MeetingRoomView() {
           name: c.displayName,
           displayName: c.displayName,
           role: 'PARTICIPANT',
+          joinedAt: new Date().toISOString(),
         }));
       return [...prev, ...newItems];
     });
@@ -291,14 +294,21 @@ export function MeetingRoomView() {
     }
   }, [remoteReaction]);
 
-  // Meeting timer
+  // Meeting duration timer (formats hh:mm:ss or mm:ss)
   useEffect(() => {
     const start = Date.now();
     const interval = setInterval(() => {
       const elapsed = Math.floor((Date.now() - start) / 1000);
-      const mins = Math.floor(elapsed / 60).toString().padStart(2, '0');
+      const hours = Math.floor(elapsed / 3600);
+      const mins = Math.floor((elapsed % 3600) / 60)
+        .toString()
+        .padStart(2, '0');
       const secs = (elapsed % 60).toString().padStart(2, '0');
-      setMeetingDuration(`${mins}:${secs}`);
+      if (hours > 0) {
+        setMeetingDuration(`${hours.toString().padStart(2, '0')}:${mins}:${secs}`);
+      } else {
+        setMeetingDuration(`${mins}:${secs}`);
+      }
     }, 1000);
     return () => clearInterval(interval);
   }, []);
@@ -348,6 +358,7 @@ export function MeetingRoomView() {
       stream?: MediaStream;
       isAudioEnabled?: boolean;
       isVideoEnabled?: boolean;
+      joinedAt?: string | number | null;
     }>();
 
     // 1. WebRTC Remote Streams (Direct P2P audio/video)
@@ -360,6 +371,7 @@ export function MeetingRoomView() {
         stream,
         isAudioEnabled: sockInfo?.isAudioEnabled ?? true,
         isVideoEnabled: sockInfo?.isVideoEnabled ?? true,
+        joinedAt: sockInfo?.joinedAt,
       });
     });
 
@@ -372,6 +384,7 @@ export function MeetingRoomView() {
           role: p.role,
           isAudioEnabled: p.isAudioEnabled,
           isVideoEnabled: p.isVideoEnabled,
+          joinedAt: p.joinedAt,
         });
       }
     });
@@ -395,6 +408,9 @@ export function MeetingRoomView() {
           existingEntry.stream = peerStream;
           existingEntry.isVideoEnabled = peerStream.getVideoTracks().some((t) => t.enabled);
         }
+        if (!existingEntry.joinedAt && p.joinedAt) {
+          existingEntry.joinedAt = p.joinedAt;
+        }
       } else {
         map.set(p.id, {
           id: p.id,
@@ -404,6 +420,7 @@ export function MeetingRoomView() {
           stream: peerStream,
           isAudioEnabled: true,
           isVideoEnabled: peerStream ? peerStream.getVideoTracks().some((t) => t.enabled) : false,
+          joinedAt: p.joinedAt || new Date().toISOString(),
         });
       }
     });
@@ -453,16 +470,19 @@ export function MeetingRoomView() {
       isAudioEnabled: p.isAudioEnabled ?? true,
       isVideoEnabled: p.isVideoEnabled ?? false,
       isHandRaised: false,
-      joinedAt: Date.now(),
+      joinedAt: p.joinedAt ? new Date(p.joinedAt).getTime() : Date.now(),
     }));
   }, [unifiedRemoteList]);
 
-  // Grid layout class based on participant count
+  // Dynamic scalable layout engineered for up to 50 concurrent participants
   const getGridClasses = () => {
-    if (totalParticipants === 1) return 'max-w-4xl w-full aspect-video';
-    if (totalParticipants === 2) return 'w-full grid grid-cols-1 md:grid-cols-2 gap-4 max-w-6xl';
-    if (totalParticipants <= 4) return 'w-full grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-6xl';
-    return 'w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-7xl';
+    if (totalParticipants === 1) return 'max-w-4xl w-full aspect-video mx-auto';
+    if (totalParticipants === 2) return 'w-full grid grid-cols-1 md:grid-cols-2 gap-4 max-w-6xl mx-auto';
+    if (totalParticipants <= 4) return 'w-full grid grid-cols-2 gap-3.5 max-w-6xl mx-auto';
+    if (totalParticipants <= 9) return 'w-full grid grid-cols-2 sm:grid-cols-3 gap-3 max-w-7xl mx-auto';
+    if (totalParticipants <= 16) return 'w-full grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5 max-w-7xl mx-auto';
+    if (totalParticipants <= 25) return 'w-full grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 max-w-7xl max-h-[72vh] overflow-y-auto p-1 mx-auto';
+    return 'w-full grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2 max-w-7xl max-h-[72vh] overflow-y-auto p-1 mx-auto';
   };
 
   const isLocalSpeaking = activeSpeakerId === 'local' && micVolume > 20;
@@ -550,9 +570,7 @@ export function MeetingRoomView() {
               )}
             </div>
             <div className="flex items-center gap-2 text-[11px] text-gray-400">
-              <span className="font-mono">{meetingDuration}</span>
-              <span>•</span>
-              <span className="flex items-center gap-1.5 text-emerald-400">
+              <span className="flex items-center gap-1.5 text-emerald-400 font-semibold">
                 <span
                   className={`h-2 w-2 rounded-full ${
                     connectionStatus === 'connected'
@@ -563,9 +581,24 @@ export function MeetingRoomView() {
                   }`}
                 />
                 <span className="capitalize">{connectionStatus}</span>
-                <span>({totalParticipants} online)</span>
+                <span>({totalParticipants}/50 online)</span>
               </span>
             </div>
+          </div>
+        </div>
+
+        {/* Meeting Duration & LIVE Status Pill */}
+        <div className="flex items-center gap-2 bg-[#050a14]/80 px-3 py-1.5 rounded-xl border border-white/10 shadow-inner">
+          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-bold text-[11px] tracking-wider uppercase">
+            <span className="flex h-2 w-2 relative">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+            </span>
+            <span>LIVE</span>
+          </div>
+          <div className="flex items-center gap-1.5 text-white font-mono text-xs sm:text-sm font-black pl-1 border-l border-white/10">
+            <Clock className="h-3.5 w-3.5 text-[#388BFF]" />
+            <span>{meetingDuration}</span>
           </div>
         </div>
 
@@ -692,6 +725,7 @@ export function MeetingRoomView() {
                       quality={networkQuality.get(peerId)}
                       isAudioEnabled={info?.isAudioEnabled ?? true}
                       isVideoEnabled={info?.isVideoEnabled ?? true}
+                      joinedAt={info?.joinedAt}
                     />
                   </div>
                 );
@@ -720,6 +754,15 @@ export function MeetingRoomView() {
                     isVideoEnabled && localStream ? 'opacity-100' : 'opacity-0'
                   }`}
                 />
+
+                {/* Top Right: Glowing LIVE Badge for Local User */}
+                <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-black/75 backdrop-blur-md border border-emerald-500/35 text-[11px] font-bold text-white shadow-lg shadow-black/60 z-10">
+                  <span className="flex h-2 w-2 relative">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                  </span>
+                  <span className="tracking-wider uppercase text-emerald-400 font-extrabold">LIVE</span>
+                </div>
 
                 {/* Video Disabled Avatar Display */}
                 {(!isVideoEnabled || !localStream) && (
@@ -759,7 +802,7 @@ export function MeetingRoomView() {
 
                 {/* Single participant invitation prompt */}
                 {unifiedRemoteList.length === 0 && (
-                  <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10 text-xs text-[#388BFF] font-medium flex items-center gap-1.5 shadow-lg">
+                  <div className="absolute top-4 left-4 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10 text-xs text-[#388BFF] font-medium flex items-center gap-1.5 shadow-lg">
                     <Share2 className="h-3.5 w-3.5 text-[#388BFF]" />
                     <span>Share link to invite participants</span>
                   </div>
@@ -779,6 +822,7 @@ export function MeetingRoomView() {
                       quality={networkQuality.get(participant.id)}
                       isAudioEnabled={participant.isAudioEnabled ?? true}
                       isVideoEnabled={participant.isVideoEnabled ?? true}
+                      joinedAt={participant.joinedAt}
                     />
                   );
                 }
@@ -799,6 +843,15 @@ export function MeetingRoomView() {
                   >
                     {/* Ambient Glow */}
                     <div className="absolute inset-0 bg-gradient-to-tr from-[#0066FF]/15 via-transparent to-[#FF7A00]/15 pointer-events-none" />
+
+                    {/* Top Right: Glowing LIVE Badge */}
+                    <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-black/75 backdrop-blur-md border border-emerald-500/35 text-[11px] font-bold text-white shadow-lg shadow-black/60 z-10">
+                      <span className="flex h-2 w-2 relative">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                      </span>
+                      <span className="tracking-wider uppercase text-emerald-400 font-extrabold">LIVE</span>
+                    </div>
 
                     {/* Dedicated unmuted audio element for voice clarity */}
                     {remoteStreams.get(participant.id) && (
@@ -849,13 +902,20 @@ export function MeetingRoomView() {
                       </div>
                     </div>
 
-                    {/* Bottom Status Bar */}
+                    {/* Bottom Status Bar with Join Time */}
                     <div className="absolute bottom-3 left-4 right-4 flex items-center justify-between text-xs text-gray-400">
                       <div className="flex items-center gap-1.5 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-xl border border-white/10 shadow-sm">
                         <Volume2 className="h-3.5 w-3.5 text-emerald-400" />
                         <span className="text-[11px] text-gray-300 font-semibold">Audio Ready</span>
                       </div>
-                      <span className="text-[10px] text-gray-400 font-medium">MetroNet Low-Latency</span>
+                      <div className="flex items-center gap-2">
+                        {participant.joinedAt && (
+                          <span className="text-[10px] text-gray-300 font-mono bg-black/50 px-2.5 py-1 rounded-xl border border-white/10 shadow-sm">
+                            Joined {new Date(participant.joinedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        )}
+                        <span className="text-[10px] text-gray-400 font-medium hidden sm:inline">MetroNet Low-Latency</span>
+                      </div>
                     </div>
                   </div>
                 );
@@ -864,6 +924,69 @@ export function MeetingRoomView() {
           </div>
         )}
       </main>
+
+      {/* Live Attendee Marquee Ribbon */}
+      <div className="h-9 px-3 sm:px-4 bg-[#050a14]/95 border-t border-b border-[#0066FF]/25 backdrop-blur-md flex items-center overflow-hidden z-20 shrink-0 select-none">
+        <div className="flex items-center gap-2 pr-3 sm:pr-4 border-r border-white/10 shrink-0 z-10 bg-[#050a14] text-xs font-bold text-[#388BFF]">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#0066FF] opacity-75" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-[#0066FF]" />
+          </span>
+          <span className="uppercase tracking-wider font-mono text-[10px] sm:text-[11px]">
+            Attendees ({totalParticipants}/50)
+          </span>
+        </div>
+        <div className="flex-1 overflow-hidden relative ml-3">
+          <div className="animate-marquee flex items-center gap-8 text-xs text-gray-300">
+            {[0, 1].map((copyIndex) => (
+              <React.Fragment key={copyIndex}>
+                {/* Local user */}
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="h-5 w-5 rounded-full bg-gradient-to-tr from-[#FF7A00] to-[#E65100] text-white font-black text-[10px] flex items-center justify-center shadow-sm">
+                    P1
+                  </span>
+                  <span className="font-bold text-white">You {isHost ? '(Host)' : ''}</span>
+                  <span className="text-[10px] text-emerald-400 font-mono font-semibold">Active</span>
+                </div>
+                <span className="text-gray-600 font-black">•</span>
+
+                {/* All Remote Attendees */}
+                {unifiedRemoteList.length > 0 ? (
+                  unifiedRemoteList.map((p) => {
+                    const initials = p.displayName.slice(0, 2).toUpperCase();
+                    const joinTimeStr = p.joinedAt
+                      ? new Date(p.joinedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                      : 'Just now';
+
+                    return (
+                      <React.Fragment key={`${copyIndex}-${p.id}`}>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="h-5 w-5 rounded-full bg-[#0066FF] text-white font-bold text-[10px] flex items-center justify-center shadow-sm">
+                            {initials}
+                          </span>
+                          <span className="font-semibold text-white">{p.displayName}</span>
+                          <span className="text-[9px] px-1.5 py-0.2 rounded bg-white/10 text-gray-300 uppercase font-bold tracking-wider">
+                            {p.role}
+                          </span>
+                          <span className="text-[10px] text-[#FFA033] font-mono">
+                            Joined {joinTimeStr}
+                          </span>
+                        </div>
+                        <span className="text-gray-600 font-black">•</span>
+                      </React.Fragment>
+                    );
+                  })
+                ) : (
+                  <React.Fragment key={`waiting-${copyIndex}`}>
+                    <span className="text-xs text-gray-400 font-medium">Waiting for additional participants (Room capacity: 50)...</span>
+                    <span className="text-gray-600 font-black">•</span>
+                  </React.Fragment>
+                )}
+              </React.Fragment>
+            ))}
+          </div>
+        </div>
+      </div>
 
       {/* Floating Bottom Meeting Controls Bar */}
       <footer className="h-20 px-4 sm:px-6 bg-[#0c101c]/90 border-t border-white/[0.08] backdrop-blur-2xl flex items-center justify-between z-20 shrink-0">
