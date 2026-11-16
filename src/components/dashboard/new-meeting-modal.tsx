@@ -44,6 +44,9 @@ export function NewMeetingModal({ isOpen, onClose, onMeetingCreated }: NewMeetin
         throw new Error('Failed to create meeting');
       }
 
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(`metromeet_host_${meetingId}`, 'true');
+      }
       onMeetingCreated?.();
       router.push(`/meeting/${meetingId}`);
     } catch (e) {

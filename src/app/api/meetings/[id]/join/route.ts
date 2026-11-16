@@ -63,10 +63,10 @@ export async function POST(
       return NextResponse.json({ error: 'This meeting has ended' }, { status: 410 });
     }
 
-    const isHost =
-      (session?.userId && session.userId === activeMeeting.hostId) ||
-      activeMeeting.hostId === 'usr_guest_host_system' ||
-      activeMeeting.hostId === 'guest_host_system';
+    const cookieHostId = req.cookies.get(`metromeet_host_${id}`)?.value;
+    const isHost = session?.userId
+      ? session.userId === activeMeeting.hostId
+      : !!cookieHostId && cookieHostId === activeMeeting.hostId;
 
     // Check lock
     if (activeMeeting.isLocked && !isHost) {

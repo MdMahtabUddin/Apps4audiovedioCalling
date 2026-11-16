@@ -6,9 +6,15 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getCurrentUser();
     let hostId = session?.userId;
+    let guestHostToken: string | null = null;
 
     if (!hostId) {
-      const guestHost = await userService.getOrCreateGuestHost();
+      guestHostToken = 'gst_' + Math.random().toString(36).substring(2, 12);
+      const guestHost = await userService.create({
+        name: 'Meeting Host',
+        email: `${guestHostToken}@metromeet.internal`,
+        passwordHash: 'guest-disabled-password',
+      });
       hostId = guestHost.id;
     }
 
@@ -26,7 +32,16 @@ export async function POST(req: NextRequest) {
       waitingRoom: !!waitingRoom,
     });
 
-    return NextResponse.json({ meeting }, { status: 201 });
+    const response = NextResponse.json({ meeting }, { status: 201 });
+    if (guestHostToken) {
+      response.cookies.set(`metromeet_host_${id}`, hostId, {
+        path: '/',
+        httpOnly: true,
+        maxAge: 86400,
+        sameSite: 'lax',
+      });
+    }
+    return response;
   } catch (error) {
     console.error('Create meeting error:', error);
     return NextResponse.json({ error: 'Failed to create meeting' }, { status: 500 });

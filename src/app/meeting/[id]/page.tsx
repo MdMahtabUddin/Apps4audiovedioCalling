@@ -134,12 +134,16 @@ function MeetingContainer({ meetingId }: { meetingId: string }) {
 
   // If already joined, show LiveKit stage if configured, or WebRTC view
   if (isJoined) {
+    const isMeetingHost =
+      (currentUser?.id && currentUser.id === meetingInfo.hostId) ||
+      (typeof window !== 'undefined' && localStorage.getItem(`metromeet_host_${meetingId}`) === 'true');
+
     if (livekitData?.token && livekitData?.wsUrl && !livekitFailed) {
       return (
         <LiveKitMeetingStage
           meetingId={meetingId}
           meetingTitle={meetingInfo.title}
-          isHost={currentUser?.id === meetingInfo.hostId}
+          isHost={isMeetingHost}
           token={livekitData.token}
           serverUrl={livekitData.wsUrl}
           displayName={currentUser?.name || 'Participant'}
