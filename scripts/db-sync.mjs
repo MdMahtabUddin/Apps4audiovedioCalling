@@ -1,9 +1,11 @@
 import { execSync } from 'child_process';
 
 const dbUrl =
+  process.env.DATABASE_URL ||
+  process.env.POSTGRES_PRISMA_URL ||
   process.env.POSTGRES_URL ||
-  process.env.PRISMA_DATABASE_URL ||
-  process.env.DATABASE_URL;
+  process.env.STORAGE_URL ||
+  process.env.PRISMA_DATABASE_URL;
 
 console.log('🔄 Checking database connection and schema sync...');
 
