@@ -17,10 +17,10 @@ export async function GET(req: NextRequest) {
     const apiSecret = process.env.LIVEKIT_API_SECRET;
     const wsUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL || process.env.LIVEKIT_URL;
 
-    if (!apiKey || !apiSecret || !wsUrl) {
+    if (!apiKey || !apiSecret || !wsUrl || apiSecret.includes('•') || apiSecret.length < 16) {
       return NextResponse.json({
         isConfigured: false,
-        message: 'LiveKit server credentials not configured in environment variables.',
+        message: 'LiveKit server credentials not properly configured (secret key is masked with dots or invalid). Falling back to WebRTC engine.',
       });
     }
 

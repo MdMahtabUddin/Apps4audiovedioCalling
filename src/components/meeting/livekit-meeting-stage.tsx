@@ -75,6 +75,47 @@ function LiveKitInnerStage({
   const [activeReaction, setActiveReaction] = useState<string | null>(null);
   const [isCopied, setIsCopied] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
+  const [knocks, setKnocks] = useState<Array<{ id: string; displayName: string }>>([]);
+
+  // Poll for waiting room admission requests if host
+  useEffect(() => {
+    if (!isHost) return;
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/meetings/${meetingId}/knocks`);
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.waitingList)) {
+            setKnocks(data.waitingList);
+          }
+        }
+      } catch {}
+    }, 1500);
+    return () => clearInterval(interval);
+  }, [isHost, meetingId]);
+
+  const handleAdmit = async (participantId: string) => {
+    try {
+      await fetch(`/api/meetings/${meetingId}/knocks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ participantId, action: 'APPROVE' }),
+      });
+      setKnocks((prev) => prev.filter((k) => k.id !== participantId));
+      toast.success('Participant admitted to meeting!');
+    } catch {}
+  };
+
+  const handleDeny = async (participantId: string) => {
+    try {
+      await fetch(`/api/meetings/${meetingId}/knocks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ participantId, action: 'DENY' }),
+      });
+      setKnocks((prev) => prev.filter((k) => k.id !== participantId));
+    } catch {}
+  };
 
   // Call duration counter
   useEffect(() => {
@@ -133,6 +174,32 @@ function LiveKitInnerStage({
       {activeReaction && (
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-8xl z-50 animate-bounce pointer-events-none drop-shadow-2xl">
           {activeReaction}
+        </div>
+      )}
+
+      {/* Waiting Room Knocks Notification for Host */}
+      {knocks.length > 0 && (
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-50 bg-[#0d1322]/95 border border-[#0066FF]/40 rounded-2xl p-3 shadow-2xl backdrop-blur-xl flex items-center gap-4 animate-in fade-in slide-in-from-top-4">
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4 text-[#FF7A00] animate-pulse" />
+            <span className="text-xs font-semibold text-white">
+              <strong className="text-[#388BFF]">{knocks[0].displayName}</strong> wants to join this meeting
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => handleAdmit(knocks[0].id)}
+              className="px-3 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-md active:scale-95 cursor-pointer"
+            >
+              Admit
+            </button>
+            <button
+              onClick={() => handleDeny(knocks[0].id)}
+              className="px-3 py-1 rounded-xl bg-rose-600/20 hover:bg-rose-600/40 text-rose-300 border border-rose-500/30 text-xs font-semibold transition-all active:scale-95 cursor-pointer"
+            >
+              Deny
+            </button>
+          </div>
         </div>
       )}
 
