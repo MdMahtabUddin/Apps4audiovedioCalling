@@ -1,15 +1,20 @@
 import { execSync } from 'child_process';
 
-const dbUrl =
-  process.env.DATABASE_URL ||
-  process.env.POSTGRES_PRISMA_URL ||
-  process.env.POSTGRES_URL ||
-  process.env.STORAGE_URL ||
-  process.env.PRISMA_DATABASE_URL;
+const rawUrls = [
+  process.env.POSTGRES_PRISMA_URL,
+  process.env.POSTGRES_URL,
+  process.env.STORAGE_URL,
+  process.env.DATABASE_URL,
+  process.env.PRISMA_DATABASE_URL,
+];
+
+const dbUrl = rawUrls.find(
+  (u) => u && !u.includes('db.prisma.io') && !u.includes('localhost:5432')
+);
 
 console.log('🔄 Checking database connection and schema sync...');
 
-if (dbUrl && !dbUrl.includes('localhost:5432')) {
+if (dbUrl) {
   try {
     console.log('🔄 Running prisma db push to sync all PostgreSQL tables...');
     execSync('npx prisma db push --skip-generate --accept-data-loss', {

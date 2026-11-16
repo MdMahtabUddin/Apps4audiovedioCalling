@@ -21,6 +21,7 @@ function MeetingContainer({ meetingId }: { meetingId: string }) {
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [livekitData, setLivekitData] = useState<{ token: string; wsUrl: string } | null>(null);
+  const [livekitFailed, setLivekitFailed] = useState(false);
 
   const { isJoined, isWaitingApproval, leaveRoom } = useMeeting();
 
@@ -133,7 +134,7 @@ function MeetingContainer({ meetingId }: { meetingId: string }) {
 
   // If already joined, show LiveKit stage if configured, or WebRTC view
   if (isJoined) {
-    if (livekitData?.token && livekitData?.wsUrl) {
+    if (livekitData?.token && livekitData?.wsUrl && !livekitFailed) {
       return (
         <LiveKitMeetingStage
           meetingId={meetingId}
@@ -143,6 +144,7 @@ function MeetingContainer({ meetingId }: { meetingId: string }) {
           serverUrl={livekitData.wsUrl}
           displayName={currentUser?.name || 'Participant'}
           onLeave={leaveRoom}
+          onFallback={() => setLivekitFailed(true)}
         />
       );
     }

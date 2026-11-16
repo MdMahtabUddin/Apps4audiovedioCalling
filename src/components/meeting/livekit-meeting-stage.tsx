@@ -45,6 +45,7 @@ interface LiveKitMeetingStageProps {
   displayName: string;
   onLeave: () => void;
   onEndMeeting?: () => Promise<void>;
+  onFallback?: () => void;
 }
 
 function LiveKitInnerStage({
@@ -421,6 +422,7 @@ export function LiveKitMeetingStage({
   displayName,
   onLeave,
   onEndMeeting,
+  onFallback,
 }: LiveKitMeetingStageProps) {
   return (
     <LiveKitRoom
@@ -430,7 +432,10 @@ export function LiveKitMeetingStage({
       video={true}
       audio={true}
       data-lk-theme="default"
-      onDisconnected={onLeave}
+      onError={(err) => {
+        console.warn('LiveKit cloud connection notice, falling back to WebRTC engine:', err);
+        onFallback?.();
+      }}
       className="h-screen w-screen overflow-hidden bg-[#06080e]"
     >
       <RoomAudioRenderer />
