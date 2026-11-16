@@ -166,6 +166,7 @@ export async function ensureDatabaseSchema(): Promise<boolean> {
       return true;
     } catch (initErr: any) {
       console.error('Failed to auto-initialize PostgreSQL schema:', initErr);
+      initPromise = null;
       return false;
     }
   })();

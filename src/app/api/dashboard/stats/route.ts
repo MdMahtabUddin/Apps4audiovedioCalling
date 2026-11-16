@@ -8,10 +8,14 @@ export async function GET() {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const user = await userService.findById(session.userId);
-  if (!user) {
-    return NextResponse.json({ error: 'User not found' }, { status: 404 });
-  }
+  const dbUser = await userService.findById(session.userId);
+  const user = dbUser || {
+    id: session.userId,
+    name: session.name || 'User',
+    email: session.email,
+    avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(session.name || 'User')}`,
+    emailVerified: true,
+  };
 
   const [recentMeetings, scheduledMeetings] = await Promise.all([
     meetingService.getRecentAndHistory(session.userId),

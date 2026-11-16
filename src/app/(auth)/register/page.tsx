@@ -84,7 +84,7 @@ export default function RegisterPage() {
               <Video className="h-6 w-6 text-white" />
             </div>
             <span className="text-2xl font-bold tracking-tight text-white">
-              Meet<span className="text-indigo-400">Flow</span>
+              Metro<span className="text-indigo-400">Meet</span>
             </span>
           </Link>
           <h2 className="text-2xl font-bold tracking-tight text-white pt-2">Create an account</h2>

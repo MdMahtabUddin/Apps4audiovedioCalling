@@ -102,8 +102,7 @@ export async function checkPrisma(): Promise<boolean> {
     } catch (schemaErr) {
       console.error('Schema auto-init failed:', schemaErr);
     }
-    console.warn('Prisma check failed, falling back to local store');
-    isPrismaAvailable = false;
+    console.warn('Prisma check failed, falling back to local store for this request');
     return false;
   }
 }
