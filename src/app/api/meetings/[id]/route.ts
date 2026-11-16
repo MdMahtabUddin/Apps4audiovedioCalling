@@ -69,10 +69,18 @@ export async function GET(
       );
     }
 
+    const activeParticipants = await meetingService.getParticipants(id);
+    const hasActiveHost = activeParticipants.some((p: any) => p.role === 'HOST' && !p.leftAt);
+
     const cookieHostId = req.cookies.get(`metromeet_host_${id}`)?.value;
-    const isHost = session?.userId
+    let isHost = session?.userId
       ? session.userId === activeMeeting.hostId
       : !!cookieHostId && cookieHostId === activeMeeting.hostId;
+
+    // First person rule: If the meeting has NO active host yet, this first visitor is the host organizer!
+    if (!hasActiveHost && (!activeMeeting.hostId || activeMeeting.hostId === 'guest_host_system' || activeMeeting.hostId.startsWith('usr_guest_') || activeMeeting.hostId.startsWith('gst_') || !cookieHostId)) {
+      isHost = true;
+    }
 
     return NextResponse.json({
       exists: true,
@@ -83,7 +91,7 @@ export async function GET(
       isHost,
       requiresPassword: !!activeMeeting.hasPassword && !isHost,
       isLocked: activeMeeting.isLocked && !isHost,
-      waitingRoom: !!activeMeeting.waitingRoom && !isHost,
+      waitingRoom: !isHost,
       isActive: activeMeeting.isActive,
       participantCount: activeMeeting.participantCount,
       settings: activeMeeting.settings,

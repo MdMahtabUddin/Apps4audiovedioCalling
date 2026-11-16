@@ -63,10 +63,18 @@ export async function POST(
       return NextResponse.json({ error: 'This meeting has ended' }, { status: 410 });
     }
 
+    const activeParticipants = await meetingService.getParticipants(id);
+    const hasActiveHost = activeParticipants.some((p: any) => p.role === 'HOST' && !p.leftAt);
+
     const cookieHostId = req.cookies.get(`metromeet_host_${id}`)?.value;
-    const isHost = session?.userId
+    let isHost = session?.userId
       ? session.userId === activeMeeting.hostId
       : !!cookieHostId && cookieHostId === activeMeeting.hostId;
+
+    // First person rule: If the meeting has NO active host yet, this first visitor becomes the HOST!
+    if (!hasActiveHost) {
+      isHost = true;
+    }
 
     // Check lock
     if (activeMeeting.isLocked && !isHost) {
@@ -90,15 +98,15 @@ export async function POST(
     if (!finalName) {
       if (session) {
         const u = await userService.findById(session.userId);
-        finalName = u?.name || session.name || 'Participant';
+        finalName = u?.name || session.name || (isHost ? 'Host' : 'Participant');
       } else {
-        finalName = 'Guest User';
+        finalName = isHost ? 'Meeting Host' : 'Guest User';
       }
     }
 
     const role = isHost ? 'HOST' : 'PARTICIPANT';
-    // If waiting room is disabled, everyone joins immediately!
-    const isApproved = activeMeeting.waitingRoom ? isHost : true;
+    // Host enters immediately. Participants must wait for host approval!
+    const isApproved = isHost;
 
     const participant = await meetingService.joinMeeting({
       meetingId: id,
@@ -108,7 +116,7 @@ export async function POST(
       isApproved,
     });
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       participant: {
         id: participant.id,
@@ -123,11 +131,22 @@ export async function POST(
         hostId: activeMeeting.hostId,
         hostName: activeMeeting.hostName,
         isLocked: activeMeeting.isLocked,
-        waitingRoom: activeMeeting.waitingRoom,
+        waitingRoom: true,
         settings: activeMeeting.settings,
       },
       status: isApproved ? 'JOINED' : 'WAITING_ROOM',
     });
+
+    if (isHost) {
+      response.cookies.set(`metromeet_host_${id}`, activeMeeting.hostId, {
+        path: '/',
+        httpOnly: true,
+        maxAge: 86400,
+        sameSite: 'lax',
+      });
+    }
+
+    return response;
   } catch (error) {
     console.error('Join meeting error:', error);
     return NextResponse.json(

@@ -315,7 +315,7 @@ export function PreJoinScreen({ meetingInfo, initialName = '', onJoinSuccess }: 
               className="w-full text-base font-bold shadow-xl shadow-[#FF7A00]/30 mt-2"
               isLoading={isJoining}
             >
-              Join Meeting Now
+              {meetingInfo.isHost ? 'Join Meeting as Host' : 'Ask to Join Meeting'}
               <ArrowRight className="h-4 w-4 ml-1" />
             </Button>
           </form>

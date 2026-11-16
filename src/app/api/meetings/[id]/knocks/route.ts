@@ -63,12 +63,12 @@ export async function POST(
 
     const { action, participantId } = await req.json();
 
-    if (action === 'ADMIT' && participantId) {
+    if ((action === 'ADMIT' || action === 'APPROVE') && participantId) {
       await meetingService.admitParticipant(participantId);
       return NextResponse.json({ success: true, message: 'Participant admitted' });
     }
 
-    if (action === 'DENY' && participantId) {
+    if ((action === 'DENY' || action === 'REJECT') && participantId) {
       await meetingService.denyParticipant(participantId);
       return NextResponse.json({ success: true, message: 'Participant denied' });
     }
