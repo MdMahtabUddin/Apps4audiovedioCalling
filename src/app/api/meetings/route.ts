@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth/session';
-import { meetingService } from '@/lib/db';
+import { meetingService, userService } from '@/lib/db';
 
 export async function POST(req: NextRequest) {
   try {
     const session = await getCurrentUser();
-    const hostId = session?.userId;
+    let hostId = session?.userId;
 
     if (!hostId) {
-      // If no session, create a guest host account or require auth
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+      const guestHost = await userService.getOrCreateGuestHost();
+      hostId = guestHost.id;
     }
 
     const { id, title, password, waitingRoom } = await req.json();

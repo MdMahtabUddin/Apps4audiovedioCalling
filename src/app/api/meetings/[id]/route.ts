@@ -69,7 +69,10 @@ export async function GET(
       );
     }
 
-    const isHost = session?.userId === activeMeeting.hostId;
+    const isHost =
+      (session?.userId && session.userId === activeMeeting.hostId) ||
+      activeMeeting.hostId === 'usr_guest_host_system' ||
+      activeMeeting.hostId === 'guest_host_system';
 
     return NextResponse.json({
       exists: true,
@@ -80,7 +83,7 @@ export async function GET(
       isHost,
       requiresPassword: !!activeMeeting.hasPassword && !isHost,
       isLocked: activeMeeting.isLocked && !isHost,
-      waitingRoom: !isHost,
+      waitingRoom: !!activeMeeting.waitingRoom && !isHost,
       isActive: activeMeeting.isActive,
       participantCount: activeMeeting.participantCount,
       settings: activeMeeting.settings,

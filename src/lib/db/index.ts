@@ -397,8 +397,35 @@ export const meetingService = {
   }) {
     const usePg = await checkPrisma();
     if (usePg) {
-      return prisma.meeting.create({
-        data: {
+      try {
+        const hostExists = await prisma.user.findUnique({ where: { id: data.hostId } });
+        if (!hostExists) {
+          await prisma.user.upsert({
+            where: { id: data.hostId },
+            update: {},
+            create: {
+              id: data.hostId,
+              name: 'Meeting Host',
+              email: `host_${data.hostId.replace(/[^a-zA-Z0-9]/g, '') || 'default'}@metromeet.internal`,
+              passwordHash: 'auto-provisioned-host',
+              emailVerified: true,
+            },
+          });
+        }
+      } catch (userErr) {
+        console.warn('Host user ensure error:', userErr);
+      }
+
+      return prisma.meeting.upsert({
+        where: { id: data.id },
+        update: {
+          title: data.title,
+          hostId: data.hostId,
+          password: data.password || null,
+          waitingRoom: data.waitingRoom || false,
+          isActive: true,
+        },
+        create: {
           id: data.id,
           title: data.title,
           hostId: data.hostId,
@@ -456,10 +483,36 @@ export const meetingService = {
 
     const usePg = await checkPrisma();
     if (usePg) {
+      let validUserId = data.userId || null;
+      if (validUserId) {
+        try {
+          const u = await prisma.user.findUnique({ where: { id: validUserId } });
+          if (!u) validUserId = null;
+        } catch {
+          validUserId = null;
+        }
+      }
+
+      try {
+        const m = await prisma.meeting.findUnique({ where: { id: data.meetingId } });
+        if (!m) {
+          const guestHost = await userService.getOrCreateGuestHost();
+          await prisma.meeting.create({
+            data: {
+              id: data.meetingId,
+              title: 'Instant Meeting',
+              hostId: guestHost.id,
+            },
+          });
+        }
+      } catch (meetErr) {
+        console.warn('Meeting ensure in joinMeeting note:', meetErr);
+      }
+
       return prisma.meetingParticipant.create({
         data: {
           meetingId: data.meetingId,
-          userId: data.userId || null,
+          userId: validUserId,
           guestName: data.name,
           role,
           isApproved,

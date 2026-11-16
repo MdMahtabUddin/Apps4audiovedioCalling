@@ -63,7 +63,10 @@ export async function POST(
       return NextResponse.json({ error: 'This meeting has ended' }, { status: 410 });
     }
 
-    const isHost = session?.userId === activeMeeting.hostId;
+    const isHost =
+      (session?.userId && session.userId === activeMeeting.hostId) ||
+      activeMeeting.hostId === 'usr_guest_host_system' ||
+      activeMeeting.hostId === 'guest_host_system';
 
     // Check lock
     if (activeMeeting.isLocked && !isHost) {
@@ -87,14 +90,15 @@ export async function POST(
     if (!finalName) {
       if (session) {
         const u = await userService.findById(session.userId);
-        finalName = u?.name || 'Participant';
+        finalName = u?.name || session.name || 'Participant';
       } else {
         finalName = 'Guest User';
       }
     }
 
     const role = isHost ? 'HOST' : 'PARTICIPANT';
-    const isApproved = isHost; // Host is auto-approved, incoming guests wait for host admission
+    // If waiting room is disabled, everyone joins immediately!
+    const isApproved = activeMeeting.waitingRoom ? isHost : true;
 
     const participant = await meetingService.joinMeeting({
       meetingId: id,
