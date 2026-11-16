@@ -33,6 +33,7 @@ import {
   Wifi,
 } from 'lucide-react';
 import { BrandLogo } from '@/components/ui/brand-logo';
+import { soundEngine } from '@/lib/audio/sound-engine';
 import { useToast } from '@/components/ui/toast';
 import { ChatAndNotesDrawer } from './chat-and-notes-drawer';
 
@@ -68,6 +69,19 @@ function LiveKitInnerStage({
   const connectionState = useConnectionState();
   const { localParticipant } = useLocalParticipant();
   const participants = useParticipants();
+
+  // Participant join chime and toast notification
+  const prevCountRef = React.useRef(participants.length);
+  useEffect(() => {
+    if (participants.length > prevCountRef.current) {
+      soundEngine.playAdmittedChime();
+      const latest = participants[participants.length - 1];
+      if (latest && !latest.isLocal) {
+        toast.info(`🔔 ${latest.name || 'Participant'} joined the meeting`);
+      }
+    }
+    prevCountRef.current = participants.length;
+  }, [participants, toast]);
 
   // Drawers & Modals
   const [showChatAndNotes, setShowChatAndNotes] = useState(false);

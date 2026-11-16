@@ -63,18 +63,10 @@ export async function POST(
       return NextResponse.json({ error: 'This meeting has ended' }, { status: 410 });
     }
 
-    const activeParticipants = await meetingService.getParticipants(id);
-    const hasActiveHost = activeParticipants.some((p: any) => p.role === 'HOST' && !p.leftAt);
-
     const cookieHostId = req.cookies.get(`metromeet_host_${id}`)?.value;
-    let isHost = session?.userId
+    const isHost = session?.userId
       ? session.userId === activeMeeting.hostId
       : !!cookieHostId && cookieHostId === activeMeeting.hostId;
-
-    // First person rule: If the meeting has NO active host yet, this first visitor becomes the HOST!
-    if (!hasActiveHost) {
-      isHost = true;
-    }
 
     // Check lock
     if (activeMeeting.isLocked && !isHost) {
@@ -105,8 +97,8 @@ export async function POST(
     }
 
     const role = isHost ? 'HOST' : 'PARTICIPANT';
-    // Host enters immediately. Participants must wait for host approval!
-    const isApproved = isHost;
+    // Direct instant entry into LiveKit media room
+    const isApproved = true;
 
     const participant = await meetingService.joinMeeting({
       meetingId: id,
