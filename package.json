@@ -1,5 +1,5 @@
 {
-  "name": "meetflow",
+  "name": "metromeet",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -16,10 +16,13 @@
     "test:phase5": "node scripts/test-phase5.mjs"
   },
   "dependencies": {
+    "@livekit/components-react": "^2.9.25",
     "@prisma/client": "6.4.1",
     "bcryptjs": "^3.0.3",
     "clsx": "^2.1.1",
     "jsonwebtoken": "^9.0.3",
+    "livekit-client": "^2.24.1",
+    "livekit-server-sdk": "^2.20.0",
     "lucide-react": "^1.70.0",
     "next": "16.4.5",
     "react": "19.3.0",

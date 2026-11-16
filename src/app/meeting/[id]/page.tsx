@@ -10,6 +10,7 @@ import { VideoProvider } from '@/lib/webrtc/video-provider';
 import { PreJoinScreen } from '@/components/meeting/pre-join-screen';
 import { WaitingRoomScreen } from '@/components/meeting/waiting-room-screen';
 import { MeetingRoomView } from '@/components/meeting/meeting-room-view';
+import { LiveKitMeetingStage } from '@/components/meeting/livekit-meeting-stage';
 import { MeetingValidationResponse, UserProfile } from '@/types';
 import { generateMeetingId } from '@/lib/utils';
 
@@ -19,8 +20,23 @@ function MeetingContainer({ meetingId }: { meetingId: string }) {
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [livekitData, setLivekitData] = useState<{ token: string; wsUrl: string } | null>(null);
 
   const { isJoined, isWaitingApproval, leaveRoom } = useMeeting();
+
+  // Check if LiveKit Cloud credentials are configured
+  useEffect(() => {
+    if (!isJoined) return;
+    const nameToUse = currentUser?.name || 'Participant';
+    fetch(`/api/livekit/token?room=${encodeURIComponent(meetingId)}&username=${encodeURIComponent(nameToUse)}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.isConfigured && data?.token && data?.wsUrl) {
+          setLivekitData({ token: data.token, wsUrl: data.wsUrl });
+        }
+      })
+      .catch((e) => console.warn('LiveKit token fetch note:', e));
+  }, [isJoined, meetingId, currentUser?.name]);
 
   useEffect(() => {
     // 1. Fetch current user if logged in
@@ -115,8 +131,21 @@ function MeetingContainer({ meetingId }: { meetingId: string }) {
     );
   }
 
-  // If already joined, show the meeting room view
+  // If already joined, show LiveKit stage if configured, or WebRTC view
   if (isJoined) {
+    if (livekitData?.token && livekitData?.wsUrl) {
+      return (
+        <LiveKitMeetingStage
+          meetingId={meetingId}
+          meetingTitle={meetingInfo.title}
+          isHost={currentUser?.id === meetingInfo.hostId}
+          token={livekitData.token}
+          serverUrl={livekitData.wsUrl}
+          displayName={currentUser?.name || 'Participant'}
+          onLeave={leaveRoom}
+        />
+      );
+    }
     return <MeetingRoomView />;
   }
 

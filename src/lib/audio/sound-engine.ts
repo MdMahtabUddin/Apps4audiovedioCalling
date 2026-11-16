@@ -1,5 +1,5 @@
 /**
- * MeetFlow / MetroMeet High-Fidelity Web Audio Sound Engine
+ * MetroMeet High-Fidelity Web Audio Sound Engine
  * Synthesizes crystal-clear, zero-latency sonic branding, calling ringtones,
  * and host admission knock chimes without external MP3 dependencies.
  */

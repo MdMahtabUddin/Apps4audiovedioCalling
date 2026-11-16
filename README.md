@@ -1,6 +1,6 @@
 # VedioConferencingApplication-
 
-## MeetFlow - Next.js Enterprise WebRTC Video Conferencing Platform
+## MetroMeet - Next.js Enterprise WebRTC Video Conferencing Platform
 
 A production-ready video conferencing web application built with **Next.js (App Router)**, **TypeScript**, **Tailwind CSS**, **Prisma ORM**, **PostgreSQL**, **WebRTC**, and **Socket.IO**.
 
@@ -55,7 +55,7 @@ npm install
 #### 2. Environment Variables
 Create `.env` using `.env.example`:
 ```env
-DATABASE_URL="postgresql://postgres:postgres@localhost:5432/meetflow?schema=public"
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/metromeet?schema=public"
 JWT_SECRET="your-secure-jwt-secret-key"
 NEXT_PUBLIC_APP_URL="http://localhost:3000"
 STUN_SERVER="stun:stun.l.google.com:19302"

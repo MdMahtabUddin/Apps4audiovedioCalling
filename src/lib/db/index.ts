@@ -6,7 +6,7 @@ import path from 'path';
 export { prisma };
 
 // Development local persistence fallback when PostgreSQL is not yet running
-const DATA_FILE = path.join(process.cwd(), '.meetflow-dev-data.json');
+const DATA_FILE = path.join(process.cwd(), '.metromeet-dev-data.json');
 
 interface DevStore {
   users: Array<{
@@ -129,7 +129,7 @@ export const userService = {
 
   async getOrCreateGuestHost() {
     const GUEST_HOST_ID = 'usr_guest_host_system';
-    const GUEST_EMAIL = 'guest@meetflow.internal';
+    const GUEST_EMAIL = 'guest@metromeet.internal';
     const usePg = await checkPrisma();
     if (usePg) {
       try {

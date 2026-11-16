@@ -135,7 +135,7 @@ export default function DashboardPage() {
               <Video className="h-6 w-6 text-white animate-pulse" />
             </div>
           </div>
-          <p className="text-xs text-gray-400 font-semibold tracking-wider uppercase">Loading MeetFlow Studio...</p>
+          <p className="text-xs text-gray-400 font-semibold tracking-wider uppercase">Loading MetroMeet Studio...</p>
         </div>
       </div>
     );

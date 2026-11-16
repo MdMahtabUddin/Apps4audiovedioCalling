@@ -57,7 +57,7 @@ async function runAll() {
     });
 
     socketHost.emit('join-room', {
-      meetingId: 'meetflow-test-room',
+      meetingId: 'metromeet-test-room',
       userId: 'usr_alice_123',
       displayName: 'Alice (Host)',
       role: 'HOST',
@@ -83,7 +83,7 @@ async function runAll() {
     });
 
     socketGuest.emit('join-room', {
-      meetingId: 'meetflow-test-room',
+      meetingId: 'metromeet-test-room',
       userId: 'usr_bob_456',
       displayName: 'Bob (Guest)',
       role: 'PARTICIPANT',
@@ -215,7 +215,7 @@ async function runAll() {
 
     // Have Charlie join Alice's room to test end-meeting reception
     socketOtherRoom.emit('join-room', {
-      meetingId: 'meetflow-test-room',
+      meetingId: 'metromeet-test-room',
       userId: 'usr_charlie_789',
       displayName: 'Charlie',
       role: 'PARTICIPANT',

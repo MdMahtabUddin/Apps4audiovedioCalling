@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers';
 import { verifyToken, TokenPayload } from './jwt';
 
-export const AUTH_COOKIE_NAME = 'meetflow_auth_token';
+export const AUTH_COOKIE_NAME = 'metromeet_auth_token';
 
 export async function getCurrentUser(): Promise<TokenPayload | null> {
   try {

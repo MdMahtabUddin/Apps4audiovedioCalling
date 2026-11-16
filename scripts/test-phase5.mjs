@@ -41,7 +41,7 @@ async function runPhase5Tests() {
   await new Promise((resolve) => server.listen(TEST_PORT, resolve));
   assert(server.listening, '1. Signaling server initialized on port ' + TEST_PORT);
 
-  const meetingId = 'meetflow-phase5-room';
+  const meetingId = 'metromeet-phase5-room';
 
   // 2. Host (Alice) connects & joins room
   const alice = Client(SIGNALING_URL, { transports: ['websocket'] });

@@ -1,5 +1,5 @@
 /**
- * MeetFlow / MetroMeet Real-time WebRTC Signaling Gateway
+ * MetroMeet Real-time WebRTC Signaling Gateway
  * High-performance WebSocket server with MetroNet enterprise waiting room,
  * host knocking/admission approval, ringtone coordination, role management,
  * and media state synchronization.

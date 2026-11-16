@@ -65,7 +65,7 @@ export function JoinMeetingModal({ isOpen, onClose }: JoinMeetingModalProps) {
         <Input
           id="join-code"
           label="Meeting Code or Link"
-          placeholder="abc-defg-hij or https://meetflow.app/meeting/abc-defg-hij"
+          placeholder="abc-defg-hij or https://metromeet.app/meeting/abc-defg-hij"
           value={meetingInput}
           onChange={(e) => setMeetingInput(e.target.value)}
           autoFocus

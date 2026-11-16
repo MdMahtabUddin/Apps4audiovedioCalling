@@ -1,4 +1,4 @@
-// Prisma schema for MeetFlow video conferencing application
+// Prisma schema for MetroMeet video conferencing application
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")

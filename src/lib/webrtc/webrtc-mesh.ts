@@ -1,5 +1,5 @@
 /**
- * MeetFlow WebRTC Mesh Manager (Phase 3)
+ * MetroMeet WebRTC Mesh Manager (Phase 3)
  * Full Peer-to-Peer Mesh Architecture using RTCPeerConnection and Google STUN.
  * Architected with clean decoupling so it can seamlessly connect with Socket.IO signaling (Phase 4)
  * and future SFU (mediasoup/LiveKit) without altering meeting stage UI.

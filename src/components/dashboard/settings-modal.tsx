@@ -59,25 +59,25 @@ export function SettingsModal({ isOpen, onClose, user, onUserUpdated }: Settings
   // Preference states
   const [muteOnJoin, setMuteOnJoin] = useState(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('meetflow_mute_on_join') === 'true';
+      return localStorage.getItem('metromeet_mute_on_join') === 'true';
     }
     return false;
   });
   const [videoOffOnJoin, setVideoOffOnJoin] = useState(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('meetflow_video_off_on_join') === 'true';
+      return localStorage.getItem('metromeet_video_off_on_join') === 'true';
     }
     return false;
   });
   const [mirrorVideo, setMirrorVideo] = useState(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('meetflow_mirror_video') !== 'false';
+      return localStorage.getItem('metromeet_mirror_video') !== 'false';
     }
     return true;
   });
   const [hdVideo, setHdVideo] = useState(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('meetflow_hd_video') !== 'false';
+      return localStorage.getItem('metromeet_hd_video') !== 'false';
     }
     return true;
   });
@@ -274,10 +274,10 @@ export function SettingsModal({ isOpen, onClose, user, onUserUpdated }: Settings
 
   const handleSavePreferences = () => {
     if (typeof window !== 'undefined') {
-      localStorage.setItem('meetflow_mute_on_join', String(muteOnJoin));
-      localStorage.setItem('meetflow_video_off_on_join', String(videoOffOnJoin));
-      localStorage.setItem('meetflow_mirror_video', String(mirrorVideo));
-      localStorage.setItem('meetflow_hd_video', String(hdVideo));
+      localStorage.setItem('metromeet_mute_on_join', String(muteOnJoin));
+      localStorage.setItem('metromeet_video_off_on_join', String(videoOffOnJoin));
+      localStorage.setItem('metromeet_mirror_video', String(mirrorVideo));
+      localStorage.setItem('metromeet_hd_video', String(hdVideo));
     }
     stopMedia();
     onClose();
