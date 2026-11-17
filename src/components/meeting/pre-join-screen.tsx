@@ -81,6 +81,10 @@ export function PreJoinScreen({ meetingInfo, initialName = '', onJoinSuccess }: 
     }
   }, [localStream]);
 
+  const isHostUser =
+    Boolean(meetingInfo.isHost) ||
+    (typeof window !== 'undefined' && localStorage.getItem(`metromeet_host_${meetingInfo.id}`) === 'true');
+
   const handleJoin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -96,7 +100,7 @@ export function PreJoinScreen({ meetingInfo, initialName = '', onJoinSuccess }: 
     }
 
     setIsJoining(true);
-    const res = await joinRoom(displayName.trim(), password.trim() || undefined);
+    const res = await joinRoom(displayName.trim(), password.trim() || undefined, isHostUser);
     setIsJoining(false);
 
     if (!res.success) {
@@ -315,7 +319,7 @@ export function PreJoinScreen({ meetingInfo, initialName = '', onJoinSuccess }: 
               className="w-full text-base font-bold shadow-xl shadow-[#FF7A00]/30 mt-2"
               isLoading={isJoining}
             >
-              {meetingInfo.isHost ? 'Join Meeting as Host' : 'Ask to Join Meeting'}
+              {isHostUser ? 'Join Meeting as Host' : (meetingInfo.waitingRoom ? 'Ask to Join Meeting' : 'Join Meeting')}
               <ArrowRight className="h-4 w-4 ml-1" />
             </Button>
           </form>

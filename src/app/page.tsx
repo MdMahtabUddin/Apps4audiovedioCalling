@@ -86,9 +86,21 @@ export default function HomePage() {
     };
   }, [webcamStream]);
 
-  const handleStartInstant = () => {
+  const handleStartInstant = async () => {
     soundEngine.playIntroChime();
     const id = generateMeetingId();
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(`metromeet_host_${id}`, 'true');
+    }
+    try {
+      await fetch('/api/meetings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, title: 'Instant Meeting' }),
+      });
+    } catch (e) {
+      console.warn('Auto create meeting error:', e);
+    }
     router.push(`/meeting/${id}`);
   };
 

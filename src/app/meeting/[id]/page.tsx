@@ -23,12 +23,12 @@ function MeetingContainer({ meetingId }: { meetingId: string }) {
   const [livekitData, setLivekitData] = useState<{ token: string; wsUrl: string } | null>(null);
   const [livekitFailed, setLivekitFailed] = useState(false);
 
-  const { isJoined, isWaitingApproval, leaveRoom } = useMeeting();
+  const { isJoined, isWaitingApproval, leaveRoom, myDisplayName } = useMeeting();
 
   // Check if LiveKit Cloud credentials are configured
   useEffect(() => {
     if (!isJoined) return;
-    const nameToUse = currentUser?.name || 'Participant';
+    const nameToUse = myDisplayName || currentUser?.name || 'Participant';
     fetch(`/api/livekit/token?room=${encodeURIComponent(meetingId)}&username=${encodeURIComponent(nameToUse)}`)
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
@@ -37,7 +37,7 @@ function MeetingContainer({ meetingId }: { meetingId: string }) {
         }
       })
       .catch((e) => console.warn('LiveKit token fetch note:', e));
-  }, [isJoined, meetingId, currentUser?.name]);
+  }, [isJoined, meetingId, myDisplayName, currentUser?.name]);
 
   useEffect(() => {
     // 1. Fetch current user if logged in
@@ -146,7 +146,7 @@ function MeetingContainer({ meetingId }: { meetingId: string }) {
           isHost={isMeetingHost}
           token={livekitData.token}
           serverUrl={livekitData.wsUrl}
-          displayName={currentUser?.name || 'Participant'}
+          displayName={myDisplayName || currentUser?.name || 'Participant'}
           onLeave={leaveRoom}
           onFallback={() => setLivekitFailed(true)}
         />

@@ -17,10 +17,11 @@ export interface MeetingContextType {
   waitingRoom: boolean;
   isWaitingApproval: boolean;
   isJoined: boolean;
+  myDisplayName: string;
   myParticipantId: string | null;
   participants: Participant[];
   settings: MeetingSettingsItem;
-  joinRoom: (displayName: string, password?: string) => Promise<{ success: boolean; error?: string }>;
+  joinRoom: (displayName: string, password?: string, isHostCandidate?: boolean) => Promise<{ success: boolean; error?: string }>;
   leaveRoom: () => void;
   endRoom: () => Promise<void>;
   toggleLock: () => Promise<void>;
@@ -53,17 +54,19 @@ export function MeetingProvider({
   const [waitingRoom, setWaitingRoom] = useState(false);
   const [isWaitingApproval, setIsWaitingApproval] = useState(false);
   const [isJoined, setIsJoined] = useState(false);
+  const [myDisplayName, setMyDisplayName] = useState('');
   const [myParticipantId, setMyParticipantId] = useState<string | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [settings, setSettings] = useState<MeetingSettingsItem>(defaultSettings);
 
   const joinRoom = useCallback(
-    async (displayName: string, password?: string) => {
+    async (displayName: string, password?: string, isHostCandidate?: boolean) => {
       try {
+        setMyDisplayName(displayName);
         const res = await fetch(`/api/meetings/${meetingId}/join`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ displayName, password }),
+          body: JSON.stringify({ displayName, password, isHostCandidate }),
         });
 
         const data = await res.json();
@@ -176,6 +179,7 @@ export function MeetingProvider({
         waitingRoom,
         isWaitingApproval,
         isJoined,
+        myDisplayName,
         myParticipantId,
         participants,
         settings,
