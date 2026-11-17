@@ -1,10 +1,11 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { ShieldCheck, PhoneCall, LogOut, Volume2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { BrandLogo } from '@/components/ui/brand-logo';
+import { soundEngine } from '@/lib/audio/sound-engine';
 
 interface WaitingRoomScreenProps {
   meetingTitle: string;
@@ -13,6 +14,12 @@ interface WaitingRoomScreenProps {
 }
 
 export function WaitingRoomScreen({ meetingTitle, hostName, onLeave }: WaitingRoomScreenProps) {
+  useEffect(() => {
+    soundEngine.startCallingRingtone();
+    return () => {
+      soundEngine.stopCallingRingtone();
+    };
+  }, []);
   return (
     <div className="min-h-screen bg-[#050a14] text-slate-100 flex items-center justify-center p-4 relative overflow-hidden">
       {/* MetroNet Brand Ambient Backlight */}

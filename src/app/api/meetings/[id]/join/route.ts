@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth/session';
 import { meetingService, userService } from '@/lib/db';
-import { addLiveKitKnock } from '@/lib/livekit/livekit-knocks';
+import { addLiveKitKnock, getMeetingFromLiveKit } from '@/lib/livekit/livekit-knocks';
 
 export async function POST(
   req: NextRequest,
@@ -13,6 +13,28 @@ export async function POST(
     const { displayName, password } = await req.json();
 
     let meeting = await meetingService.getById(id);
+
+    // Check LiveKit Cloud centralized store for cross-container availability on Vercel
+    if (!meeting) {
+      const cloudMeeting = await getMeetingFromLiveKit(id);
+      if (cloudMeeting) {
+        meeting = {
+          ...cloudMeeting,
+          hostName: cloudMeeting.hostName || 'Meeting Host',
+          hostEmail: '',
+          hostAvatar: null,
+          hasPassword: Boolean(cloudMeeting.password && cloudMeeting.password.trim()),
+          waitingRoom: Boolean(cloudMeeting.waitingRoom) || Boolean(cloudMeeting.password && cloudMeeting.password.trim()),
+          participantCount: 0,
+          settings: {
+            allowChat: true,
+            allowScreenShare: true,
+            muteOnEntry: false,
+            allowReactions: true,
+          },
+        } as any;
+      }
+    }
     if (!meeting) {
       try {
         let hostId = session?.userId;

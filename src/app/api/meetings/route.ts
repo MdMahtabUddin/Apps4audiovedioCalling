@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth/session';
 import { meetingService, userService } from '@/lib/db';
+import { saveMeetingToLiveKit } from '@/lib/livekit/livekit-knocks';
 
 export async function POST(req: NextRequest) {
   try {
@@ -24,12 +25,24 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Meeting ID is required' }, { status: 400 });
     }
 
+    const hasPassword = Boolean(password && password.trim());
+    const isWaitingRoom = !!waitingRoom || hasPassword;
+
     const meeting = await meetingService.create({
       id,
       title: title || 'Instant Meeting',
       hostId,
-      password: password || null,
-      waitingRoom: !!waitingRoom,
+      password: password ? password.trim() : null,
+      waitingRoom: isWaitingRoom,
+    });
+
+    // Save to LiveKit Cloud centralized store for cross-container availability on Vercel
+    await saveMeetingToLiveKit({
+      id,
+      title: title || 'Instant Meeting',
+      hostId,
+      password: password ? password.trim() : null,
+      waitingRoom: isWaitingRoom,
     });
 
     const response = NextResponse.json({ meeting }, { status: 201 });

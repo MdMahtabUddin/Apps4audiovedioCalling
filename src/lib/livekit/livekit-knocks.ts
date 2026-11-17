@@ -7,6 +7,20 @@ export interface KnockItem {
   joinedAt: string;
 }
 
+export interface CloudMeetingMetadata {
+  id: string;
+  title: string;
+  hostId: string;
+  hostName?: string;
+  password?: string | null;
+  hasPassword?: boolean;
+  waitingRoom?: boolean;
+  isLocked?: boolean;
+  isActive?: boolean;
+  startTime?: string;
+  knocks?: KnockItem[];
+}
+
 function getClient(): RoomServiceClient | null {
   const apiKey = process.env.LIVEKIT_API_KEY;
   const apiSecret = process.env.LIVEKIT_API_SECRET;
@@ -29,6 +43,83 @@ function getClient(): RoomServiceClient | null {
   return new RoomServiceClient(httpUrl, apiKey, apiSecret);
 }
 
+export async function saveMeetingToLiveKit(meeting: {
+  id: string;
+  title: string;
+  hostId: string;
+  hostName?: string;
+  password?: string | null;
+  waitingRoom?: boolean;
+}): Promise<void> {
+  const client = getClient();
+  if (!client) return;
+
+  try {
+    const hasPassword = Boolean(meeting.password && meeting.password.trim());
+    const waitingRoom = Boolean(meeting.waitingRoom) || hasPassword;
+
+    let existingMeta: CloudMeetingMetadata = {
+      id: meeting.id,
+      title: meeting.title || 'Instant Meeting',
+      hostId: meeting.hostId,
+      hostName: meeting.hostName || 'Meeting Host',
+      password: meeting.password || null,
+      hasPassword,
+      waitingRoom,
+      isLocked: false,
+      isActive: true,
+      startTime: new Date().toISOString(),
+      knocks: [],
+    };
+
+    try {
+      const rooms = await client.listRooms([meeting.id]);
+      if (rooms.length > 0 && rooms[0].metadata) {
+        try {
+          const parsed = JSON.parse(rooms[0].metadata);
+          existingMeta = {
+            ...existingMeta,
+            ...parsed,
+            title: meeting.title || parsed.title,
+            password: meeting.password !== undefined ? meeting.password : parsed.password,
+            hasPassword,
+            waitingRoom,
+          };
+        } catch {}
+      } else {
+        await client.createRoom({
+          name: meeting.id,
+          emptyTimeout: 86400,
+          metadata: JSON.stringify(existingMeta),
+        });
+        return;
+      }
+    } catch {}
+
+    await client.updateRoomMetadata(meeting.id, JSON.stringify(existingMeta));
+  } catch (err) {
+    console.warn('[LiveKitKnocks] saveMeetingToLiveKit error:', err);
+  }
+}
+
+export async function getMeetingFromLiveKit(id: string): Promise<CloudMeetingMetadata | null> {
+  const client = getClient();
+  if (!client) return null;
+
+  try {
+    const rooms = await client.listRooms([id]);
+    if (rooms.length === 0 || !rooms[0].metadata) return null;
+
+    const parsed: CloudMeetingMetadata = JSON.parse(rooms[0].metadata);
+    if (!parsed || !parsed.id) return null;
+
+    return parsed;
+  } catch (err) {
+    console.warn('[LiveKitKnocks] getMeetingFromLiveKit error:', err);
+    return null;
+  }
+}
+
 export async function addLiveKitKnock(
   roomId: string,
   participantId: string,
@@ -43,7 +134,13 @@ export async function addLiveKitKnock(
     } catch {}
 
     const rooms = await client.listRooms([roomId]);
-    let meta: { knocks?: KnockItem[] } = {};
+    let meta: CloudMeetingMetadata = {
+      id: roomId,
+      title: 'Meeting',
+      hostId: 'host',
+      knocks: [],
+    };
+
     if (rooms.length > 0 && rooms[0].metadata) {
       try {
         meta = JSON.parse(rooms[0].metadata);
@@ -61,6 +158,9 @@ export async function addLiveKitKnock(
         status: 'WAITING',
         joinedAt: new Date().toISOString(),
       });
+    } else {
+      existing.status = 'WAITING';
+      existing.displayName = displayName || existing.displayName;
     }
 
     await client.updateRoomMetadata(roomId, JSON.stringify(meta));
@@ -77,7 +177,7 @@ export async function getLiveKitKnocks(roomId: string): Promise<KnockItem[]> {
     const rooms = await client.listRooms([roomId]);
     if (rooms.length === 0 || !rooms[0].metadata) return [];
 
-    const meta = JSON.parse(rooms[0].metadata);
+    const meta: CloudMeetingMetadata = JSON.parse(rooms[0].metadata);
     return Array.isArray(meta.knocks)
       ? meta.knocks.filter((k: KnockItem) => k.status === 'WAITING')
       : [];
@@ -98,7 +198,7 @@ export async function getLiveKitKnockStatus(
     const rooms = await client.listRooms([roomId]);
     if (rooms.length === 0 || !rooms[0].metadata) return 'NOT_FOUND';
 
-    const meta = JSON.parse(rooms[0].metadata);
+    const meta: CloudMeetingMetadata = JSON.parse(rooms[0].metadata);
     if (!Array.isArray(meta.knocks)) return 'NOT_FOUND';
 
     const item = meta.knocks.find((k: KnockItem) => k.id === participantId);
@@ -123,7 +223,7 @@ export async function updateLiveKitKnockStatus(
     const rooms = await client.listRooms([roomId]);
     if (rooms.length === 0 || !rooms[0].metadata) return false;
 
-    const meta = JSON.parse(rooms[0].metadata);
+    const meta: CloudMeetingMetadata = JSON.parse(rooms[0].metadata);
     if (!Array.isArray(meta.knocks)) return false;
 
     const item = meta.knocks.find((k: KnockItem) => k.id === participantId);

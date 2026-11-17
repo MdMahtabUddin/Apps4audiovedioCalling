@@ -6,7 +6,8 @@ import path from 'path';
 export { prisma };
 
 // Development local persistence fallback when PostgreSQL is not yet running
-const DATA_FILE = path.join(process.cwd(), '.metromeet-dev-data.json');
+const DATA_DIR = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME ? '/tmp' : process.cwd();
+const DATA_FILE = path.join(DATA_DIR, '.metromeet-dev-data.json');
 
 interface DevStore {
   users: Array<{

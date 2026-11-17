@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth/session';
 import { meetingService, userService } from '@/lib/db';
+import { getMeetingFromLiveKit } from '@/lib/livekit/livekit-knocks';
 
 export async function GET(
   req: NextRequest,
@@ -11,6 +12,28 @@ export async function GET(
     const session = await getCurrentUser();
 
     let meeting = await meetingService.getById(id);
+
+    // Check LiveKit Cloud centralized store for cross-container availability on Vercel
+    if (!meeting) {
+      const cloudMeeting = await getMeetingFromLiveKit(id);
+      if (cloudMeeting) {
+        meeting = {
+          ...cloudMeeting,
+          hostName: cloudMeeting.hostName || 'Meeting Host',
+          hostEmail: '',
+          hostAvatar: null,
+          hasPassword: Boolean(cloudMeeting.password && cloudMeeting.password.trim()),
+          waitingRoom: Boolean(cloudMeeting.waitingRoom) || Boolean(cloudMeeting.password && cloudMeeting.password.trim()),
+          participantCount: 0,
+          settings: {
+            allowChat: true,
+            allowScreenShare: true,
+            muteOnEntry: false,
+            allowReactions: true,
+          },
+        } as any;
+      }
+    }
 
     // If meeting doesn't exist yet, automatically initialize as an instant meeting session
     if (!meeting) {
