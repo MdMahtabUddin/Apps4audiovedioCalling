@@ -24,8 +24,9 @@ class SoundEngine {
   }
 
   /**
-   * MetroMeet Intro Sonic Branding Chime (Soft Harmonic Ambient Chord)
-   * Warm, lush F Major 9th chord (F3, C4, A4, E5) with soft analog filter.
+   * MetroMeet Modern International Sonic Branding Signature
+   * Precision-tuned 6-part acoustic & synthetic chord with deep sub-bass swell,
+   * crystal glass arpeggio, spatial stereo detune, and warm silk tail.
    */
   public playIntroChime() {
     try {
@@ -33,39 +34,79 @@ class SoundEngine {
       if (!ctx) return;
 
       const now = ctx.currentTime;
-      const notes = [174.61, 261.63, 440.0, 659.25, 880.0]; // F3, C4, A4, E5, A5
-      const masterGain = ctx.createGain();
+      const master = ctx.createGain();
+      const comp = ctx.createDynamicsCompressor();
+
+      // High-end studio master compressor
+      comp.threshold.setValueAtTime(-14, now);
+      comp.knee.setValueAtTime(30, now);
+      comp.ratio.setValueAtTime(8, now);
+      comp.attack.setValueAtTime(0.003, now);
+      comp.release.setValueAtTime(0.25, now);
+
+      master.gain.setValueAtTime(0.001, now);
+      master.gain.linearRampToValueAtTime(0.3, now + 0.08);
+      master.gain.exponentialRampToValueAtTime(0.0001, now + 2.8);
+
+      // 1. Deep Cinematic Sub Fundamental Swell (D2 73.42Hz -> A2 110Hz)
+      const sub = ctx.createOscillator();
+      const subGain = ctx.createGain();
+      sub.type = 'sine';
+      sub.frequency.setValueAtTime(73.42, now);
+      sub.frequency.exponentialRampToValueAtTime(110.0, now + 0.28);
+      subGain.gain.setValueAtTime(0.001, now);
+      subGain.gain.linearRampToValueAtTime(0.35, now + 0.1);
+      subGain.gain.exponentialRampToValueAtTime(0.0001, now + 1.4);
+      sub.connect(subGain);
+      subGain.connect(comp);
+      sub.start(now);
+      sub.stop(now + 1.5);
+
+      // 2. Crystal Glass Arpeggio (D4, F#4, A4, C#5, E5, A5, C#6 sparkle)
+      const arpeggio = [
+        { f: 293.66, delay: 0.00, dur: 1.8, vol: 0.22, type: 'triangle' as OscillatorType }, // D4
+        { f: 369.99, delay: 0.04, dur: 1.9, vol: 0.24, type: 'sine' as OscillatorType },     // F#4
+        { f: 440.00, delay: 0.08, dur: 2.1, vol: 0.25, type: 'sine' as OscillatorType },     // A4
+        { f: 554.37, delay: 0.13, dur: 2.3, vol: 0.22, type: 'triangle' as OscillatorType }, // C#5
+        { f: 659.25, delay: 0.18, dur: 2.5, vol: 0.20, type: 'sine' as OscillatorType },     // E5
+        { f: 880.00, delay: 0.23, dur: 2.6, vol: 0.18, type: 'sine' as OscillatorType },     // A5
+        { f: 1108.73, delay: 0.28, dur: 2.4, vol: 0.14, type: 'sine' as OscillatorType },    // C#6 (glass shimmer)
+        { f: 1760.00, delay: 0.32, dur: 2.0, vol: 0.09, type: 'sine' as OscillatorType },    // A6 (airy sparkle)
+      ];
+
+      // Dual detuned stereo shimmer filter
       const filter = ctx.createBiquadFilter();
-
       filter.type = 'lowpass';
-      filter.frequency.setValueAtTime(1200, now);
-      filter.frequency.exponentialRampToValueAtTime(3200, now + 0.4);
-      filter.frequency.exponentialRampToValueAtTime(800, now + 2.8);
+      filter.frequency.setValueAtTime(1600, now);
+      filter.frequency.exponentialRampToValueAtTime(7000, now + 0.35);
+      filter.frequency.exponentialRampToValueAtTime(1200, now + 2.5);
+      filter.Q.setValueAtTime(2.5, now);
 
-      masterGain.gain.setValueAtTime(0.001, now);
-      masterGain.gain.linearRampToValueAtTime(0.18, now + 0.12);
-      masterGain.gain.exponentialRampToValueAtTime(0.0001, now + 3.0);
+      arpeggio.forEach(({ f, delay, dur, vol, type }) => {
+        // Dual detuned stereo oscillators for expansive spatial depth
+        [-7, 7].forEach((detune) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
 
-      notes.forEach((freq, idx) => {
-        const osc = ctx.createOscillator();
-        const noteGain = ctx.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(f, now + delay);
+          osc.detune.setValueAtTime(detune, now + delay);
 
-        osc.type = idx % 2 === 0 ? 'sine' : 'triangle';
-        osc.frequency.setValueAtTime(freq, now + idx * 0.04);
+          gain.gain.setValueAtTime(0.0001, now + delay);
+          gain.gain.linearRampToValueAtTime(vol * 0.5, now + delay + 0.03);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + delay + dur);
 
-        noteGain.gain.setValueAtTime(0.001, now + idx * 0.04);
-        noteGain.gain.linearRampToValueAtTime(0.2 / (idx + 1), now + idx * 0.04 + 0.08);
-        noteGain.gain.exponentialRampToValueAtTime(0.0001, now + 2.5);
+          osc.connect(gain);
+          gain.connect(filter);
 
-        osc.connect(noteGain);
-        noteGain.connect(filter);
-
-        osc.start(now + idx * 0.04);
-        osc.stop(now + 3.2);
+          osc.start(now + delay);
+          osc.stop(now + delay + dur + 0.1);
+        });
       });
 
-      filter.connect(masterGain);
-      masterGain.connect(ctx.destination);
+      filter.connect(comp);
+      comp.connect(master);
+      master.connect(ctx.destination);
     } catch (e) {
       console.warn('Audio chime note:', e);
     }

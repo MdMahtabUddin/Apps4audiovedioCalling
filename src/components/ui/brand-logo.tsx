@@ -75,23 +75,26 @@ export function BrandLogo({
           </svg>
 
           {/* Typography */}
-          <div className="flex items-baseline tracking-tight font-black italic">
-            <span className="text-[#0066FF] drop-shadow-[0_0_12px_rgba(0,102,255,0.4)] transition-colors group-hover:text-[#1E78FF]">
+          <div className="flex items-center tracking-tight font-black italic relative overflow-hidden rounded-lg">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#2B82FF] via-[#00D4FF] to-[#0057FF] drop-shadow-[0_0_14px_rgba(0,102,255,0.45)] transition-all group-hover:drop-shadow-[0_0_20px_rgba(0,212,255,0.7)]">
               Metro
             </span>
-            <span className="text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.2)] ml-0.5">
+            <span className="text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.3)] ml-0.5 font-black">
               Meet
             </span>
-            <span className="ml-1.5 px-1.5 py-0.5 text-[9px] not-italic font-bold tracking-wider rounded bg-gradient-to-r from-[#FF7A00] to-[#FF5500] text-white shadow-sm shadow-orange-500/30 uppercase">
-              Pro
+            <span className="ml-1.5 px-2 py-0.5 text-[8.5px] not-italic font-black tracking-widest rounded-full bg-gradient-to-r from-[#FF7A00] via-[#FFA336] to-[#FF4500] text-white shadow-md shadow-orange-500/35 uppercase border border-white/20 animate-pulse">
+              PRO
             </span>
+            {/* Ambient Shimmer Beam Sweep */}
+            <span className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/25 to-transparent pointer-events-none" />
           </div>
         </div>
       </div>
 
       {showTagline && size !== 'sm' && (
         <div className="flex items-center gap-1.5 -mt-0.5">
-          <span className="text-[10px] font-semibold text-[#0066FF] italic tracking-wide">
+          <span className="h-1.5 w-1.5 rounded-full bg-[#00D4FF] animate-ping" />
+          <span className="text-[10px] font-semibold text-[#388BFF] italic tracking-wide">
             We Do <span className="font-black text-[#FF7A00]">IT</span>
           </span>
           <span className="text-[9px] text-gray-500">|</span>

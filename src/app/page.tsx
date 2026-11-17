@@ -86,6 +86,27 @@ export default function HomePage() {
     };
   }, [webcamStream]);
 
+  // Play modern international sonic identity on first user interaction
+  useEffect(() => {
+    let hasPlayed = false;
+    const handleFirstInteraction = () => {
+      if (!hasPlayed) {
+        hasPlayed = true;
+        soundEngine.playIntroChime();
+      }
+      window.removeEventListener('click', handleFirstInteraction);
+      window.removeEventListener('keydown', handleFirstInteraction);
+    };
+
+    window.addEventListener('click', handleFirstInteraction, { once: true });
+    window.addEventListener('keydown', handleFirstInteraction, { once: true });
+
+    return () => {
+      window.removeEventListener('click', handleFirstInteraction);
+      window.removeEventListener('keydown', handleFirstInteraction);
+    };
+  }, []);
+
   const handleStartInstant = async () => {
     soundEngine.playIntroChime();
     const id = generateMeetingId();
@@ -209,29 +230,27 @@ export default function HomePage() {
 
       <main className="flex-1 flex flex-col justify-center items-center px-4 sm:px-6 lg:px-8 pt-10 sm:pt-16 pb-24 relative z-10">
         <div className="max-w-6xl mx-auto text-center space-y-7">
-          {/* Top Pill with MetroNet Official Arc & Sonic Branding */}
-          <div className="inline-flex items-center justify-center">
+          {/* Top Pill with Modern International Sonic Identity */}
+          <div className="inline-flex items-center justify-center animate-in fade-in slide-in-from-top-4 duration-700">
             <div
-              onClick={() => {
-                soundEngine.playIntroChime();
-                if (typeof window !== 'undefined') {
-                  window.dispatchEvent(new Event('metromeet:play-splash'));
-                }
-              }}
-              className="inline-flex items-center gap-2.5 px-4 sm:px-5 py-2 rounded-full bg-white/[0.04] border border-[#0066FF]/35 backdrop-blur-2xl shadow-xl shadow-[#001030]/60 text-xs sm:text-sm font-semibold text-white hover:border-[#FF7A00]/60 hover:bg-white/[0.07] transition-all cursor-pointer group select-none relative glow-border"
-              title="Click to view MetroNet logo animation and audio chime"
+              onClick={() => soundEngine.playIntroChime()}
+              className="inline-flex items-center gap-2.5 px-4 sm:px-6 py-2.5 rounded-full bg-gradient-to-r from-blue-950/40 via-black/60 to-orange-950/40 border border-[#0066FF]/40 backdrop-blur-2xl shadow-2xl shadow-blue-950/60 text-xs sm:text-sm font-semibold text-white hover:border-[#00D4FF] hover:shadow-cyan-500/25 transition-all duration-300 cursor-pointer group select-none relative overflow-hidden"
+              title="Click to hear MetroMeet Modern Sonic Branding Signature"
             >
-              <span className="flex h-2.5 w-2.5 rounded-full bg-[#FF7A00] relative">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#FF7A00] opacity-75" />
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00D4FF] opacity-80" />
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#0066FF]" />
               </span>
-              <span className="tracking-wide text-[#388BFF] font-bold">MetroNet Backbone 100G</span>
-              <span className="text-gray-500 hidden sm:inline">•</span>
-              <span className="text-gray-300 font-medium hidden sm:inline">Zero-Latency WebRTC 2.0</span>
-              <span className="text-gray-500">•</span>
-              <span className="text-[11px] text-[#FFA033] font-bold flex items-center gap-1 group-hover:scale-105 transition-transform">
-                <Volume2 className="h-3.5 w-3.5" />
-                Play Intro
+              <span className="tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-[#00D4FF] via-white to-[#FFA336] font-bold">
+                MetroMeet 2026 • Global LiveKit Cloud SFU
               </span>
+              <span className="text-gray-500 hidden sm:inline">|</span>
+              <span className="text-[11px] text-cyan-300 font-extrabold flex items-center gap-1.5 group-hover:scale-105 transition-transform bg-cyan-950/70 px-2.5 py-0.5 rounded-full border border-cyan-500/30">
+                <Sparkles className="h-3.5 w-3.5 text-cyan-400 animate-spin" />
+                Play Sonic Identity
+              </span>
+              {/* Sleek light sweep beam */}
+              <span className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/15 to-transparent pointer-events-none" />
             </div>
           </div>
 
@@ -239,11 +258,11 @@ export default function HomePage() {
           <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight text-white leading-[1.08] max-w-4xl mx-auto">
             Enterprise Video Meetings with{' '}
             <span className="relative inline-block">
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#0066FF] via-[#388BFF] to-[#FF7A00] text-glow-blue">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#0066FF] via-[#00D4FF] to-[#FF7A00] text-glow-blue">
                 Zero Latency.
               </span>
               {/* Subtle underline light beam */}
-              <span className="absolute -bottom-1.5 left-0 right-0 h-1 bg-gradient-to-r from-[#0066FF] via-[#388BFF] to-[#FF7A00] rounded-full blur-[1px] opacity-75" />
+              <span className="absolute -bottom-1.5 left-0 right-0 h-1 bg-gradient-to-r from-[#0066FF] via-[#00D4FF] to-[#FF7A00] rounded-full blur-[2px] opacity-80 animate-pulse" />
             </span>
           </h1>
 
