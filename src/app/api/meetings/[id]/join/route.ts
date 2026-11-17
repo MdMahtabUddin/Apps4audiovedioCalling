@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth/session';
 import { meetingService, userService } from '@/lib/db';
+import { addLiveKitKnock } from '@/lib/livekit/livekit-knocks';
 
 export async function POST(
   req: NextRequest,
@@ -97,8 +98,9 @@ export async function POST(
     }
 
     const role = isHost ? 'HOST' : 'PARTICIPANT';
-    // Direct instant entry into LiveKit media room
-    const isApproved = true;
+    // If meeting is password protected or has waiting room enabled, guests must wait in Waiting Room
+    const requiresWaitingRoom = !isHost && (Boolean(activeMeeting.hasPassword) || Boolean(activeMeeting.waitingRoom));
+    const isApproved = !requiresWaitingRoom;
 
     const participant = await meetingService.joinMeeting({
       meetingId: id,
@@ -107,6 +109,10 @@ export async function POST(
       role,
       isApproved,
     });
+
+    if (requiresWaitingRoom) {
+      await addLiveKitKnock(id, participant.id, finalName);
+    }
 
     const response = NextResponse.json({
       success: true,

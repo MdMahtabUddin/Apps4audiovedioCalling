@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   LiveKitRoom,
   RoomAudioRenderer,
@@ -109,6 +109,16 @@ function LiveKitInnerStage({
     }, 1500);
     return () => clearInterval(interval);
   }, [isHost, meetingId]);
+
+  // Play notification chime for host when a new knock arrives
+  const prevKnocksCount = useRef(0);
+  useEffect(() => {
+    if (knocks.length > prevKnocksCount.current) {
+      soundEngine.playKnockChime();
+      toast.info(`🔔 ${knocks[knocks.length - 1].displayName} is waiting to join`);
+    }
+    prevKnocksCount.current = knocks.length;
+  }, [knocks, toast]);
 
   const handleAdmit = async (participantId: string) => {
     try {
