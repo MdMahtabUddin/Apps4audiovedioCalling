@@ -36,6 +36,7 @@ import {
 import { BrandLogo } from '@/components/ui/brand-logo';
 import { soundEngine } from '@/lib/audio/sound-engine';
 import { useToast } from '@/components/ui/toast';
+import { RTC_CONFIG } from '@/lib/webrtc/webrtc-mesh';
 import { ChatAndNotesDrawer } from './chat-and-notes-drawer';
 
 interface LiveKitMeetingStageProps {
@@ -512,10 +513,12 @@ export function LiveKitMeetingStage({
       connect={true}
       video={true}
       audio={true}
+      connectOptions={{
+        rtcConfig: RTC_CONFIG,
+      }}
       data-lk-theme="default"
       onError={(err) => {
-        console.warn('LiveKit cloud connection notice, falling back to WebRTC engine:', err);
-        onFallback?.();
+        console.warn('LiveKit cloud connection notice:', err);
       }}
       className="h-screen w-screen overflow-hidden bg-[#06080e]"
     >
