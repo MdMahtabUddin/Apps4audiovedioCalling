@@ -44,6 +44,7 @@ export function PreJoinScreen({ meetingInfo, initialName = '', onJoinSuccess }: 
     toggleAudio,
     toggleVideo,
     initializeLocalMedia,
+    stopAllMedia,
     switchCamera,
     switchMicrophone,
     switchSpeaker,
@@ -70,8 +71,9 @@ export function PreJoinScreen({ meetingInfo, initialName = '', onJoinSuccess }: 
 
     return () => {
       active = false;
+      stopAllMedia();
     };
-  }, [initializeLocalMedia]);
+  }, [initializeLocalMedia, stopAllMedia]);
 
   // Attach local stream to video element
   useEffect(() => {
@@ -106,6 +108,7 @@ export function PreJoinScreen({ meetingInfo, initialName = '', onJoinSuccess }: 
     if (!res.success) {
       setError(res.error || 'Failed to join meeting.');
     } else {
+      stopAllMedia();
       onJoinSuccess();
     }
   };

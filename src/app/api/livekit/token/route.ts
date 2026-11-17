@@ -15,13 +15,22 @@ export async function GET(req: NextRequest) {
 
     const apiKey = process.env.LIVEKIT_API_KEY;
     const apiSecret = process.env.LIVEKIT_API_SECRET;
-    const wsUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL || process.env.LIVEKIT_URL;
+    let wsUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL || process.env.LIVEKIT_URL;
 
     if (!apiKey || !apiSecret || !wsUrl || apiSecret.includes('•') || apiSecret.length < 16) {
       return NextResponse.json({
         isConfigured: false,
         message: 'LiveKit server credentials not properly configured (secret key is masked with dots or invalid). Falling back to WebRTC engine.',
       });
+    }
+
+    // Ensure proper wss:// protocol for WebSocket client
+    if (wsUrl.startsWith('https://')) {
+      wsUrl = 'wss://' + wsUrl.slice(8);
+    } else if (wsUrl.startsWith('http://')) {
+      wsUrl = 'ws://' + wsUrl.slice(7);
+    } else if (!wsUrl.startsWith('wss://') && !wsUrl.startsWith('ws://')) {
+      wsUrl = 'wss://' + wsUrl;
     }
 
     const at = new AccessToken(apiKey, apiSecret, {

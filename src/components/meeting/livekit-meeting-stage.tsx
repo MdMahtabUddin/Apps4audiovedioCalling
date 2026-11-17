@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
   LiveKitRoom,
   RoomAudioRenderer,
+  StartAudio,
   VideoTrack,
   useTracks,
   useParticipants,
@@ -174,12 +175,11 @@ function LiveKitInnerStage({
 
   // Grid layout class based on participant count
   const getGridClasses = () => {
-    if (tracks.length <= 1) return 'max-w-4xl w-full aspect-video mx-auto';
-    if (tracks.length === 2) return 'w-full grid grid-cols-1 md:grid-cols-2 gap-4 max-w-6xl mx-auto';
-    if (tracks.length <= 4) return 'w-full grid grid-cols-2 gap-3.5 max-w-6xl mx-auto';
-    if (tracks.length <= 9) return 'w-full grid grid-cols-2 sm:grid-cols-3 gap-3 max-w-7xl mx-auto';
-    if (tracks.length <= 16) return 'w-full grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5 max-w-7xl mx-auto';
-    return 'w-full grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2 max-w-7xl max-h-[72vh] overflow-y-auto p-1 mx-auto';
+    if (tracks.length <= 1) return 'max-w-4xl w-full aspect-video mx-auto max-h-[75vh]';
+    if (tracks.length === 2) return 'w-full grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 max-w-6xl mx-auto max-h-[75vh] overflow-y-auto';
+    if (tracks.length <= 4) return 'w-full grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3.5 max-w-6xl mx-auto max-h-[75vh] overflow-y-auto';
+    if (tracks.length <= 9) return 'w-full grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3 max-w-7xl mx-auto max-h-[75vh] overflow-y-auto';
+    return 'w-full grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 max-w-7xl max-h-[75vh] overflow-y-auto p-1 mx-auto';
   };
 
   return (
@@ -520,6 +520,7 @@ export function LiveKitMeetingStage({
       className="h-screen w-screen overflow-hidden bg-[#06080e]"
     >
       <RoomAudioRenderer />
+      <StartAudio label="Click to allow audio" />
       <LiveKitInnerStage
         meetingId={meetingId}
         meetingTitle={meetingTitle}

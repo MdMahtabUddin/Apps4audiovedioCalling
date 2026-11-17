@@ -34,9 +34,14 @@ function MeetingContainer({ meetingId }: { meetingId: string }) {
       .then((data) => {
         if (data?.isConfigured && data?.token && data?.wsUrl) {
           setLivekitData({ token: data.token, wsUrl: data.wsUrl });
+        } else {
+          setLivekitFailed(true);
         }
       })
-      .catch((e) => console.warn('LiveKit token fetch note:', e));
+      .catch((e) => {
+        console.warn('LiveKit token fetch note:', e);
+        setLivekitFailed(true);
+      });
   }, [isJoined, meetingId, myDisplayName, currentUser?.name]);
 
   useEffect(() => {
@@ -134,6 +139,22 @@ function MeetingContainer({ meetingId }: { meetingId: string }) {
 
   // If already joined, show LiveKit stage if configured, or WebRTC view
   if (isJoined) {
+    if (!livekitData && !livekitFailed) {
+      return (
+        <div className="h-screen w-screen bg-[#06080e] flex items-center justify-center">
+          <div className="flex flex-col items-center gap-4">
+            <div className="relative">
+              <div className="h-12 w-12 rounded-2xl bg-[#0066FF]/30 border border-[#0066FF]/40 animate-ping absolute inset-0" />
+              <div className="h-12 w-12 rounded-2xl bg-[#0066FF] flex items-center justify-center relative z-10 shadow-xl shadow-[#0066FF]/50">
+                <Video className="h-6 w-6 text-white animate-pulse" />
+              </div>
+            </div>
+            <p className="text-xs text-gray-400 font-semibold tracking-wider uppercase">Connecting to media stage...</p>
+          </div>
+        </div>
+      );
+    }
+
     const isMeetingHost =
       (currentUser?.id && currentUser.id === meetingInfo.hostId) ||
       (typeof window !== 'undefined' && localStorage.getItem(`metromeet_host_${meetingId}`) === 'true');
