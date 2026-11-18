@@ -242,7 +242,7 @@ export default function HomePage() {
                 <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#0066FF]" />
               </span>
               <span className="tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-[#00D4FF] via-white to-[#FFA336] font-bold">
-                MetroMeet 2026 • Global LiveKit Cloud SFU
+                MetroMeet 2026 • Enterprise Cloud Infrastructure
               </span>
               <span className="text-gray-500 hidden sm:inline">|</span>
               <span className="text-[11px] text-cyan-300 font-extrabold flex items-center gap-1.5 group-hover:scale-105 transition-transform bg-cyan-950/70 px-2.5 py-0.5 rounded-full border border-cyan-500/30">

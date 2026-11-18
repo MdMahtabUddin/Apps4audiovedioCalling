@@ -340,7 +340,7 @@ function LiveKitInnerStage({
               </h2>
               <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#0066FF]/20 text-[#388BFF] border border-[#0066FF]/40 flex items-center gap-1">
                 <Sparkles className="h-3 w-3 text-cyan-400" />
-                LiveKit SFU Cloud
+                Enterprise Cloud Engine
               </span>
             </div>
             <div className="flex items-center gap-2 text-[11px] text-gray-400 font-mono">
@@ -520,7 +520,7 @@ function LiveKitInnerStage({
       <footer className="h-18 px-4 bg-[#0c101c]/95 border-t border-white/[0.08] backdrop-blur-lg flex items-center justify-between z-20 shrink-0">
         <div className="hidden md:flex items-center gap-3 text-xs text-gray-400">
           <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="font-mono text-[11px]">LiveKit Cloud SFU • 0% Packet Loss</span>
+          <span className="font-mono text-[11px]">Enterprise SFU • 0% Packet Loss</span>
         </div>
 
         {/* Center Controls */}
@@ -659,7 +659,7 @@ function LiveKitInnerStage({
 
         {/* Right Info */}
         <div className="hidden md:flex items-center gap-2 text-xs text-gray-400">
-          <span className="font-mono text-[11px] text-gray-500">MetroMeet LiveKit v1</span>
+          <span className="font-mono text-[11px] text-gray-500">MetroMeet Pro v2.6</span>
         </div>
       </footer>
 

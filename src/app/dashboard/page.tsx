@@ -12,7 +12,6 @@ import {
   Check,
   ExternalLink,
   Users,
-  ShieldCheck,
   Sparkles,
   Settings,
   ArrowRight,
@@ -564,29 +563,7 @@ export default function DashboardPage() {
               </Card>
             )}
 
-            {/* Infrastructure Health */}
-            <Card className="bg-gradient-to-br from-white/[0.02] to-white/[0.01] border-white/[0.08]">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs flex items-center gap-2 text-indigo-300">
-                  <ShieldCheck className="h-4 w-4 text-indigo-400" />
-                  Enterprise WebRTC Mesh
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2.5 text-[11px] text-gray-400">
-                <div className="flex items-center justify-between">
-                  <span>Signaling Gateway</span>
-                  <span className="text-emerald-400 font-semibold">Socket.IO Ready</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span>NAT Traversal</span>
-                  <span className="text-emerald-400 font-semibold">STUN Configured</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span>Opus Codec</span>
-                  <span className="text-emerald-400 font-semibold">48kHz Full-Band</span>
-                </div>
-              </CardContent>
-            </Card>
+            {/* Personal Meeting Room (PMI) VIP Card */}
           </div>
         </div>
       </main>
