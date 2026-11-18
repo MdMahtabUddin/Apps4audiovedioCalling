@@ -32,10 +32,15 @@ import {
   PictureInPicture2,
   Sparkles,
   Wifi,
+  Disc,
+  Hand,
+  Maximize,
+  Minimize,
 } from 'lucide-react';
 import { BrandLogo } from '@/components/ui/brand-logo';
 import { soundEngine } from '@/lib/audio/sound-engine';
 import { useToast } from '@/components/ui/toast';
+import { useMeetingRecorder } from '@/lib/recording/use-meeting-recorder';
 import { RTC_CONFIG } from '@/lib/webrtc/webrtc-mesh';
 import { ChatAndNotesDrawer } from './chat-and-notes-drawer';
 
@@ -92,6 +97,102 @@ function LiveKitInnerStage({
   const [isCopied, setIsCopied] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
   const [knocks, setKnocks] = useState<Array<{ id: string; displayName: string }>>([]);
+
+  // Video & Audio Meeting Recorder
+  const recorder = useMeetingRecorder(meetingTitle);
+
+  // Virtual Hand Raise State
+  const [isHandRaised, setIsHandRaised] = useState(false);
+  const [raisedHands, setRaisedHands] = useState<Record<string, string>>({});
+
+  // Fullscreen State
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(Boolean(document.fullscreenElement));
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen().catch(() => {});
+    }
+  };
+
+  // Listen to LiveKit real-time data channel for reactions & hand raises
+  useEffect(() => {
+    if (!room) return;
+    const handleDataReceived = (payload: Uint8Array, participant?: any) => {
+      try {
+        const text = new TextDecoder().decode(payload);
+        const data = JSON.parse(text);
+        if (data.type === 'reaction' && data.emoji) {
+          setActiveReaction(data.emoji);
+          setTimeout(() => setActiveReaction(null), 2500);
+        } else if (data.type === 'hand-raise') {
+          const id = data.identity || participant?.identity;
+          const name = data.name || participant?.name || 'Participant';
+          setRaisedHands((prev) => {
+            const next = { ...prev };
+            if (data.raised) {
+              next[id] = name;
+            } else {
+              delete next[id];
+            }
+            return next;
+          });
+          if (data.raised && !participant?.isLocal) {
+            soundEngine.playIntroChime();
+            toast.info(`✋ ${name} raised their hand!`);
+          }
+        }
+      } catch {}
+    };
+
+    room.on('dataReceived', handleDataReceived);
+    return () => {
+      room.off('dataReceived', handleDataReceived);
+    };
+  }, [room, toast]);
+
+  // Hand Raise Toggle
+  const toggleHandRaise = () => {
+    const nextRaised = !isHandRaised;
+    setIsHandRaised(nextRaised);
+    if (nextRaised) {
+      soundEngine.playIntroChime();
+      toast.success('You raised your hand ✋');
+    } else {
+      toast.info('You lowered your hand');
+    }
+
+    setRaisedHands((prev) => {
+      const next = { ...prev };
+      if (nextRaised) {
+        next[localParticipant.identity] = displayName;
+      } else {
+        delete next[localParticipant.identity];
+      }
+      return next;
+    });
+
+    try {
+      const payload = new TextEncoder().encode(
+        JSON.stringify({
+          type: 'hand-raise',
+          identity: localParticipant.identity,
+          name: displayName,
+          raised: nextRaised,
+        })
+      );
+      room?.localParticipant.publishData(payload, { reliable: true });
+    } catch {}
+  };
 
   // Poll for waiting room admission requests if host
   useEffect(() => {
@@ -261,8 +362,25 @@ function LiveKitInnerStage({
           <span className="text-white font-semibold">{formatDuration(callDuration)}</span>
         </div>
 
+        {/* Center/Right: Active Recording Indicator */}
+        {recorder.isRecording && (
+          <div className="flex items-center gap-2 px-3 py-1 rounded-2xl bg-rose-600/20 border border-rose-500/40 text-xs font-mono animate-pulse">
+            <span className="h-2 w-2 rounded-full bg-rose-500 animate-ping" />
+            <span className="text-rose-400 font-extrabold text-[11px]">REC {recorder.recordingDuration}</span>
+          </div>
+        )}
+
         {/* Right Controls */}
         <div className="flex items-center gap-2">
+          {/* Fullscreen Toggle */}
+          <button
+            onClick={toggleFullscreen}
+            className="h-8 w-8 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.08] text-gray-300 hover:text-white flex items-center justify-center transition-all cursor-pointer shadow-sm active:scale-95"
+            title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
+          >
+            {isFullscreen ? <Minimize className="h-3.5 w-3.5" /> : <Maximize className="h-3.5 w-3.5" />}
+          </button>
+
           <button
             onClick={copyMeetingLink}
             className="px-3 py-1.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.08] text-gray-300 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95"
@@ -307,6 +425,14 @@ function LiveKitInnerStage({
                       </div>
                       <p className="text-xs font-bold text-gray-200">{pName} {isLocal ? '(You)' : ''}</p>
                       <p className="text-[10px] text-gray-400">Camera stream paused</p>
+                    </div>
+                  )}
+
+                  {/* Hand Raised Badge */}
+                  {raisedHands[participant.identity] && (
+                    <div className="absolute top-3 left-3 z-20 flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-500 text-slate-950 font-bold text-[10px] sm:text-[11px] shadow-lg animate-bounce">
+                      <span>✋</span>
+                      <span>Hand Raised</span>
                     </div>
                   )}
 
@@ -462,6 +588,47 @@ function LiveKitInnerStage({
             )}
           </div>
 
+          {/* Virtual Hand Raise */}
+          <button
+            onClick={toggleHandRaise}
+            className={`h-11 w-11 sm:h-12 sm:w-12 rounded-2xl flex items-center justify-center transition-all cursor-pointer shadow-lg active:scale-95 ${
+              isHandRaised
+                ? 'bg-amber-500 hover:bg-amber-600 text-slate-950 font-black shadow-amber-500/30'
+                : 'bg-white/[0.08] hover:bg-white/[0.15] text-gray-300 hover:text-white border border-white/10'
+            }`}
+            title={isHandRaised ? 'Lower Hand' : 'Raise Hand'}
+          >
+            <Hand className="h-5 w-5" />
+          </button>
+
+          {/* Meeting Video & Audio Recorder */}
+          <button
+            onClick={async () => {
+              if (recorder.isRecording) {
+                recorder.stopRecording();
+                toast.success('Recording saved! Download starting.');
+              } else {
+                const started = await recorder.startRecording();
+                if (started) {
+                  toast.success('Recording started!');
+                } else {
+                  toast.error('Recording cancelled or permission not granted.');
+                }
+              }
+            }}
+            className={`h-11 px-3 sm:h-12 sm:px-4 rounded-2xl flex items-center gap-1.5 sm:gap-2 transition-all cursor-pointer shadow-lg active:scale-95 text-xs font-semibold ${
+              recorder.isRecording
+                ? 'bg-rose-600 hover:bg-rose-700 text-white animate-pulse border border-rose-400'
+                : 'bg-white/[0.08] hover:bg-white/[0.15] text-gray-300 hover:text-white border border-white/10'
+            }`}
+            title={recorder.isRecording ? 'Stop Recording' : 'Record Video & Audio'}
+          >
+            <Disc className={`h-4 w-4 ${recorder.isRecording ? 'text-white animate-spin' : 'text-rose-400'}`} />
+            <span className="hidden sm:inline">
+              {recorder.isRecording ? `REC ${recorder.recordingDuration}` : 'Record'}
+            </span>
+          </button>
+
           {/* Chat & Notes Drawer */}
           <button
             onClick={() => setShowChatAndNotes(true)}
@@ -474,6 +641,9 @@ function LiveKitInnerStage({
           {/* Leave / End Meeting Button */}
           <button
             onClick={() => {
+              if (recorder.isRecording) {
+                recorder.stopRecording();
+              }
               if (isHost && onEndMeeting) {
                 onEndMeeting();
               } else {

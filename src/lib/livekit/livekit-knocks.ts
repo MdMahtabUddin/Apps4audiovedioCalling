@@ -22,9 +22,9 @@ export interface CloudMeetingMetadata {
 }
 
 function getClient(): RoomServiceClient | null {
-  const apiKey = process.env.LIVEKIT_API_KEY;
-  const apiSecret = process.env.LIVEKIT_API_SECRET;
-  let wsUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL || process.env.LIVEKIT_URL;
+  const apiKey = process.env.LIVEKIT_API_KEY || 'APIa2BuzPQWD3Vn';
+  const apiSecret = process.env.LIVEKIT_API_SECRET || 'gjDmc9QfM68VI45DofbIjQIcAoFAhCuPzPz8jTNGCRc';
+  let wsUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL || process.env.LIVEKIT_URL || 'wss://metromeet-wjbjv475.livekit.cloud';
 
   if (!apiKey || !apiSecret || !wsUrl || apiSecret.includes('•') || apiSecret.length < 16) {
     return null;
