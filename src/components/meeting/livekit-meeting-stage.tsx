@@ -36,6 +36,11 @@ import {
   Hand,
   Maximize,
   Minimize,
+  FlipHorizontal,
+  Pin,
+  PinOff,
+  Volume2,
+  VolumeX,
 } from 'lucide-react';
 import { BrandLogo } from '@/components/ui/brand-logo';
 import { soundEngine } from '@/lib/audio/sound-engine';
@@ -121,6 +126,33 @@ function LiveKitInnerStage({
       document.documentElement.requestFullscreen().catch(() => {});
     } else {
       document.exitFullscreen().catch(() => {});
+    }
+  };
+
+  // Camera Mirroring State (Default: true for natural webcam mirror orientation)
+  const [isMirrored, setIsMirrored] = useState(true);
+
+  // Spotlight / Pinned Track Key
+  const [pinnedTrackKey, setPinnedTrackKey] = useState<string | null>(null);
+
+  // Picture in Picture Toggle
+  const togglePiP = async () => {
+    try {
+      const videos = Array.from(document.querySelectorAll('video'));
+      const activeVideo = videos.find((v) => v.readyState >= 2 && !v.paused) || videos[0];
+      if (!activeVideo) {
+        toast.info('No active video found for Picture-in-Picture');
+        return;
+      }
+      if (document.pictureInPictureElement) {
+        await document.exitPictureInPicture();
+        toast.info('Exited Picture-in-Picture');
+      } else {
+        await activeVideo.requestPictureInPicture();
+        toast.success('Picture-in-Picture activated');
+      }
+    } catch {
+      toast.info('Picture-in-Picture is not supported in this browser');
     }
   };
 
@@ -262,6 +294,14 @@ function LiveKitInnerStage({
     { source: Track.Source.ScreenShare, withPlaceholder: false },
   ]);
 
+  // Order tracks so pinned track comes first
+  const orderedTracks = useMemo(() => {
+    if (!pinnedTrackKey) return tracks;
+    const pinned = tracks.find((t) => `${t.participant.identity}-${t.source}` === pinnedTrackKey);
+    const others = tracks.filter((t) => `${t.participant.identity}-${t.source}` !== pinnedTrackKey);
+    return pinned ? [pinned, ...others] : tracks;
+  }, [tracks, pinnedTrackKey]);
+
   const copyMeetingLink = () => {
     if (typeof window !== 'undefined') {
       const url = `${window.location.origin}/meeting/${meetingId}`;
@@ -287,6 +327,7 @@ function LiveKitInnerStage({
 
   // Grid layout class based on participant count
   const getGridClasses = () => {
+    if (pinnedTrackKey) return 'w-full flex flex-col lg:flex-row gap-3 max-w-7xl mx-auto max-h-[75vh] items-stretch';
     if (tracks.length <= 1) return 'max-w-4xl w-full aspect-video mx-auto max-h-[75vh]';
     if (tracks.length === 2) return 'w-full grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 max-w-6xl mx-auto max-h-[75vh] overflow-y-auto';
     if (tracks.length <= 4) return 'w-full grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3.5 max-w-6xl mx-auto max-h-[75vh] overflow-y-auto';
@@ -396,27 +437,39 @@ function LiveKitInnerStage({
       <main className="flex-1 overflow-hidden p-3 sm:p-5 flex items-center justify-center relative">
         <div className="w-full h-full flex items-center justify-center">
           <div className={getGridClasses()}>
-            {tracks.map((trackRef) => {
+            {orderedTracks.map((trackRef) => {
               const participant = trackRef.participant;
               const isLocal = participant.isLocal;
+              const trackKey = `${participant.identity}-${trackRef.source}`;
+              const isPinned = pinnedTrackKey === trackKey;
               const pName = participant.name || participant.identity || (isLocal ? displayName : 'Participant');
               const hasVideo = trackRef.publication && !trackRef.publication.isMuted && trackRef.publication.track;
               const isSpeaking = participant.isSpeaking;
 
               return (
                 <div
-                  key={`${participant.identity}-${trackRef.source}`}
-                  className={`relative w-full aspect-video rounded-3xl bg-[#0c101c] overflow-hidden flex items-center justify-center transition-all duration-300 group ${
+                  key={trackKey}
+                  className={`relative aspect-video rounded-3xl bg-[#0c101c] overflow-hidden flex items-center justify-center transition-all duration-300 group ${
+                    pinnedTrackKey && isPinned
+                      ? 'flex-1 w-full lg:max-h-[75vh] ring-2 ring-[#0066FF] shadow-2xl'
+                      : pinnedTrackKey
+                      ? 'w-full lg:w-64 shrink-0 border border-white/10'
+                      : 'w-full'
+                  } ${
                     isSpeaking
                       ? 'ring-4 ring-emerald-500 shadow-2xl shadow-emerald-500/25'
                       : 'border-2 border-white/[0.08] hover:border-indigo-500/40 shadow-xl'
                   }`}
                 >
-                  {/* Video Track Element */}
+                  {/* Video Track Element with Mirroring for Local Camera */}
                   {hasVideo ? (
                     <VideoTrack
                       trackRef={trackRef}
-                      className="w-full h-full object-cover"
+                      className={`w-full h-full object-cover transition-transform duration-300 ${
+                        isLocal && trackRef.source === Track.Source.Camera && isMirrored
+                          ? 'scale-x-[-1]'
+                          : ''
+                      }`}
                     />
                   ) : (
                     <div className="absolute inset-0 flex flex-col items-center justify-center space-y-3 bg-[#0a0d16]">
@@ -428,23 +481,55 @@ function LiveKitInnerStage({
                     </div>
                   )}
 
-                  {/* Hand Raised Badge */}
-                  {raisedHands[participant.identity] && (
-                    <div className="absolute top-3 left-3 z-20 flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-500 text-slate-950 font-bold text-[10px] sm:text-[11px] shadow-lg animate-bounce">
-                      <span>✋</span>
-                      <span>Hand Raised</span>
-                    </div>
-                  )}
-
-                  {/* Top Left Resolution & PiP Pill */}
-                  <div className="absolute top-3 left-3 flex items-center gap-1.5 z-10">
+                  {/* Top Left Badges: Hand Raise, Res, Mirror, Spotlight */}
+                  <div className="absolute top-3 left-3 flex flex-wrap items-center gap-1.5 z-20 pointer-events-none">
+                    {raisedHands[participant.identity] && (
+                      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-500 text-slate-950 font-bold text-[10px] sm:text-[11px] shadow-lg animate-bounce">
+                        <span>✋</span>
+                        <span>Hand Raised</span>
+                      </div>
+                    )}
                     <span className="px-2 py-0.5 rounded-lg bg-black/60 backdrop-blur-md border border-white/10 text-[10px] font-mono text-cyan-400 font-bold">
                       {trackRef.source === Track.Source.ScreenShare ? 'Screen Share' : '1080p HD'}
                     </span>
+                    {isPinned && (
+                      <span className="px-2 py-0.5 rounded-lg bg-[#0066FF] text-white text-[10px] font-bold flex items-center gap-1">
+                        <Pin className="h-2.5 w-2.5" /> Spotlight
+                      </span>
+                    )}
+                    {isLocal && trackRef.source === Track.Source.Camera && isMirrored && (
+                      <span className="hidden sm:inline-block px-1.5 py-0.5 rounded-lg bg-black/60 backdrop-blur-md border border-white/10 text-[9px] font-mono text-gray-300">
+                        Mirrored
+                      </span>
+                    )}
                   </div>
 
-                  {/* Top Right Live Badge */}
-                  <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-black/75 backdrop-blur-md border border-emerald-500/35 text-[11px] font-bold text-white shadow-lg">
+                  {/* Top Right Quick Actions (visible on hover) */}
+                  <div className="absolute top-3 right-3 flex items-center gap-1.5 z-30 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={() => setPinnedTrackKey(isPinned ? null : trackKey)}
+                      className="h-8 w-8 rounded-xl bg-black/80 hover:bg-[#0066FF] border border-white/15 text-white flex items-center justify-center transition-all cursor-pointer shadow-lg active:scale-90"
+                      title={isPinned ? 'Remove Spotlight' : 'Pin to Stage'}
+                    >
+                      {isPinned ? <PinOff className="h-4 w-4 text-amber-400" /> : <Pin className="h-4 w-4" />}
+                    </button>
+                    {isLocal && trackRef.source === Track.Source.Camera && (
+                      <button
+                        onClick={() => {
+                          const next = !isMirrored;
+                          setIsMirrored(next);
+                          toast.info(next ? 'Mirror camera enabled' : 'Mirror camera disabled');
+                        }}
+                        className="h-8 w-8 rounded-xl bg-black/80 hover:bg-[#0066FF] border border-white/15 text-white flex items-center justify-center transition-all cursor-pointer shadow-lg active:scale-90"
+                        title={isMirrored ? 'Show Un-mirrored Camera' : 'Show Mirrored Camera'}
+                      >
+                        <FlipHorizontal className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Top Right Live Badge (fades on hover) */}
+                  <div className="absolute top-3 right-3 group-hover:opacity-0 transition-opacity flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-black/75 backdrop-blur-md border border-emerald-500/35 text-[11px] font-bold text-white shadow-lg pointer-events-none">
                     <span className="flex h-2 w-2 relative">
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
                       <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
@@ -599,6 +684,32 @@ function LiveKitInnerStage({
             title={isHandRaised ? 'Lower Hand' : 'Raise Hand'}
           >
             <Hand className="h-5 w-5" />
+          </button>
+
+          {/* Flip / Mirror Camera Toggle */}
+          <button
+            onClick={() => {
+              const next = !isMirrored;
+              setIsMirrored(next);
+              toast.info(next ? 'Mirror camera enabled (Natural hand orientation)' : 'Mirror camera disabled');
+            }}
+            className={`h-11 w-11 sm:h-12 sm:w-12 rounded-2xl flex items-center justify-center transition-all cursor-pointer shadow-lg active:scale-95 ${
+              isMirrored
+                ? 'bg-[#0066FF]/20 hover:bg-[#0066FF]/30 text-[#388BFF] border border-[#0066FF]/40'
+                : 'bg-white/[0.08] hover:bg-white/[0.15] text-gray-300 hover:text-white border border-white/10'
+            }`}
+            title={isMirrored ? 'Disable Mirror Camera' : 'Enable Mirror Camera (Natural Hand View)'}
+          >
+            <FlipHorizontal className="h-5 w-5" />
+          </button>
+
+          {/* Picture in Picture */}
+          <button
+            onClick={togglePiP}
+            className="h-11 w-11 sm:h-12 sm:w-12 rounded-2xl bg-white/[0.08] hover:bg-white/[0.15] border border-white/10 text-gray-300 hover:text-white flex items-center justify-center transition-all cursor-pointer shadow-lg active:scale-95"
+            title="Picture-in-Picture Floating Window"
+          >
+            <PictureInPicture2 className="h-5 w-5" />
           </button>
 
           {/* Meeting Video & Audio Recorder */}
