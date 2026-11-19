@@ -15,6 +15,8 @@ import {
   Sparkles,
   Bookmark,
   Share2,
+  Lock,
+  Users,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/toast';
@@ -22,9 +24,19 @@ import { useToast } from '@/components/ui/toast';
 export interface ChatMessage {
   id: string;
   sender: string;
+  senderId?: string;
   isLocal: boolean;
   text: string;
   timestamp: string;
+  isPrivate?: boolean;
+  recipientId?: string;
+  recipientName?: string;
+}
+
+export interface ChatParticipantOption {
+  id: string;
+  name: string;
+  isLocal?: boolean;
 }
 
 interface ChatAndNotesDrawerProps {
@@ -33,8 +45,11 @@ interface ChatAndNotesDrawerProps {
   meetingId: string;
   meetingTitle: string;
   localUserName: string;
-  onSendMessage?: (text: string) => void;
+  onSendMessage?: (text: string, recipient?: { id: string; name: string } | null) => void;
   messages?: ChatMessage[];
+  participants?: ChatParticipantOption[];
+  selectedRecipientId?: string;
+  onSelectRecipient?: (id: string) => void;
 }
 
 export function ChatAndNotesDrawer({
@@ -44,13 +59,29 @@ export function ChatAndNotesDrawer({
   meetingTitle,
   localUserName,
   onSendMessage,
-  messages = [],
+  messages,
+  participants = [],
+  selectedRecipientId,
+  onSelectRecipient,
 }: ChatAndNotesDrawerProps) {
   const toast = useToast();
   const [activeTab, setActiveTab] = useState<'chat' | 'notes'>('chat');
+  const [internalRecipientId, setInternalRecipientId] = useState<string>('ALL');
   const [inputText, setInputText] = useState('');
   const [copied, setCopied] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const activeRecipientId = selectedRecipientId ?? internalRecipientId;
+  const setActiveRecipientId = (id: string) => {
+    setInternalRecipientId(id);
+    onSelectRecipient?.(id);
+  };
+
+  const remoteParticipants = participants.filter((p) => !p.isLocal);
+  const selectedRecipient =
+    activeRecipientId !== 'ALL'
+      ? remoteParticipants.find((p) => p.id === activeRecipientId) || null
+      : null;
 
   // Local simulated messages state (if no socket signaling active)
   const [localMessages, setLocalMessages] = useState<ChatMessage[]>([
@@ -112,17 +143,23 @@ Date: ${new Date().toLocaleDateString()}
     e.preventDefault();
     if (!inputText.trim()) return;
 
-    const newMsg: ChatMessage = {
-      id: 'msg_' + Date.now() + Math.random().toString(36).slice(2, 6),
-      sender: localUserName || 'You',
-      isLocal: true,
-      text: inputText.trim(),
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    };
+    const text = inputText.trim();
+    const isPrivate = Boolean(selectedRecipient);
 
-    setLocalMessages((prev) => [...prev, newMsg]);
     if (onSendMessage) {
-      onSendMessage(inputText.trim());
+      onSendMessage(text, selectedRecipient ? { id: selectedRecipient.id, name: selectedRecipient.name } : null);
+    } else {
+      const newMsg: ChatMessage = {
+        id: 'msg_' + Date.now() + Math.random().toString(36).slice(2, 6),
+        sender: localUserName || 'You',
+        isLocal: true,
+        text,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        isPrivate,
+        recipientId: selectedRecipient?.id,
+        recipientName: selectedRecipient?.name,
+      };
+      setLocalMessages((prev) => [...prev, newMsg]);
     }
     setInputText('');
   };
@@ -158,7 +195,7 @@ Date: ${new Date().toLocaleDateString()}
 
   if (!isOpen) return null;
 
-  const allMessages = messages.length > 0 ? messages : localMessages;
+  const allMessages = messages !== undefined ? messages : localMessages;
   const wordCount = notes.trim().split(/\s+/).filter(Boolean).length;
   const charCount = notes.length;
 
@@ -220,17 +257,29 @@ Date: ${new Date().toLocaleDateString()}
                   msg.isLocal ? 'items-end' : 'items-start'
                 }`}
               >
-                <div className="flex items-center gap-1.5 mb-1 text-[11px] text-gray-400">
+                <div className="flex items-center gap-1.5 mb-1 text-[11px] text-gray-400 flex-wrap">
                   <span className="font-semibold text-gray-300">
                     {msg.isLocal ? 'You' : msg.sender}
                   </span>
+                  {msg.isPrivate && (
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-violet-500/20 text-violet-300 border border-violet-500/35 text-[9px] font-black uppercase">
+                      <Lock className="h-2.5 w-2.5" />
+                      {msg.isLocal
+                        ? `Private to ${msg.recipientName || 'Participant'}`
+                        : 'Private to You'}
+                    </span>
+                  )}
                   <span>•</span>
                   <span>{msg.timestamp}</span>
                 </div>
 
                 <div
                   className={`max-w-[85%] px-3.5 py-2.5 rounded-2xl text-xs sm:text-sm leading-relaxed shadow-md ${
-                    msg.isLocal
+                    msg.isPrivate
+                      ? msg.isLocal
+                        ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-br-xs shadow-violet-600/25 border border-violet-400/30'
+                        : 'bg-violet-500/15 border border-violet-500/35 text-violet-100 rounded-bl-xs'
+                      : msg.isLocal
                       ? 'bg-[#0066FF] text-white rounded-br-xs shadow-[#0066FF]/20'
                       : 'bg-white/[0.06] border border-white/[0.08] text-gray-100 rounded-bl-xs'
                   }`}
@@ -242,8 +291,38 @@ Date: ${new Date().toLocaleDateString()}
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Quick Reaction Emojis & Chat Input Bar */}
-          <div className="p-3 border-t border-white/[0.08] bg-[#050a14]/60 space-y-2">
+          {/* Quick Reaction Emojis, Recipient Selector & Chat Input Bar */}
+          <div className="p-3 border-t border-white/[0.08] bg-[#050a14]/60 space-y-2.5">
+            {/* Send To Selector (Public Everyone vs Private DM) */}
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[11px] font-bold text-gray-400 flex items-center gap-1 shrink-0">
+                {selectedRecipient ? (
+                  <Lock className="h-3 w-3 text-violet-400" />
+                ) : (
+                  <Users className="h-3 w-3 text-[#388BFF]" />
+                )}
+                To:
+              </span>
+              <select
+                value={selectedRecipient ? selectedRecipient.id : 'ALL'}
+                onChange={(e) => setActiveRecipientId(e.target.value)}
+                className={`flex-1 rounded-xl px-2.5 py-1.5 text-xs font-bold outline-none border transition-colors cursor-pointer ${
+                  selectedRecipient
+                    ? 'bg-violet-500/15 border-violet-500/40 text-violet-200'
+                    : 'bg-white/[0.05] border-white/[0.1] text-gray-200'
+                }`}
+              >
+                <option value="ALL" className="bg-[#091222] text-white">
+                  Everyone (Public Chat)
+                </option>
+                {remoteParticipants.map((p) => (
+                  <option key={p.id} value={p.id} className="bg-[#091222] text-white">
+                    Private: {p.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <div className="flex items-center gap-1">
               {['👍', '👏', '❤️', '🔥', '🚀', '🙌'].map((emoji) => (
                 <button
@@ -260,10 +339,18 @@ Date: ${new Date().toLocaleDateString()}
             <form onSubmit={handleSendChat} className="flex items-center gap-2">
               <input
                 type="text"
-                placeholder="Send a message to everyone..."
+                placeholder={
+                  selectedRecipient
+                    ? `Private message to ${selectedRecipient.name}...`
+                    : 'Send a message to everyone...'
+                }
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
-                className="flex-1 bg-white/[0.05] border border-white/[0.1] rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-white placeholder:text-gray-500 outline-none focus:border-[#0066FF] transition-all"
+                className={`flex-1 bg-white/[0.05] border rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-white placeholder:text-gray-500 outline-none transition-all ${
+                  selectedRecipient
+                    ? 'border-violet-500/45 focus:border-violet-400'
+                    : 'border-white/[0.1] focus:border-[#0066FF]'
+                }`}
               />
               <Button
                 type="submit"

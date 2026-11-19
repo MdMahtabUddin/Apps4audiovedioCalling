@@ -51,7 +51,7 @@ import { soundEngine } from '@/lib/audio/sound-engine';
 import { useToast } from '@/components/ui/toast';
 import { useMeetingRecorder } from '@/lib/recording/use-meeting-recorder';
 import { RTC_CONFIG } from '@/lib/webrtc/webrtc-mesh';
-import { ChatAndNotesDrawer } from './chat-and-notes-drawer';
+import { ChatAndNotesDrawer, ChatMessage } from './chat-and-notes-drawer';
 import { WhiteboardCanvas, WhiteboardElement } from './whiteboard-canvas';
 
 interface LiveKitMeetingStageProps {
@@ -108,6 +108,22 @@ function LiveKitInnerStage({
   const [coHosts, setCoHosts] = useState<Record<string, boolean>>({});
   const [wbElements, setWbElements] = useState<WhiteboardElement[]>([]);
   const [wbRedoStack, setWbRedoStack] = useState<WhiteboardElement[]>([]);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
+    {
+      id: 'welcome_lk',
+      sender: 'MetroMeet Bot',
+      isLocal: false,
+      text: 'Welcome! You can chat with Everyone or send Private Messages (DM) to any participant.',
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    },
+  ]);
+  const [chatRecipientId, setChatRecipientId] = useState<string>('ALL');
+  const [unreadChatCount, setUnreadChatCount] = useState<number>(0);
+  const showChatRef = useRef(showChatAndNotes);
+  useEffect(() => {
+    showChatRef.current = showChatAndNotes;
+    if (showChatAndNotes) setUnreadChatCount(0);
+  }, [showChatAndNotes]);
   const [showReactionsBar, setShowReactionsBar] = useState(false);
   const [activeReaction, setActiveReaction] = useState<string | null>(null);
   const [isCopied, setIsCopied] = useState(false);
@@ -209,6 +225,61 @@ function LiveKitInnerStage({
         } else if (data.type === 'wb-clear') {
           setWbElements([]);
           setWbRedoStack([]);
+        } else if (data.type === 'host-media-control') {
+          const myId = room?.localParticipant?.identity;
+          const isTarget =
+            data.targetIdentity === myId || (data.targetIdentity === 'ALL' && !isHost);
+          if (isTarget && room?.localParticipant) {
+            if (data.media === 'mic') {
+              room.localParticipant.setMicrophoneEnabled(Boolean(data.enabled)).catch(() => {});
+              toast.info(
+                data.enabled
+                  ? `🎤 ${data.byName || 'Host'} turned ON your microphone`
+                  : `🔇 ${data.byName || 'Host'} muted your microphone`
+              );
+            } else if (data.media === 'cam') {
+              room.localParticipant.setCameraEnabled(Boolean(data.enabled)).catch(() => {});
+              toast.info(
+                data.enabled
+                  ? `📹 ${data.byName || 'Host'} turned ON your vedio`
+                  : `📷 ${data.byName || 'Host'} turned OFF your vedio`
+              );
+            }
+          }
+        } else if (data.type === 'chat-msg' && data.text) {
+          const myId = room?.localParticipant?.identity;
+          // Ignore echoes of our own messages
+          if (data.senderIdentity && data.senderIdentity === myId) return;
+          // Private message visibility check: only intended recipient sees it
+          if (data.isPrivate && data.recipientIdentity !== myId) return;
+
+          const incomingMsg: ChatMessage = {
+            id: data.id || `msg_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+            sender: data.senderName || participant?.name || 'Participant',
+            senderId: data.senderIdentity || participant?.identity,
+            isLocal: false,
+            text: data.text,
+            timestamp:
+              data.timestamp ||
+              new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            isPrivate: Boolean(data.isPrivate),
+            recipientId: data.recipientIdentity,
+            recipientName: data.recipientName,
+          };
+
+          setChatMessages((prev) =>
+            prev.some((m) => m.id === incomingMsg.id) ? prev : [...prev, incomingMsg]
+          );
+
+          if (!showChatRef.current) {
+            setUnreadChatCount((c) => c + 1);
+            soundEngine.playKnockChime();
+            if (incomingMsg.isPrivate) {
+              toast.info(`🔒 Private message from ${incomingMsg.sender}`);
+            } else {
+              toast.info(`💬 ${incomingMsg.sender}: ${incomingMsg.text.slice(0, 40)}`);
+            }
+          }
         }
       } catch {}
     };
@@ -217,7 +288,104 @@ function LiveKitInnerStage({
     return () => {
       room.off('dataReceived', handleDataReceived);
     };
-  }, [room, toast]);
+  }, [room, toast, isHost]);
+
+  const hasHostPrivileges = isHost || Boolean(localParticipant && coHosts[localParticipant.identity]);
+
+  const handleHostControlMedia = (
+    targetIdentity: string,
+    targetName: string,
+    media: 'mic' | 'cam',
+    enabled: boolean
+  ) => {
+    if (localParticipant && targetIdentity === localParticipant.identity) {
+      if (media === 'mic') {
+        localParticipant.setMicrophoneEnabled(enabled).catch(() => {});
+      } else {
+        localParticipant.setCameraEnabled(enabled).catch(() => {});
+      }
+      return;
+    }
+
+    try {
+      const payload = new TextEncoder().encode(
+        JSON.stringify({
+          type: 'host-media-control',
+          targetIdentity,
+          media,
+          enabled,
+          byName: displayName,
+        })
+      );
+      room?.localParticipant.publishData(
+        payload,
+        targetIdentity === 'ALL'
+          ? { reliable: true }
+          : { reliable: true, destinationIdentities: [targetIdentity] }
+      );
+      const actionLabel =
+        media === 'mic'
+          ? enabled
+            ? 'Unmuted'
+            : 'Muted'
+          : enabled
+          ? 'Turned ON vedio for'
+          : 'Turned OFF vedio for';
+      toast.success(`${actionLabel} ${targetIdentity === 'ALL' ? 'all participants' : targetName}`);
+    } catch {}
+  };
+
+  const handleSendChatMessage = (
+    text: string,
+    recipient?: { id: string; name: string } | null
+  ) => {
+    const myId = localParticipant?.identity || 'local';
+    const isPrivate = Boolean(recipient);
+    const msgId = `msg_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    const outgoing: ChatMessage = {
+      id: msgId,
+      sender: displayName || 'You',
+      senderId: myId,
+      isLocal: true,
+      text,
+      timestamp,
+      isPrivate,
+      recipientId: recipient?.id,
+      recipientName: recipient?.name,
+    };
+
+    setChatMessages((prev) => [...prev, outgoing]);
+
+    try {
+      const payload = new TextEncoder().encode(
+        JSON.stringify({
+          type: 'chat-msg',
+          id: msgId,
+          senderIdentity: myId,
+          senderName: displayName || 'Participant',
+          text,
+          timestamp,
+          isPrivate,
+          recipientIdentity: recipient?.id || null,
+          recipientName: recipient?.name || null,
+        })
+      );
+      room?.localParticipant.publishData(
+        payload,
+        isPrivate && recipient
+          ? { reliable: true, destinationIdentities: [recipient.id] }
+          : { reliable: true }
+      );
+    } catch {}
+  };
+
+  const handleOpenPrivateChat = (targetIdentity: string) => {
+    setChatRecipientId(targetIdentity);
+    setShowParticipantsDrawer(false);
+    setShowChatAndNotes(true);
+  };
 
   const handleToggleCoHost = (identity: string, name: string) => {
     const nextIsCoHost = !coHosts[identity];
@@ -859,13 +1027,18 @@ function LiveKitInnerStage({
             </span>
           </button>
 
-          {/* Chat & Notes Drawer */}
+          {/* Chat & Private Messages Drawer */}
           <button
             onClick={() => setShowChatAndNotes(true)}
-            className="h-11 w-11 sm:h-12 sm:w-12 rounded-2xl bg-white/[0.08] hover:bg-white/[0.15] border border-white/10 text-gray-300 hover:text-white flex items-center justify-center transition-all cursor-pointer shadow-lg active:scale-95"
-            title="Chat & Notes"
+            className="relative h-11 w-11 sm:h-12 sm:w-12 rounded-2xl bg-white/[0.08] hover:bg-white/[0.15] border border-white/10 text-gray-300 hover:text-white flex items-center justify-center transition-all cursor-pointer shadow-lg active:scale-95"
+            title="Chat, Private Messages & Notes"
           >
             <MessageSquare className="h-5 w-5" />
+            {unreadChatCount > 0 && (
+              <span className="absolute -top-1 -right-1 h-5 min-w-5 px-1 rounded-full bg-violet-500 text-white text-[10px] font-black flex items-center justify-center border-2 border-[#06080e] animate-bounce">
+                {unreadChatCount}
+              </span>
+            )}
           </button>
 
           {/* Leave / End Meeting Button */}
@@ -947,7 +1120,9 @@ function LiveKitInnerStage({
                   </span>
                 </h3>
                 <p className="text-[11px] text-gray-400">
-                  {isHost ? 'Manage attendees & assign Co-Hosts' : 'Live attendees in this meeting'}
+                  {hasHostPrivileges
+                    ? 'Control Mic/Vedio, assign Co-Hosts & send DMs'
+                    : 'View attendees & send private messages'}
                 </p>
               </div>
             </div>
@@ -959,6 +1134,28 @@ function LiveKitInnerStage({
             </button>
           </div>
 
+          {/* Host / Co-Host Bulk Media Controls */}
+          {hasHostPrivileges && (
+            <div className="px-4 py-3 border-b border-white/[0.08] bg-white/[0.02] flex items-center gap-2">
+              <button
+                onClick={() => handleHostControlMedia('ALL', 'Everyone', 'mic', false)}
+                className="flex-1 py-2 px-3 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                title="Mute all participants' microphones"
+              >
+                <MicOff className="h-3.5 w-3.5" />
+                <span>Mute All</span>
+              </button>
+              <button
+                onClick={() => handleHostControlMedia('ALL', 'Everyone', 'cam', false)}
+                className="flex-1 py-2 px-3 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                title="Turn off all participants' vedio"
+              >
+                <VideoOff className="h-3.5 w-3.5" />
+                <span>All Vedio Off</span>
+              </button>
+            </div>
+          )}
+
           <div className="flex-1 overflow-y-auto p-4 space-y-2.5">
             {participants.map((p) => {
               const pName = p.name || p.identity || 'Participant';
@@ -969,63 +1166,145 @@ function LiveKitInnerStage({
               return (
                 <div
                   key={p.identity}
-                  className="p-3.5 rounded-2xl bg-white/[0.04] border border-white/[0.08] hover:border-[#0066FF]/35 transition-all flex items-center justify-between gap-3"
+                  className="p-3.5 rounded-2xl bg-white/[0.04] border border-white/[0.08] hover:border-[#0066FF]/35 transition-all space-y-2.5"
                 >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="h-10 w-10 rounded-xl bg-gradient-to-tr from-[#0066FF] to-[#FF7A00] text-white font-black text-xs flex items-center justify-center shrink-0 shadow-md">
-                      {pName.slice(0, 2).toUpperCase()}
-                    </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="text-xs sm:text-sm font-bold text-white truncate max-w-[140px]">
-                          {pName} {isLocalP ? '(You)' : ''}
-                        </span>
-                        {isPeerHost && (
-                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[#FF7A00]/20 text-[#FFA033] border border-[#FF7A00]/35 text-[9px] font-black uppercase">
-                            <Crown className="h-2.5 w-2.5" /> Host
-                          </span>
-                        )}
-                        {isPeerCoHost && (
-                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[#0066FF]/20 text-[#388BFF] border border-[#0066FF]/35 text-[9px] font-black uppercase">
-                            <Shield className="h-2.5 w-2.5" /> Co-Host
-                          </span>
-                        )}
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="h-10 w-10 rounded-xl bg-gradient-to-tr from-[#0066FF] to-[#FF7A00] text-white font-black text-xs flex items-center justify-center shrink-0 shadow-md">
+                        {pName.slice(0, 2).toUpperCase()}
                       </div>
-                      <div className="flex items-center gap-2 text-[10px] text-gray-400 mt-0.5">
-                        <span className={p.isMicrophoneEnabled ? 'text-emerald-400' : 'text-rose-400'}>
-                          {p.isMicrophoneEnabled ? 'Mic On' : 'Muted'}
-                        </span>
-                        <span>•</span>
-                        <span className={p.isCameraEnabled ? 'text-emerald-400' : 'text-gray-500'}>
-                          {p.isCameraEnabled ? 'Camera On' : 'Camera Off'}
-                        </span>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-xs sm:text-sm font-bold text-white truncate max-w-[140px]">
+                            {pName} {isLocalP ? '(You)' : ''}
+                          </span>
+                          {isPeerHost && (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[#FF7A00]/20 text-[#FFA033] border border-[#FF7A00]/35 text-[9px] font-black uppercase">
+                              <Crown className="h-2.5 w-2.5" /> Host
+                            </span>
+                          )}
+                          {isPeerCoHost && (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[#0066FF]/20 text-[#388BFF] border border-[#0066FF]/35 text-[9px] font-black uppercase">
+                              <Shield className="h-2.5 w-2.5" /> Co-Host
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 text-[10px] text-gray-400 mt-0.5">
+                          <span className={p.isMicrophoneEnabled ? 'text-emerald-400' : 'text-rose-400'}>
+                            {p.isMicrophoneEnabled ? 'Mic On' : 'Muted'}
+                          </span>
+                          <span>•</span>
+                          <span className={p.isCameraEnabled ? 'text-emerald-400' : 'text-gray-500'}>
+                            {p.isCameraEnabled ? 'Vedio On' : 'Vedio Off'}
+                          </span>
+                        </div>
                       </div>
                     </div>
+
+                    {/* Private Message (DM) Button — available for any participant to message any other */}
+                    {!isLocalP && (
+                      <button
+                        onClick={() => handleOpenPrivateChat(p.identity)}
+                        className="h-8 px-2.5 rounded-xl bg-violet-500/15 hover:bg-violet-500/30 border border-violet-500/35 text-violet-300 text-[11px] font-bold flex items-center gap-1 shrink-0 transition-all cursor-pointer"
+                        title={`Send private message to ${pName}`}
+                      >
+                        <MessageSquare className="h-3.5 w-3.5" />
+                        <span>DM</span>
+                      </button>
+                    )}
                   </div>
 
-                  {/* Host Action: Make / Remove Co-Host */}
-                  {isHost && !isLocalP && (
-                    <button
-                      onClick={() => handleToggleCoHost(p.identity, pName)}
-                      className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold flex items-center gap-1 shrink-0 transition-all cursor-pointer ${
-                        isPeerCoHost
-                          ? 'bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30'
-                          : 'bg-[#0066FF]/20 hover:bg-[#0066FF]/35 text-[#388BFF] border border-[#0066FF]/40'
-                      }`}
-                      title={isPeerCoHost ? 'Remove Co-Host role' : 'Promote to Co-Host'}
-                    >
-                      {isPeerCoHost ? (
-                        <>
-                          <UserMinus className="h-3.5 w-3.5" />
-                          <span>Remove</span>
-                        </>
-                      ) : (
-                        <>
-                          <UserCheck className="h-3.5 w-3.5" />
-                          <span>Co-Host</span>
-                        </>
+                  {/* Host / Co-Host Controls Row: Mic On/Off, Vedio On/Off, Make Co-Host */}
+                  {hasHostPrivileges && (
+                    <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-white/[0.06]">
+                      {/* Toggle Participant Mic ON/OFF */}
+                      <button
+                        onClick={() =>
+                          handleHostControlMedia(
+                            p.identity,
+                            pName,
+                            'mic',
+                            !p.isMicrophoneEnabled
+                          )
+                        }
+                        className={`flex-1 py-1.5 px-2 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1 transition-all cursor-pointer ${
+                          p.isMicrophoneEnabled
+                            ? 'bg-emerald-500/15 hover:bg-rose-500/20 text-emerald-300 hover:text-rose-300 border border-emerald-500/30'
+                            : 'bg-rose-500/15 hover:bg-emerald-500/20 text-rose-300 hover:text-emerald-300 border border-rose-500/30'
+                        }`}
+                        title={
+                          p.isMicrophoneEnabled
+                            ? `Mute ${pName}'s microphone`
+                            : `Turn ON ${pName}'s microphone`
+                        }
+                      >
+                        {p.isMicrophoneEnabled ? (
+                          <>
+                            <Mic className="h-3.5 w-3.5" />
+                            <span>Mic On</span>
+                          </>
+                        ) : (
+                          <>
+                            <MicOff className="h-3.5 w-3.5" />
+                            <span>Mic Off</span>
+                          </>
+                        )}
+                      </button>
+
+                      {/* Toggle Participant Vedio (Camera) ON/OFF */}
+                      <button
+                        onClick={() =>
+                          handleHostControlMedia(p.identity, pName, 'cam', !p.isCameraEnabled)
+                        }
+                        className={`flex-1 py-1.5 px-2 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1 transition-all cursor-pointer ${
+                          p.isCameraEnabled
+                            ? 'bg-emerald-500/15 hover:bg-rose-500/20 text-emerald-300 hover:text-rose-300 border border-emerald-500/30'
+                            : 'bg-rose-500/15 hover:bg-emerald-500/20 text-rose-300 hover:text-emerald-300 border border-rose-500/30'
+                        }`}
+                        title={
+                          p.isCameraEnabled
+                            ? `Turn OFF ${pName}'s vedio`
+                            : `Turn ON ${pName}'s vedio`
+                        }
+                      >
+                        {p.isCameraEnabled ? (
+                          <>
+                            <Video className="h-3.5 w-3.5" />
+                            <span>Vedio On</span>
+                          </>
+                        ) : (
+                          <>
+                            <VideoOff className="h-3.5 w-3.5" />
+                            <span>Vedio Off</span>
+                          </>
+                        )}
+                      </button>
+
+                      {/* Host Action: Make / Remove Co-Host */}
+                      {isHost && !isLocalP && (
+                        <button
+                          onClick={() => handleToggleCoHost(p.identity, pName)}
+                          className={`py-1.5 px-2.5 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1 shrink-0 transition-all cursor-pointer ${
+                            isPeerCoHost
+                              ? 'bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30'
+                              : 'bg-[#0066FF]/20 hover:bg-[#0066FF]/35 text-[#388BFF] border border-[#0066FF]/40'
+                          }`}
+                          title={isPeerCoHost ? 'Remove Co-Host role' : 'Promote to Co-Host'}
+                        >
+                          {isPeerCoHost ? (
+                            <>
+                              <UserMinus className="h-3.5 w-3.5" />
+                              <span>Remove</span>
+                            </>
+                          ) : (
+                            <>
+                              <UserCheck className="h-3.5 w-3.5" />
+                              <span>Co-Host</span>
+                            </>
+                          )}
+                        </button>
                       )}
-                    </button>
+                    </div>
                   )}
                 </div>
               );
@@ -1056,6 +1335,15 @@ function LiveKitInnerStage({
         meetingId={meetingId}
         meetingTitle={meetingTitle}
         localUserName={displayName}
+        messages={chatMessages}
+        onSendMessage={handleSendChatMessage}
+        participants={participants.map((p) => ({
+          id: p.identity,
+          name: p.name || p.identity || 'Participant',
+          isLocal: p.isLocal,
+        }))}
+        selectedRecipientId={chatRecipientId}
+        onSelectRecipient={setChatRecipientId}
       />
     </div>
   );
