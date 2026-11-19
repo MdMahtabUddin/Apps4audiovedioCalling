@@ -33,6 +33,12 @@ export interface MeetingItem {
   startTime: string;
   endTime?: string | null;
   durationSeconds?: number;
+  /** false when the real call length can't be determined (legacy rows with no leave data) */
+  durationRecorded?: boolean;
+  /** true once at least one participant actually joined */
+  hasStarted?: boolean;
+  /** true only while someone is really in the room right now */
+  isLive?: boolean;
   durationMinutes?: number;
   participantCount?: number;
   createdAt: string;

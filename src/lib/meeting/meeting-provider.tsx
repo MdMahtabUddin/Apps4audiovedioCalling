@@ -59,6 +59,16 @@ export function MeetingProvider({
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [settings, setSettings] = useState<MeetingSettingsItem>(defaultSettings);
 
+  const sessionRef = useRef<{ participantId: string | null; isHost: boolean; isJoined: boolean }>({
+    participantId: null,
+    isHost: false,
+    isJoined: false,
+  });
+
+  useEffect(() => {
+    sessionRef.current = { participantId: myParticipantId, isHost, isJoined };
+  }, [myParticipantId, isHost, isJoined]);
+
   const joinRoom = useCallback(
     async (displayName: string, password?: string, isHostCandidate?: boolean) => {
       try {
@@ -143,12 +153,56 @@ export function MeetingProvider({
     };
   }, [isWaitingApproval, myParticipantId, meetingId, toast, router]);
 
+  const sendLeave = useCallback(() => {
+    const partId = sessionRef.current.participantId || myParticipantId;
+    if (!partId || typeof window === 'undefined') return;
+    const url = `/api/meetings/${meetingId}/leave`;
+    const body = JSON.stringify({
+      participantId: partId,
+      isHost: sessionRef.current.isHost,
+    });
+    try {
+      if (navigator.sendBeacon) {
+        navigator.sendBeacon(url, new Blob([body], { type: 'application/json' }));
+      } else {
+        fetch(url, { method: 'POST', body, keepalive: true }).catch(() => {});
+      }
+    } catch {}
+  }, [meetingId, myParticipantId]);
+
+  // Periodic heartbeat while active + record leave on tab close or client navigation
+  useEffect(() => {
+    if (!isJoined || !myParticipantId) return;
+
+    // Send heartbeat every 25 seconds to track real presence
+    const interval = setInterval(() => {
+      fetch(`/api/meetings/${meetingId}/heartbeat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ participantId: myParticipantId }),
+      }).catch(() => {});
+    }, 25000);
+
+    const onLeaveWindow = () => sendLeave();
+    window.addEventListener('pagehide', onLeaveWindow);
+    window.addEventListener('beforeunload', onLeaveWindow);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('pagehide', onLeaveWindow);
+      window.removeEventListener('beforeunload', onLeaveWindow);
+      // Unmount cleanup on client-side route navigation
+      sendLeave();
+    };
+  }, [isJoined, myParticipantId, meetingId, sendLeave]);
+
   const leaveRoom = useCallback(() => {
     soundEngine.stopCallingRingtone();
+    sendLeave();
     setIsJoined(false);
     setIsWaitingApproval(false);
     router.push('/');
-  }, [router]);
+  }, [router, sendLeave]);
 
   const endRoom = useCallback(async () => {
     try {

@@ -108,6 +108,126 @@ export async function checkPrisma(): Promise<boolean> {
   }
 }
 
+// ---- Real call-time calculation -------------------------------------------------------
+// A meeting row is created long before people actually join, and the host may press "End"
+// hours or days later. So duration must come from real participant join/leave times,
+// never from meeting creation -> end button.
+interface SessionParticipant {
+  userId?: string | null;
+  guestName?: string | null;
+  isApproved: boolean;
+  joinedAt: string;
+  leftAt?: string | null;
+}
+
+const STALE_SESSION_LIMIT_MS = 4 * 60 * 60 * 1000; // 4 hours maximum single continuous call without heartbeat
+const DEFAULT_UNCLOSED_DURATION_MS = 5 * 60 * 1000; // 5 mins fallback if someone joined and closed tab without leave record
+
+export function summarizeSession(
+  meeting: { startTime: string; endTime?: string | null; isActive: boolean },
+  participants: SessionParticipant[]
+) {
+  const now = Date.now();
+  const joined = participants.filter((p) => p.isApproved);
+  const uniquePeople = new Set(
+    joined.map((p) => p.userId || `guest:${(p.guestName || '').toLowerCase()}`)
+  );
+
+  const meetingStartMs = new Date(meeting.startTime).getTime();
+
+  if (joined.length === 0) {
+    return {
+      startTime: meeting.startTime,
+      endTime: meeting.isActive ? null : (meeting.endTime ?? meeting.startTime),
+      durationSeconds: 0,
+      durationMinutes: 0,
+      durationRecorded: true,
+      hasStarted: false,
+      isLive: false,
+      participantCount: 0,
+    };
+  }
+
+  const joinTimes = joined.map((p) => new Date(p.joinedAt).getTime()).filter((t) => !Number.isNaN(t));
+  const firstJoin = joinTimes.length > 0 ? Math.min(...joinTimes) : meetingStartMs;
+  const latestJoin = joinTimes.length > 0 ? Math.max(...joinTimes) : meetingStartMs;
+
+  // Use the earliest valid start
+  const startMs = !Number.isNaN(meetingStartMs) && Math.abs(firstJoin - meetingStartMs) < 60 * 60 * 1000
+    ? Math.min(meetingStartMs, firstJoin)
+    : firstJoin;
+
+  // Check valid left times (must be >= startMs)
+  const rawLeftTimes = joined
+    .filter((p) => p.leftAt)
+    .map((p) => new Date(p.leftAt as string).getTime())
+    .filter((t) => !Number.isNaN(t) && t >= startMs);
+
+  const anyPresent = joined.some((p) => !p.leftAt);
+  const endedAtMs = meeting.endTime ? new Date(meeting.endTime).getTime() : null;
+
+  // Is this meeting genuinely live right now?
+  // Only live if marked active AND at least one participant is still in the room AND the last join was recent (< 4 hours)
+  const isLive = Boolean(meeting.isActive && anyPresent && now - latestJoin < STALE_SESSION_LIMIT_MS);
+
+  let endMs: number;
+
+  if (isLive) {
+    endMs = now;
+  } else {
+    // If not live, determine when the call actually ended.
+    // Filter out artificial leftAt timestamps that were stamped days later by dashboard cleanup.
+    const validLeftTimes = rawLeftTimes.filter((t) => t - latestJoin <= STALE_SESSION_LIMIT_MS);
+    const hasValidLeft = validLeftTimes.length > 0;
+    const lastValidLeft = hasValidLeft ? Math.max(...validLeftTimes) : null;
+
+    if (endedAtMs !== null && !Number.isNaN(endedAtMs)) {
+      if (endedAtMs - latestJoin <= STALE_SESSION_LIMIT_MS) {
+        // endedAt was within realistic range of meeting activity
+        endMs = hasValidLeft ? Math.max(lastValidLeft!, endedAtMs) : endedAtMs;
+      } else {
+        // endedAt was clicked days/hours later (like clicking "End Session" the next day on dashboard).
+        // The call actually ended when the last participant left, or shortly after join.
+        endMs = hasValidLeft
+          ? lastValidLeft!
+          : Math.min(latestJoin + DEFAULT_UNCLOSED_DURATION_MS, endedAtMs);
+      }
+    } else if (hasValidLeft) {
+      endMs = lastValidLeft!;
+    } else {
+      // No end time and no leave data, but meeting is inactive or stale
+      endMs = latestJoin + DEFAULT_UNCLOSED_DURATION_MS;
+    }
+  }
+
+  // Ensure endMs >= startMs
+  if (endMs < startMs) {
+    endMs = startMs;
+  }
+
+  // Calculate real duration
+  let spanMs = endMs - startMs;
+
+  // Safety clamp: if somehow an abandoned call is calculated > 4 hours without multi-participant activity, clamp
+  if (!isLive && spanMs > STALE_SESSION_LIMIT_MS && uniquePeople.size <= 2) {
+    spanMs = Math.min(spanMs, 45 * 60 * 1000); // 45 mins realistic cap for abandoned test rooms
+    endMs = startMs + spanMs;
+  }
+
+  const durationSeconds = Math.max(0, Math.round(spanMs / 1000));
+  const durationMinutes = durationSeconds > 0 ? Math.max(1, Math.round(durationSeconds / 60)) : 0;
+
+  return {
+    startTime: new Date(startMs).toISOString(),
+    endTime: isLive ? null : new Date(endMs).toISOString(),
+    durationSeconds,
+    durationMinutes,
+    durationRecorded: true,
+    hasStarted: true,
+    isLive,
+    participantCount: Math.max(1, uniquePeople.size),
+  };
+}
 export const userService = {
   async findByEmail(email: string) {
     const usePg = await checkPrisma();
@@ -331,14 +451,6 @@ export const meetingService = {
   },
 
   async getRecentAndHistory(userId: string) {
-    const computeDuration = (startIso: string, endIso?: string | null) => {
-      const startMs = new Date(startIso).getTime();
-      const endMs = endIso ? new Date(endIso).getTime() : Date.now();
-      const durationSeconds = Math.max(0, Math.round((endMs - startMs) / 1000));
-      const durationMinutes = Math.max(1, Math.round(durationSeconds / 60));
-      return { durationSeconds, durationMinutes };
-    };
-
     const usePg = await checkPrisma();
     if (usePg) {
       const meetings = await prisma.meeting.findMany({
@@ -348,38 +460,40 @@ export const meetingService = {
             { participants: { some: { userId } } },
           ],
         },
-        orderBy: { startTime: 'desc' },
         include: {
           host: { select: { id: true, name: true, email: true } },
-          participants: { select: { userId: true, guestName: true } },
+          participants: {
+            select: { userId: true, guestName: true, isApproved: true, joinedAt: true, leftAt: true },
+          },
         },
       });
-      return meetings.map((m) => {
-        const startIso = m.startTime.toISOString();
-        const endIso = m.endTime ? m.endTime.toISOString() : null;
-        const { durationSeconds, durationMinutes } = computeDuration(startIso, endIso);
-        // Count distinct people: rejoining creates a new row, which must not inflate attendance.
-        const uniquePeople = new Set(
-          m.participants.map((p) => p.userId || `guest:${(p.guestName || '').toLowerCase()}`)
-        );
-        return {
-          id: m.id,
-          title: m.title,
-          hostId: m.hostId,
-          hostName: m.host.name,
-          hostEmail: m.host.email,
-          hasPassword: !!m.password,
-          isLocked: m.isLocked,
-          waitingRoom: m.waitingRoom,
-          isActive: m.isActive,
-          startTime: startIso,
-          endTime: endIso,
-          durationSeconds,
-          durationMinutes,
-          participantCount: Math.max(1, uniquePeople.size),
-          createdAt: m.createdAt.toISOString(),
-        };
-      });
+      return meetings
+        .map((m) => {
+          const session = summarizeSession(
+            { startTime: m.startTime.toISOString(), endTime: m.endTime?.toISOString() ?? null, isActive: m.isActive },
+            m.participants.map((p) => ({
+              userId: p.userId,
+              guestName: p.guestName,
+              isApproved: p.isApproved,
+              joinedAt: p.joinedAt.toISOString(),
+              leftAt: p.leftAt ? p.leftAt.toISOString() : null,
+            }))
+          );
+          return {
+            id: m.id,
+            title: m.title,
+            hostId: m.hostId,
+            hostName: m.host.name,
+            hostEmail: m.host.email,
+            hasPassword: !!m.password,
+            isLocked: m.isLocked,
+            waitingRoom: m.waitingRoom,
+            isActive: m.isActive,
+            createdAt: m.createdAt.toISOString(),
+            ...session,
+          };
+        })
+        .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
     }
 
     const store = loadDevStore();
@@ -388,28 +502,31 @@ export const meetingService = {
     );
     return store.meetings
       .filter((m) => m.hostId === userId || participatedIds.has(m.id))
-      .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime())
       .map((m) => {
         const host = store.users.find((u) => u.id === m.hostId);
-        const { durationSeconds, durationMinutes } = computeDuration(m.startTime, m.endTime);
         const { password, ...safeMeeting } = m;
-        const uniquePeople = new Set(
+        const session = summarizeSession(
+          { startTime: m.startTime, endTime: m.endTime ?? null, isActive: m.isActive },
           store.participants
             .filter((p) => p.meetingId === m.id)
-            .map((p) => p.userId || `guest:${(p.guestName || '').toLowerCase()}`)
+            .map((p) => ({
+              userId: p.userId,
+              guestName: p.guestName,
+              isApproved: p.isApproved,
+              joinedAt: p.joinedAt,
+              leftAt: p.leftAt ?? null,
+            }))
         );
         return {
           ...safeMeeting,
           hasPassword: !!password,
           hostName: host ? host.name : 'Host',
           hostEmail: host ? host.email : '',
-          durationSeconds,
-          durationMinutes,
-          participantCount: Math.max(1, uniquePeople.size),
+          ...session,
         };
-      });
+      })
+      .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
   },
-
   async getScheduledMeetings(userId: string) {
     const usePg = await checkPrisma();
     if (usePg) {
@@ -669,21 +786,118 @@ export const meetingService = {
 
   async endMeeting(id: string, hostId: string) {
     const usePg = await checkPrisma();
+    const now = new Date();
+    const STALE_LIMIT = 4 * 60 * 60 * 1000;
+
     if (usePg) {
+      const meeting = await prisma.meeting.findUnique({
+        where: { id },
+        include: { participants: true },
+      });
+      let effectiveEnd = now;
+      if (meeting) {
+        const startMs = meeting.startTime.getTime();
+        const joinTimes = meeting.participants.map((p) => p.joinedAt.getTime());
+        const lastJoin = joinTimes.length > 0 ? Math.max(...joinTimes) : startMs;
+        if (now.getTime() - lastJoin > STALE_LIMIT) {
+          // Stale session closed after hours/days: effective end should be when it was actually active
+          effectiveEnd = new Date(lastJoin + 5 * 60 * 1000);
+        }
+      }
+
+      await prisma.meetingParticipant.updateMany({
+        where: { meetingId: id, leftAt: null },
+        data: { leftAt: effectiveEnd },
+      });
       return prisma.meeting.updateMany({
         where: { id, hostId },
-        data: { isActive: false, endTime: new Date() },
+        data: { isActive: false, endTime: effectiveEnd },
       });
     }
 
     const store = loadDevStore();
     const meeting = store.meetings.find((m) => m.id === id && m.hostId === hostId);
     if (meeting) {
+      const startMs = new Date(meeting.startTime).getTime();
+      const parts = store.participants.filter((p) => p.meetingId === id);
+      const joinTimes = parts.map((p) => new Date(p.joinedAt).getTime());
+      const lastJoin = joinTimes.length > 0 ? Math.max(...joinTimes) : startMs;
+      let effectiveEndIso = now.toISOString();
+      if (now.getTime() - lastJoin > STALE_LIMIT) {
+        effectiveEndIso = new Date(lastJoin + 5 * 60 * 1000).toISOString();
+      }
+
+      parts.forEach((p) => {
+        if (!p.leftAt) p.leftAt = effectiveEndIso;
+      });
       meeting.isActive = false;
-      meeting.endTime = new Date().toISOString();
+      meeting.endTime = effectiveEndIso;
       saveDevStore(store);
     }
     return meeting;
+  },
+
+  async leaveMeeting(meetingId: string, participantId: string, isHost?: boolean) {
+    const now = new Date();
+    const usePg = await checkPrisma();
+    if (usePg) {
+      await prisma.meetingParticipant.updateMany({
+        where: { id: participantId, meetingId, leftAt: null },
+        data: { leftAt: now },
+      });
+      // Check remaining participants still in the room
+      const remaining = await prisma.meetingParticipant.count({
+        where: { meetingId, isApproved: true, leftAt: null },
+      });
+      if (remaining === 0 || isHost) {
+        // Automatically close meeting if host left or room is empty
+        await prisma.meeting
+          .update({
+            where: { id: meetingId },
+            data: { isActive: false, endTime: now },
+          })
+          .catch(() => {});
+      }
+      return true;
+    }
+
+    const store = loadDevStore();
+    const p = store.participants.find((x) => x.id === participantId && x.meetingId === meetingId);
+    if (p && !p.leftAt) {
+      p.leftAt = now.toISOString();
+    }
+    const remaining = store.participants.filter(
+      (x) => x.meetingId === meetingId && x.isApproved && !x.leftAt
+    ).length;
+    if (remaining === 0 || isHost) {
+      const meeting = store.meetings.find((m) => m.id === meetingId);
+      if (meeting && meeting.isActive) {
+        meeting.isActive = false;
+        meeting.endTime = now.toISOString();
+      }
+    }
+    saveDevStore(store);
+    return p;
+  },
+
+  async recordHeartbeat(meetingId: string, participantId: string) {
+    const usePg = await checkPrisma();
+    if (usePg) {
+      await prisma.meetingParticipant
+        .updateMany({
+          where: { id: participantId, meetingId },
+          data: { leftAt: null },
+        })
+        .catch(() => {});
+      return true;
+    }
+    const store = loadDevStore();
+    const p = store.participants.find((x) => x.id === participantId && x.meetingId === meetingId);
+    if (p) {
+      p.leftAt = null;
+      saveDevStore(store);
+    }
+    return true;
   },
 
   async lockMeeting(id: string, hostId: string, isLocked: boolean) {

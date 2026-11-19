@@ -51,18 +51,19 @@ type HistoryFilter = 'all' | 'active' | 'completed';
 type HistorySort = 'newest' | 'longest' | 'participants';
 
 function computeDurationSeconds(item: MeetingItem, nowMs: number): number {
+  // Server computes real call time from participant join/leave. Only live calls tick locally.
+  if (item.durationRecorded === false || item.hasStarted === false) return 0;
   const startMs = new Date(item.startTime || item.createdAt).getTime();
-  if (Number.isNaN(startMs)) return item.durationSeconds || 0;
-  if (item.endTime) {
-    const endMs = new Date(item.endTime).getTime();
-    if (!Number.isNaN(endMs) && endMs >= startMs) {
-      return Math.round((endMs - startMs) / 1000);
-    }
+  if (item.isLive && !Number.isNaN(startMs)) {
+    return Math.max(0, Math.round((nowMs - startMs) / 1000));
   }
-  if (typeof item.durationSeconds === 'number' && !item.isActive) {
-    return item.durationSeconds;
-  }
-  return Math.max(0, Math.round((nowMs - startMs) / 1000));
+  return item.durationSeconds || 0;
+}
+
+function formatDurationFor(item: MeetingItem, seconds: number): string {
+  if (item.hasStarted === false) return 'Not started';
+  if (item.durationRecorded === false) return 'Not recorded';
+  return formatDurationDetailed(seconds);
 }
 
 function formatDurationDetailed(totalSeconds: number): string {
@@ -100,6 +101,27 @@ function formatMeetingTime(dateString?: string | null): string {
     minute: '2-digit',
     hour12: true,
   });
+}
+
+function formatTimeWindow(startIso?: string | null, endIso?: string | null, isActive?: boolean): string {
+  if (!startIso) return 'Not started';
+  const startD = new Date(startIso);
+  const startStr = formatMeetingTime(startIso);
+  if (isActive || !endIso) {
+    return `${startStr} – Ongoing`;
+  }
+  const endD = new Date(endIso);
+  const endStr = formatMeetingTime(endIso);
+  const sameDay =
+    startD.getFullYear() === endD.getFullYear() &&
+    startD.getMonth() === endD.getMonth() &&
+    startD.getDate() === endD.getDate();
+
+  if (sameDay) {
+    return `${startStr} – ${endStr}`;
+  }
+  const shortEndDate = endD.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return `${startStr} – ${endStr} (${shortEndDate})`;
 }
 
 function buildScheduleStart(item: ScheduledMeetingItem): Date {
@@ -343,7 +365,7 @@ export default function DashboardPage() {
         `"${startDate}"`,
         `"${startT}"`,
         `"${endT}"`,
-        `"${formatDurationDetailed(secs)}"`,
+        `"${formatDurationFor(m, secs)}"`,
         m.participantCount || 1,
       ].join(',');
     });
@@ -365,10 +387,11 @@ export default function DashboardPage() {
       return {
         ...m,
         computedDurationSeconds: durationSec,
-        formattedDuration: formatDurationDetailed(durationSec),
+        formattedDuration: formatDurationFor(m, durationSec),
         formattedDate: formatMeetingDate(m.startTime || m.createdAt),
         formattedStartTime: formatMeetingTime(m.startTime || m.createdAt),
         formattedEndTime: m.endTime ? formatMeetingTime(m.endTime) : null,
+        formattedTimeWindow: formatTimeWindow(m.startTime || m.createdAt, m.endTime, m.isActive),
         relativeDay: getRelativeDayLabel(m.startTime || m.createdAt),
       };
     });
@@ -989,12 +1012,7 @@ export default function DashboardPage() {
                                   Time Window
                                 </p>
                                 <p className="text-xs font-bold text-gray-100 truncate">
-                                  {item.formattedStartTime}
-                                  {item.formattedEndTime
-                                    ? ` – ${item.formattedEndTime}`
-                                    : item.isActive
-                                    ? ' – Ongoing'
-                                    : ''}
+                                  {item.formattedTimeWindow}
                                 </p>
                               </div>
                             </div>
