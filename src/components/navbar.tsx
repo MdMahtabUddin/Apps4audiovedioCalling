@@ -2,14 +2,14 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import {
   Video,
   LogOut,
   Settings,
-  Zap,
-  Radio,
   ChevronDown,
+  Home,
+  LayoutDashboard,
 } from 'lucide-react';
 import { UserProfile } from '@/types';
 import { BrandLogo } from '@/components/ui/brand-logo';
@@ -23,6 +23,7 @@ interface NavbarProps {
 
 export function Navbar({ user, onOpenSettings, onQuickNewMeeting }: NavbarProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const toast = useToast();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [status, setStatus] = useState<'Available' | 'Busy' | 'In a Call'>('Available');
@@ -46,9 +47,37 @@ export function Navbar({ user, onOpenSettings, onQuickNewMeeting }: NavbarProps)
   return (
     <header className="sticky top-0 z-40 w-full border-b border-[#0066FF]/20 bg-[#050a14]/85 backdrop-blur-2xl transition-all">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between">
-        {/* Brand Logo with MetroNet Corporate Identity */}
-        <div className="flex items-center gap-6">
-          <BrandLogo size="md" showTagline={true} href={user ? '/dashboard' : '/'} />
+        {/* Brand Logo & Navigation */}
+        <div className="flex items-center gap-5">
+          <BrandLogo size="md" showTagline={true} href="/" />
+
+          {user && (
+            <nav className="hidden md:flex items-center gap-1.5 pl-4 border-l border-white/[0.08]">
+              <Link
+                href="/"
+                className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
+                  pathname === '/'
+                    ? 'bg-[#0066FF]/20 text-white border border-[#0066FF]/40 shadow-sm shadow-[#0066FF]/15'
+                    : 'text-gray-400 hover:text-white hover:bg-white/[0.06] border border-transparent'
+                }`}
+              >
+                <Home className="h-3.5 w-3.5 text-[#388BFF]" />
+                <span>Home</span>
+              </Link>
+
+              <Link
+                href="/dashboard"
+                className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
+                  pathname?.startsWith('/dashboard')
+                    ? 'bg-[#0066FF]/20 text-white border border-[#0066FF]/40 shadow-sm shadow-[#0066FF]/15'
+                    : 'text-gray-400 hover:text-white hover:bg-white/[0.06] border border-transparent'
+                }`}
+              >
+                <LayoutDashboard className="h-3.5 w-3.5 text-[#FFA033]" />
+                <span>Dashboard</span>
+              </Link>
+            </nav>
+          )}
         </div>
 
         {/* Right Actions */}
@@ -133,6 +162,24 @@ export function Navbar({ user, onOpenSettings, onQuickNewMeeting }: NavbarProps)
                           </button>
                         </div>
                       </div>
+
+                      <Link
+                        href="/"
+                        onClick={() => setDropdownOpen(false)}
+                        className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs text-gray-300 hover:text-white hover:bg-white/[0.06] rounded-xl transition-colors font-medium"
+                      >
+                        <Home className="h-4 w-4 text-[#388BFF]" />
+                        Home Page
+                      </Link>
+
+                      <Link
+                        href="/dashboard"
+                        onClick={() => setDropdownOpen(false)}
+                        className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs text-gray-300 hover:text-white hover:bg-white/[0.06] rounded-xl transition-colors font-medium"
+                      >
+                        <LayoutDashboard className="h-4 w-4 text-[#FFA033]" />
+                        Dashboard
+                      </Link>
 
                       {onOpenSettings && (
                         <button
