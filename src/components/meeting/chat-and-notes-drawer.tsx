@@ -50,6 +50,7 @@ interface ChatAndNotesDrawerProps {
   participants?: ChatParticipantOption[];
   selectedRecipientId?: string;
   onSelectRecipient?: (id: string) => void;
+  topSwitcher?: React.ReactNode;
 }
 
 export function ChatAndNotesDrawer({
@@ -63,6 +64,7 @@ export function ChatAndNotesDrawer({
   participants = [],
   selectedRecipientId,
   onSelectRecipient,
+  topSwitcher,
 }: ChatAndNotesDrawerProps) {
   const toast = useToast();
   const [activeTab, setActiveTab] = useState<'chat' | 'notes'>('chat');
@@ -200,7 +202,10 @@ Date: ${new Date().toLocaleDateString()}
   const charCount = notes.length;
 
   return (
-    <aside className="fixed inset-y-0 right-0 z-50 w-full sm:w-[420px] bg-[#091222]/95 backdrop-blur-2xl border-l border-[#0066FF]/25 shadow-2xl flex flex-col transition-all duration-300 animate-in slide-in-from-right">
+    <aside className="fixed inset-y-0 right-0 z-50 w-full sm:w-[420px] bg-[#091222]/96 backdrop-blur-2xl border-l border-white/[0.1] shadow-2xl flex flex-col transition-all duration-300 animate-in slide-in-from-right">
+      {/* Optional Unified Meeting Hub Tab Switcher (Participants / Chat / Draw) */}
+      {topSwitcher}
+
       {/* Drawer Header with Dual Tabs: Chat & Notepad */}
       <div className="p-3 sm:p-4 border-b border-white/[0.08] flex items-center justify-between shrink-0">
         <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-white/[0.04] border border-white/[0.08]">

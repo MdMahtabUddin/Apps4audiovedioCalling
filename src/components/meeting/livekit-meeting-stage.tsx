@@ -795,83 +795,129 @@ function LiveKitInnerStage({
         </div>
       )}
 
-      {/* Top Navigation Bar */}
-      <header className="h-14 sm:h-16 px-4 bg-[#0c101c]/90 border-b border-white/[0.08] backdrop-blur-md flex items-center justify-between z-20 shrink-0">
-        <div className="flex items-center gap-3">
+      {/* Top Navigation Bar — Clean International Studio Header */}
+      <header className="h-14 sm:h-16 px-4 sm:px-5 bg-[#080d18]/90 border-b border-white/[0.07] backdrop-blur-xl flex items-center justify-between gap-3 z-20 shrink-0">
+        {/* Left: Brand & Meeting Title */}
+        <div className="flex items-center gap-3 min-w-0">
           <BrandLogo size="sm" showTagline={false} />
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-sm sm:text-base font-bold text-white tracking-tight truncate max-w-[140px] sm:max-w-xs">
-                {meetingTitle}
-              </h2>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#0066FF]/20 text-[#388BFF] border border-[#0066FF]/40 flex items-center gap-1">
-                <Sparkles className="h-3 w-3 text-cyan-400" />
-                Enterprise Cloud Engine
-              </span>
-            </div>
+          <div className="h-5 w-px bg-white/[0.1] hidden sm:block" />
+          <div className="min-w-0">
+            <h2 className="text-sm sm:text-base font-bold text-white tracking-tight truncate max-w-[140px] sm:max-w-xs">
+              {meetingTitle}
+            </h2>
             <div className="flex items-center gap-2 text-[11px] text-gray-400 font-mono">
-              <span className="text-emerald-400 flex items-center gap-1 font-semibold">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-ping" />
-                HD Audio & Vedio
+              <span className="inline-flex items-center gap-1.5 text-emerald-400 font-semibold">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                LIVE
               </span>
-              <span>•</span>
+              <span className="text-gray-600">•</span>
               <span className="text-gray-300 font-semibold">{formatDuration(callDuration)}</span>
+              {recorder.isRecording && (
+                <>
+                  <span className="text-gray-600">•</span>
+                  <span className="text-rose-400 font-extrabold animate-pulse">
+                    REC {recorder.recordingDuration}
+                  </span>
+                </>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Center: Live Call Duration Pill */}
-        <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-black/50 border border-white/10 text-xs font-mono">
-          <Radio className="h-3.5 w-3.5 text-rose-500 animate-pulse" />
-          <span className="text-rose-400 font-bold uppercase tracking-wider text-[10px]">LIVE</span>
-          <span className="text-gray-500">|</span>
-          <span className="text-white font-semibold">{formatDuration(callDuration)}</span>
-        </div>
+        {/* Right: Studio Utility Controls (Snapshot, Mirror Camera, Record, PiP, Shortcuts, Fullscreen, Share) */}
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          {/* Grouped Media Utilities Pill: Snapshot + Mirror Camera + Record */}
+          <div className="flex items-center gap-1 p-1 rounded-2xl bg-white/[0.04] border border-white/[0.08]">
+            {/* Snapshot Capture */}
+            <button
+              onClick={handleCaptureSnapshot}
+              className="h-8 w-8 rounded-xl hover:bg-white/[0.1] text-cyan-300 hover:text-white flex items-center justify-center transition-all cursor-pointer active:scale-95"
+              title="Capture Live Snapshot (PNG)"
+            >
+              <Camera className="h-4 w-4" />
+            </button>
 
-        {/* Center/Right: Active Recording Indicator */}
-        {recorder.isRecording && (
-          <div className="flex items-center gap-2 px-3 py-1 rounded-2xl bg-rose-600/20 border border-rose-500/40 text-xs font-mono animate-pulse">
-            <span className="h-2 w-2 rounded-full bg-rose-500 animate-ping" />
-            <span className="text-rose-400 font-extrabold text-[11px]">REC {recorder.recordingDuration}</span>
+            {/* Mirror / Disable Mirror Camera (next to Snapshot) */}
+            <button
+              onClick={() => {
+                const next = !isMirrored;
+                setIsMirrored(next);
+                toast.info(next ? 'Mirror camera enabled' : 'Mirror camera disabled');
+              }}
+              className={`h-8 w-8 rounded-xl flex items-center justify-center transition-all cursor-pointer active:scale-95 ${
+                isMirrored
+                  ? 'bg-[#0066FF]/20 text-[#388BFF]'
+                  : 'text-gray-400 hover:text-white hover:bg-white/[0.1]'
+              }`}
+              title={isMirrored ? 'Disable Mirror Camera' : 'Enable Mirror Camera'}
+            >
+              <FlipHorizontal className="h-4 w-4" />
+            </button>
+
+            {/* Record Vedio & Audio (next to Snapshot & Mirror) */}
+            <button
+              onClick={async () => {
+                if (recorder.isRecording) {
+                  recorder.stopRecording();
+                  toast.success('Recording saved! Download starting.');
+                } else {
+                  const started = await recorder.startRecording();
+                  if (started) {
+                    toast.success('Recording started!');
+                  } else {
+                    toast.error('Recording cancelled or permission not granted.');
+                  }
+                }
+              }}
+              className={`h-8 px-2.5 rounded-xl flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 text-[11px] font-bold ${
+                recorder.isRecording
+                  ? 'bg-rose-600 text-white animate-pulse'
+                  : 'hover:bg-white/[0.1] text-gray-200 hover:text-white'
+              }`}
+              title={recorder.isRecording ? 'Stop Recording' : 'Record Vedio & Audio'}
+            >
+              <Disc className={`h-3.5 w-3.5 ${recorder.isRecording ? 'text-white animate-spin' : 'text-rose-400'}`} />
+              <span className="hidden md:inline">
+                {recorder.isRecording ? recorder.recordingDuration : 'Record'}
+              </span>
+            </button>
+
+            {/* Picture in Picture */}
+            <button
+              onClick={togglePiP}
+              className="hidden sm:flex h-8 w-8 rounded-xl hover:bg-white/[0.1] text-gray-300 hover:text-white items-center justify-center transition-all cursor-pointer active:scale-95"
+              title="Picture-in-Picture"
+            >
+              <PictureInPicture2 className="h-4 w-4" />
+            </button>
           </div>
-        )}
-
-        {/* Right Controls */}
-        <div className="flex items-center gap-2">
-          {/* Snapshot Capture */}
-          <button
-            onClick={handleCaptureSnapshot}
-            className="h-8 w-8 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.08] text-gray-300 hover:text-white flex items-center justify-center transition-all cursor-pointer shadow-sm active:scale-95"
-            title="Capture Live Snapshot (PNG)"
-          >
-            <Camera className="h-3.5 w-3.5 text-cyan-300" />
-          </button>
 
           {/* Keyboard Shortcuts */}
           <button
             onClick={() => setShowShortcutsModal(true)}
-            className="hidden sm:flex h-8 w-8 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.08] text-gray-300 hover:text-white items-center justify-center transition-all cursor-pointer shadow-sm active:scale-95"
+            className="hidden md:flex h-9 w-9 rounded-xl bg-white/[0.05] hover:bg-white/[0.12] border border-white/[0.08] text-gray-300 hover:text-white items-center justify-center transition-all cursor-pointer active:scale-95"
             title="Keyboard Shortcuts (?)"
           >
-            <Keyboard className="h-3.5 w-3.5" />
+            <Keyboard className="h-4 w-4" />
           </button>
 
           {/* Fullscreen Toggle */}
           <button
             onClick={toggleFullscreen}
-            className="h-8 w-8 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.08] text-gray-300 hover:text-white flex items-center justify-center transition-all cursor-pointer shadow-sm active:scale-95"
+            className="h-9 w-9 rounded-xl bg-white/[0.05] hover:bg-white/[0.12] border border-white/[0.08] text-gray-300 hover:text-white flex items-center justify-center transition-all cursor-pointer active:scale-95"
             title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
           >
-            {isFullscreen ? <Minimize className="h-3.5 w-3.5" /> : <Maximize className="h-3.5 w-3.5" />}
+            {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
           </button>
 
+          {/* Share Link */}
           <button
             onClick={copyMeetingLink}
-            className="px-3 py-1.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.08] text-gray-300 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95"
+            className="h-9 px-3 rounded-xl bg-[#0066FF]/15 hover:bg-[#0066FF]/25 border border-[#0066FF]/35 text-[#388BFF] hover:text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
             title="Copy Meeting Link"
           >
             {isCopied ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
-            <span className="hidden sm:inline">{isCopied ? 'Copied' : 'Share Link'}</span>
+            <span className="hidden sm:inline">{isCopied ? 'Copied' : 'Invite'}</span>
           </button>
         </div>
       </header>
@@ -1080,65 +1126,18 @@ function LiveKitInnerStage({
         </div>
       </main>
 
-      {/* Live Attendees Ticker Ribbon */}
-      <div className="h-9 px-3 sm:px-4 bg-[#050a14]/95 border-t border-b border-[#0066FF]/25 backdrop-blur-md flex items-center overflow-hidden z-20 shrink-0 select-none">
-        <div className="flex items-center gap-2 pr-3 sm:pr-4 border-r border-white/10 shrink-0 z-10 bg-[#050a14] text-xs font-bold text-[#388BFF]">
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#0066FF] opacity-75" />
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-[#0066FF]" />
-          </span>
-          <span className="uppercase tracking-wider font-mono text-[10px] sm:text-[11px]">
-            Attendees ({totalCount}/50)
-          </span>
-        </div>
-        <div className="flex-1 overflow-hidden relative ml-3">
-          <div className="animate-marquee flex items-center gap-8 text-xs text-gray-300">
-            {[0, 1].map((copyIndex) => (
-              <React.Fragment key={copyIndex}>
-                {participants.map((p) => {
-                  const pName = p.name || p.identity || 'Participant';
-                  const initials = pName.slice(0, 2).toUpperCase();
-                  const isLocal = p.isLocal;
-
-                  return (
-                    <React.Fragment key={`${copyIndex}-${p.identity}`}>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className="h-5 w-5 rounded-full bg-gradient-to-tr from-[#0066FF] to-[#0047AB] text-white font-bold text-[10px] flex items-center justify-center shadow-sm">
-                          {initials}
-                        </span>
-                        <span className="font-semibold text-white">
-                          {pName} {isLocal ? '(You)' : ''}
-                        </span>
-                        <span className="text-[10px] text-emerald-400 font-mono font-semibold">Active</span>
-                      </div>
-                      <span className="text-gray-600 font-black">•</span>
-                    </React.Fragment>
-                  );
-                })}
-              </React.Fragment>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Bottom Floating Control Bar */}
-      <footer className="h-18 px-4 bg-[#0c101c]/95 border-t border-white/[0.08] backdrop-blur-lg flex items-center justify-between z-20 shrink-0">
-        <div className="hidden md:flex items-center gap-3 text-xs text-gray-400">
-          <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="font-mono text-[11px]">Enterprise SFU • 0% Packet Loss</span>
-        </div>
-
-        {/* Center Controls */}
-        <div className="flex items-center gap-2 sm:gap-3 mx-auto">
+      {/* Floating International-Standard Bottom Control Dock */}
+      <footer className="pb-4 pt-2 px-4 flex items-center justify-center z-20 shrink-0 pointer-events-none">
+        <div className="pointer-events-auto flex items-center gap-2 sm:gap-2.5 px-3 sm:px-4 py-2.5 rounded-full bg-[#0b1222]/92 border border-white/[0.12] backdrop-blur-2xl shadow-[0_12px_40px_rgba(0,0,0,0.65)]">
           {/* Mic Toggle */}
           <button
             onClick={() => localParticipant.setMicrophoneEnabled(!localParticipant.isMicrophoneEnabled)}
-            className={`h-11 w-11 sm:h-12 sm:w-12 rounded-2xl flex items-center justify-center transition-all cursor-pointer shadow-lg active:scale-95 ${
+            className={`h-11 w-11 rounded-full flex items-center justify-center transition-all cursor-pointer active:scale-95 ${
               localParticipant.isMicrophoneEnabled
-                ? 'bg-white/[0.08] hover:bg-white/[0.15] text-white border border-white/10'
-                : 'bg-rose-500 hover:bg-rose-600 text-white shadow-rose-500/30'
+                ? 'bg-white/[0.09] hover:bg-white/[0.16] text-white'
+                : 'bg-rose-500 hover:bg-rose-600 text-white shadow-lg shadow-rose-500/30'
             }`}
-            title={localParticipant.isMicrophoneEnabled ? 'Mute Microphone' : 'Unmute Microphone'}
+            title={localParticipant.isMicrophoneEnabled ? 'Mute Microphone (M)' : 'Unmute Microphone (M)'}
           >
             {localParticipant.isMicrophoneEnabled ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}
           </button>
@@ -1146,12 +1145,12 @@ function LiveKitInnerStage({
           {/* Camera Toggle */}
           <button
             onClick={() => localParticipant.setCameraEnabled(!localParticipant.isCameraEnabled)}
-            className={`h-11 w-11 sm:h-12 sm:w-12 rounded-2xl flex items-center justify-center transition-all cursor-pointer shadow-lg active:scale-95 ${
+            className={`h-11 w-11 rounded-full flex items-center justify-center transition-all cursor-pointer active:scale-95 ${
               localParticipant.isCameraEnabled
-                ? 'bg-white/[0.08] hover:bg-white/[0.15] text-white border border-white/10'
-                : 'bg-rose-500 hover:bg-rose-600 text-white shadow-rose-500/30'
+                ? 'bg-white/[0.09] hover:bg-white/[0.16] text-white'
+                : 'bg-rose-500 hover:bg-rose-600 text-white shadow-lg shadow-rose-500/30'
             }`}
-            title={localParticipant.isCameraEnabled ? 'Turn Off Camera' : 'Turn On Camera'}
+            title={localParticipant.isCameraEnabled ? 'Turn Off Vedio (V)' : 'Turn On Vedio (V)'}
           >
             {localParticipant.isCameraEnabled ? <Video className="h-5 w-5" /> : <VideoOff className="h-5 w-5" />}
           </button>
@@ -1159,27 +1158,29 @@ function LiveKitInnerStage({
           {/* Screen Share */}
           <button
             onClick={() => localParticipant.setScreenShareEnabled(!localParticipant.isScreenShareEnabled)}
-            className={`h-11 w-11 sm:h-12 sm:w-12 rounded-2xl flex items-center justify-center transition-all cursor-pointer shadow-lg active:scale-95 ${
+            className={`h-11 w-11 rounded-full flex items-center justify-center transition-all cursor-pointer active:scale-95 ${
               localParticipant.isScreenShareEnabled
-                ? 'bg-[#0066FF] text-white shadow-[#0066FF]/40 border border-[#388BFF]'
-                : 'bg-white/[0.08] hover:bg-white/[0.15] text-gray-300 hover:text-white border border-white/10'
+                ? 'bg-[#0066FF] text-white shadow-lg shadow-[#0066FF]/40'
+                : 'bg-white/[0.09] hover:bg-white/[0.16] text-gray-200 hover:text-white'
             }`}
             title={localParticipant.isScreenShareEnabled ? 'Stop Screen Share' : 'Share Screen'}
           >
             <Monitor className="h-5 w-5" />
           </button>
 
+          <div className="h-6 w-px bg-white/[0.1] mx-0.5 hidden sm:block" />
+
           {/* Reactions Dropdown */}
           <div className="relative">
             <button
               onClick={() => setShowReactionsBar(!showReactionsBar)}
-              className="h-11 w-11 sm:h-12 sm:w-12 rounded-2xl bg-white/[0.08] hover:bg-white/[0.15] border border-white/10 text-gray-300 hover:text-white flex items-center justify-center transition-all cursor-pointer shadow-lg active:scale-95"
-              title="Reactions"
+              className="h-11 w-11 rounded-full bg-white/[0.09] hover:bg-white/[0.16] text-gray-200 hover:text-white flex items-center justify-center transition-all cursor-pointer active:scale-95"
+              title="Send Reaction"
             >
               <Smile className="h-5 w-5" />
             </button>
             {showReactionsBar && (
-              <div className="absolute bottom-16 left-1/2 -translate-x-1/2 p-2 rounded-2xl bg-[#0c101c] border border-white/15 shadow-2xl flex items-center gap-2 z-50 animate-in fade-in zoom-in-95">
+              <div className="absolute bottom-16 left-1/2 -translate-x-1/2 p-2 rounded-2xl bg-[#0c1324] border border-white/15 shadow-2xl flex items-center gap-1.5 z-50 animate-in fade-in zoom-in-95">
                 {['👍', '❤️', '👏', '🎉', '🔥', '🚀'].map((emoji) => (
                   <button
                     key={emoji}
@@ -1196,90 +1197,22 @@ function LiveKitInnerStage({
           {/* Virtual Hand Raise */}
           <button
             onClick={toggleHandRaise}
-            className={`h-11 w-11 sm:h-12 sm:w-12 rounded-2xl flex items-center justify-center transition-all cursor-pointer shadow-lg active:scale-95 ${
+            className={`h-11 w-11 rounded-full flex items-center justify-center transition-all cursor-pointer active:scale-95 ${
               isHandRaised
-                ? 'bg-amber-500 hover:bg-amber-600 text-slate-950 font-black shadow-amber-500/30'
-                : 'bg-white/[0.08] hover:bg-white/[0.15] text-gray-300 hover:text-white border border-white/10'
+                ? 'bg-amber-500 hover:bg-amber-600 text-slate-950 font-black shadow-lg shadow-amber-500/30'
+                : 'bg-white/[0.09] hover:bg-white/[0.16] text-gray-200 hover:text-white'
             }`}
             title={isHandRaised ? 'Lower Hand' : 'Raise Hand'}
           >
             <Hand className="h-5 w-5" />
           </button>
 
-          {/* Flip / Mirror Camera Toggle */}
-          <button
-            onClick={() => {
-              const next = !isMirrored;
-              setIsMirrored(next);
-              toast.info(next ? 'Mirror camera enabled (Natural hand orientation)' : 'Mirror camera disabled');
-            }}
-            className={`h-11 w-11 sm:h-12 sm:w-12 rounded-2xl flex items-center justify-center transition-all cursor-pointer shadow-lg active:scale-95 ${
-              isMirrored
-                ? 'bg-[#0066FF]/20 hover:bg-[#0066FF]/30 text-[#388BFF] border border-[#0066FF]/40'
-                : 'bg-white/[0.08] hover:bg-white/[0.15] text-gray-300 hover:text-white border border-white/10'
-            }`}
-            title={isMirrored ? 'Disable Mirror Camera' : 'Enable Mirror Camera (Natural Hand View)'}
-          >
-            <FlipHorizontal className="h-5 w-5" />
-          </button>
-
-          {/* Picture in Picture */}
-          <button
-            onClick={togglePiP}
-            className="h-11 w-11 sm:h-12 sm:w-12 rounded-2xl bg-white/[0.08] hover:bg-white/[0.15] border border-white/10 text-gray-300 hover:text-white flex items-center justify-center transition-all cursor-pointer shadow-lg active:scale-95"
-            title="Picture-in-Picture Floating Window"
-          >
-            <PictureInPicture2 className="h-5 w-5" />
-          </button>
-
-          {/* Meeting Video & Audio Recorder */}
-          <button
-            onClick={async () => {
-              if (recorder.isRecording) {
-                recorder.stopRecording();
-                toast.success('Recording saved! Download starting.');
-              } else {
-                const started = await recorder.startRecording();
-                if (started) {
-                  toast.success('Recording started!');
-                } else {
-                  toast.error('Recording cancelled or permission not granted.');
-                }
-              }
-            }}
-            className={`h-11 px-3 sm:h-12 sm:px-4 rounded-2xl flex items-center gap-1.5 sm:gap-2 transition-all cursor-pointer shadow-lg active:scale-95 text-xs font-semibold ${
-              recorder.isRecording
-                ? 'bg-rose-600 hover:bg-rose-700 text-white animate-pulse border border-rose-400'
-                : 'bg-white/[0.08] hover:bg-white/[0.15] text-gray-300 hover:text-white border border-white/10'
-            }`}
-            title={recorder.isRecording ? 'Stop Recording' : 'Record Vedio & Audio'}
-          >
-            <Disc className={`h-4 w-4 ${recorder.isRecording ? 'text-white animate-spin' : 'text-rose-400'}`} />
-            <span className="hidden sm:inline">
-              {recorder.isRecording ? `REC ${recorder.recordingDuration}` : 'Record'}
-            </span>
-          </button>
-
-          {/* Live Whiteboard / Draw Studio */}
-          <button
-            onClick={() => setShowWhiteboard(true)}
-            className={`h-11 px-3 sm:h-12 sm:px-4 rounded-2xl flex items-center gap-1.5 sm:gap-2 transition-all cursor-pointer shadow-lg active:scale-95 text-xs font-bold ${
-              showWhiteboard
-                ? 'bg-gradient-to-r from-[#0066FF] to-[#FF7A00] text-white border border-white/25'
-                : 'bg-white/[0.08] hover:bg-white/[0.15] text-gray-200 hover:text-white border border-white/10'
-            }`}
-            title="Live Collaborative Whiteboard & Draw Studio (W)"
-          >
-            <PenTool className="h-4 w-4 text-[#388BFF]" />
-            <span className="hidden sm:inline">Draw</span>
-          </button>
-
-          {/* Host / Co-Host Live Poll & TV Banner Studio Buttons */}
+          {/* Host / Co-Host Live Poll & Announcement Banner */}
           {hasHostPrivileges && (
             <>
               <button
                 onClick={() => setShowPollModal(true)}
-                className="h-11 w-11 sm:h-12 sm:w-12 rounded-2xl bg-white/[0.08] hover:bg-white/[0.15] border border-white/10 text-amber-300 hover:text-white flex items-center justify-center transition-all cursor-pointer shadow-lg active:scale-95"
+                className="h-11 w-11 rounded-full bg-white/[0.09] hover:bg-white/[0.16] text-amber-300 hover:text-white flex items-center justify-center transition-all cursor-pointer active:scale-95"
                 title="Launch Live Poll"
               >
                 <BarChart2 className="h-5 w-5" />
@@ -1289,43 +1222,45 @@ function LiveKitInnerStage({
                   setBannerDraft(broadcastBanner?.text || '');
                   setShowBannerModal(true);
                 }}
-                className={`h-11 w-11 sm:h-12 sm:w-12 rounded-2xl flex items-center justify-center transition-all cursor-pointer shadow-lg active:scale-95 ${
+                className={`h-11 w-11 rounded-full flex items-center justify-center transition-all cursor-pointer active:scale-95 ${
                   broadcastBanner
-                    ? 'bg-[#FF7A00] text-white border border-amber-300'
-                    : 'bg-white/[0.08] hover:bg-white/[0.15] border border-white/10 text-gray-300 hover:text-white'
+                    ? 'bg-[#FF7A00] text-white'
+                    : 'bg-white/[0.09] hover:bg-white/[0.16] text-gray-200 hover:text-white'
                 }`}
-                title="TV On-Air Announcement Banner"
+                title="Live Announcement Banner"
               >
                 <Megaphone className="h-5 w-5" />
               </button>
             </>
           )}
 
-          {/* Participants & Co-Host Management Drawer */}
+          <div className="h-6 w-px bg-white/[0.1] mx-0.5 hidden sm:block" />
+
+          {/* Merged Unified Hub Button: Participants + Chat + Draw */}
           <button
-            onClick={() => setShowParticipantsDrawer(true)}
-            className={`relative h-11 w-11 sm:h-12 sm:w-12 rounded-2xl flex items-center justify-center transition-all cursor-pointer shadow-lg active:scale-95 ${
-              showParticipantsDrawer
-                ? 'bg-[#0066FF] text-white border border-[#388BFF]'
-                : 'bg-white/[0.08] hover:bg-white/[0.15] border border-white/10 text-gray-300 hover:text-white'
+            onClick={() => {
+              if (showParticipantsDrawer || showChatAndNotes || showWhiteboard) {
+                setShowParticipantsDrawer(false);
+                setShowChatAndNotes(false);
+                setShowWhiteboard(false);
+              } else {
+                setShowParticipantsDrawer(true);
+              }
+            }}
+            className={`relative h-11 px-4 rounded-full flex items-center gap-2 transition-all cursor-pointer active:scale-95 text-xs font-bold ${
+              showParticipantsDrawer || showChatAndNotes || showWhiteboard
+                ? 'bg-[#0066FF] text-white shadow-lg shadow-[#0066FF]/35'
+                : 'bg-white/[0.09] hover:bg-white/[0.16] text-gray-100'
             }`}
-            title="Participants & Co-Host Controls"
+            title="Meeting Hub: Participants, Chat & Draw"
           >
-            <Users className="h-5 w-5" />
-            <span className="absolute -top-1 -right-1 h-5 min-w-5 px-1 rounded-full bg-[#0066FF] text-white text-[10px] font-black flex items-center justify-center border-2 border-[#06080e]">
+            <Users className="h-4 w-4" />
+            <span className="hidden sm:inline">People • Chat • Draw</span>
+            <span className="px-1.5 py-0.5 rounded-full bg-black/35 text-[10px] font-mono font-bold">
               {totalCount}
             </span>
-          </button>
-
-          {/* Chat & Private Messages Drawer */}
-          <button
-            onClick={() => setShowChatAndNotes(true)}
-            className="relative h-11 w-11 sm:h-12 sm:w-12 rounded-2xl bg-white/[0.08] hover:bg-white/[0.15] border border-white/10 text-gray-300 hover:text-white flex items-center justify-center transition-all cursor-pointer shadow-lg active:scale-95"
-            title="Chat, Private Messages & Notes"
-          >
-            <MessageSquare className="h-5 w-5" />
             {unreadChatCount > 0 && (
-              <span className="absolute -top-1 -right-1 h-5 min-w-5 px-1 rounded-full bg-violet-500 text-white text-[10px] font-black flex items-center justify-center border-2 border-[#06080e] animate-bounce">
+              <span className="absolute -top-1 -right-1 h-5 min-w-5 px-1 rounded-full bg-violet-500 text-white text-[10px] font-black flex items-center justify-center border-2 border-[#0b1222] animate-bounce">
                 {unreadChatCount}
               </span>
             )}
@@ -1343,16 +1278,11 @@ function LiveKitInnerStage({
                 onLeave();
               }
             }}
-            className="h-11 px-5 sm:h-12 sm:px-6 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs sm:text-sm flex items-center gap-2 shadow-xl shadow-rose-600/30 transition-all cursor-pointer active:scale-95"
+            className="h-11 px-5 rounded-full bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs sm:text-sm flex items-center gap-2 shadow-lg shadow-rose-600/35 transition-all cursor-pointer active:scale-95"
           >
             <PhoneOff className="h-4 w-4" />
-            <span>{isHost ? 'End / Leave' : 'Leave'}</span>
+            <span className="hidden sm:inline">{isHost ? 'End' : 'Leave'}</span>
           </button>
-        </div>
-
-        {/* Right Info */}
-        <div className="hidden md:flex items-center gap-2 text-xs text-gray-400">
-          <span className="font-mono text-[11px] text-gray-500">MetroMeet Pro v2.6</span>
         </div>
       </footer>
 
@@ -1564,34 +1494,64 @@ function LiveKitInnerStage({
         </div>
       )}
 
-      {/* Participants & Co-Host Drawer */}
+      {/* Unified Meeting Hub — Participants Tab */}
       {showParticipantsDrawer && (
-        <aside className="fixed inset-y-0 right-0 z-50 w-full sm:w-96 bg-[#091222]/96 backdrop-blur-2xl border-l border-[#0066FF]/25 shadow-2xl flex flex-col animate-in slide-in-from-right duration-200">
-          <div className="p-4 border-b border-white/[0.08] flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="h-9 w-9 rounded-xl bg-[#0066FF]/15 border border-[#0066FF]/30 text-[#388BFF] flex items-center justify-center">
-                <Users className="h-4 w-4" />
-              </div>
-              <div>
-                <h3 className="text-sm font-black text-white flex items-center gap-2">
-                  Participants
-                  <span className="px-2 py-0.5 rounded-full bg-[#0066FF]/20 text-[#388BFF] text-[11px] font-mono">
-                    {totalCount}
-                  </span>
-                </h3>
-                <p className="text-[11px] text-gray-400">
-                  {hasHostPrivileges
-                    ? 'Control Mic/Vedio, assign Co-Hosts & send DMs'
-                    : 'View attendees & send private messages'}
-                </p>
-              </div>
-            </div>
+        <aside className="fixed inset-y-0 right-0 z-50 w-full sm:w-[420px] bg-[#091222]/96 backdrop-blur-2xl border-l border-white/[0.1] shadow-2xl flex flex-col animate-in slide-in-from-right duration-200">
+          {/* Unified Hub Switcher Bar: People | Chat | Draw */}
+          <div className="px-3 pt-3 pb-2 border-b border-white/[0.08] bg-[#060c18]/80 flex items-center gap-1.5 shrink-0">
+            <button
+              onClick={() => {
+                setShowParticipantsDrawer(true);
+                setShowChatAndNotes(false);
+                setShowWhiteboard(false);
+              }}
+              className="flex-1 py-2 px-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 bg-[#0066FF] text-white shadow-md shadow-[#0066FF]/30 cursor-pointer"
+            >
+              <Users className="h-3.5 w-3.5" />
+              <span>People ({totalCount})</span>
+            </button>
+            <button
+              onClick={() => {
+                setShowParticipantsDrawer(false);
+                setShowChatAndNotes(true);
+                setShowWhiteboard(false);
+              }}
+              className="relative flex-1 py-2 px-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 text-gray-300 hover:text-white hover:bg-white/[0.08] transition-all cursor-pointer"
+            >
+              <MessageSquare className="h-3.5 w-3.5" />
+              <span>Chat</span>
+              {unreadChatCount > 0 && (
+                <span className="px-1.5 py-0.2 rounded-full bg-violet-500 text-white text-[9px] font-black">
+                  {unreadChatCount}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => {
+                setShowParticipantsDrawer(false);
+                setShowChatAndNotes(false);
+                setShowWhiteboard(true);
+              }}
+              className="flex-1 py-2 px-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 text-gray-300 hover:text-white hover:bg-white/[0.08] transition-all cursor-pointer"
+            >
+              <PenTool className="h-3.5 w-3.5 text-[#FFA033]" />
+              <span>Draw</span>
+            </button>
             <button
               onClick={() => setShowParticipantsDrawer(false)}
-              className="h-8 w-8 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] text-gray-400 hover:text-white flex items-center justify-center cursor-pointer"
+              className="h-8 w-8 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] text-gray-400 hover:text-white flex items-center justify-center cursor-pointer shrink-0"
+              title="Close Panel"
             >
               <X className="h-4 w-4" />
             </button>
+          </div>
+
+          <div className="px-4 py-2.5 border-b border-white/[0.06] flex items-center justify-between">
+            <p className="text-[11px] text-gray-400">
+              {hasHostPrivileges
+                ? 'Control Mic/Vedio, assign Co-Hosts & send DMs'
+                : 'View attendees & send private messages'}
+            </p>
           </div>
 
           {/* Host / Co-Host Bulk Media Controls */}
@@ -1804,6 +1764,43 @@ function LiveKitInnerStage({
         }))}
         selectedRecipientId={chatRecipientId}
         onSelectRecipient={setChatRecipientId}
+        topSwitcher={
+          <div className="px-3 pt-3 pb-2 border-b border-white/[0.08] bg-[#060c18]/80 flex items-center gap-1.5 shrink-0">
+            <button
+              onClick={() => {
+                setShowChatAndNotes(false);
+                setShowParticipantsDrawer(true);
+                setShowWhiteboard(false);
+              }}
+              className="flex-1 py-2 px-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 text-gray-300 hover:text-white hover:bg-white/[0.08] transition-all cursor-pointer"
+            >
+              <Users className="h-3.5 w-3.5" />
+              <span>People ({totalCount})</span>
+            </button>
+            <button
+              onClick={() => {
+                setShowChatAndNotes(true);
+                setShowParticipantsDrawer(false);
+                setShowWhiteboard(false);
+              }}
+              className="flex-1 py-2 px-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 bg-[#0066FF] text-white shadow-md shadow-[#0066FF]/30 cursor-pointer"
+            >
+              <MessageSquare className="h-3.5 w-3.5" />
+              <span>Chat</span>
+            </button>
+            <button
+              onClick={() => {
+                setShowChatAndNotes(false);
+                setShowParticipantsDrawer(false);
+                setShowWhiteboard(true);
+              }}
+              className="flex-1 py-2 px-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 text-gray-300 hover:text-white hover:bg-white/[0.08] transition-all cursor-pointer"
+            >
+              <PenTool className="h-3.5 w-3.5 text-[#FFA033]" />
+              <span>Draw</span>
+            </button>
+          </div>
+        }
       />
     </div>
   );
