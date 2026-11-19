@@ -210,6 +210,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [endingId, setEndingId] = useState<string | null>(null);
   const [repeatingId, setRepeatingId] = useState<string | null>(null);
+  const [launchingTemplate, setLaunchingTemplate] = useState<string | null>(null);
   const [nowMs, setNowMs] = useState<number>(() => Date.now());
   const [visibleCount, setVisibleCount] = useState(10);
 
@@ -338,6 +339,38 @@ export default function DashboardPage() {
     }
   };
 
+  const handleLaunchTemplate = async (templateTitle: string, waitingRoom: boolean) => {
+    setLaunchingTemplate(templateTitle);
+    const newId = generateMeetingId();
+    try {
+      const res = await fetch('/api/meetings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: newId,
+          title: templateTitle,
+          waitingRoom,
+        }),
+      });
+      if (res.ok && typeof window !== 'undefined') {
+        localStorage.setItem(`metromeet_host_${newId}`, 'true');
+      }
+      router.push(`/meeting/${newId}`);
+    } catch {
+      router.push(`/meeting/${newId}`);
+    } finally {
+      setLaunchingTemplate(null);
+    }
+  };
+
+  const handleCopyFullInvite = (title: string, roomId: string) => {
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    const url = `${origin}/meeting/${roomId}`;
+    const inviteText = `📹 MetroMeet Invitation\nHost: ${user?.name || 'Host'}\nTopic: ${title}\nJoin Link: ${url}\nMeeting ID: ${roomId}`;
+    navigator.clipboard.writeText(inviteText);
+    toast.success('Full formatted invitation copied! Ready for WhatsApp / Email.');
+  };
+
   const handleExportHistoryCSV = () => {
     if (recentMeetings.length === 0) {
       toast.info('No meeting history to export yet');
@@ -460,6 +493,23 @@ export default function DashboardPage() {
     ).length;
     const longCalls = enrichedHistory.filter((m) => m.computedDurationSeconds >= 2700).length;
 
+    // Last 7 days daily meeting count chart
+    const today = new Date();
+    const last7Days = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() - (6 - i));
+      const dayLabel = d.toLocaleDateString('en-US', { weekday: 'short' });
+      const count = enrichedHistory.filter((m) => {
+        const md = new Date(m.startTime || m.createdAt);
+        return (
+          md.getFullYear() === d.getFullYear() &&
+          md.getMonth() === d.getMonth() &&
+          md.getDate() === d.getDate()
+        );
+      }).length;
+      return { label: dayLabel, count };
+    });
+    const maxDailyCount = Math.max(1, ...last7Days.map((d) => d.count));
+
     return {
       totalMeetings,
       activeMeetings,
@@ -472,6 +522,8 @@ export default function DashboardPage() {
       shortCalls,
       mediumCalls,
       longCalls,
+      last7Days,
+      maxDailyCount,
     };
   }, [enrichedHistory]);
 
@@ -770,6 +822,69 @@ export default function DashboardPage() {
               Configure hardware <ArrowRight className="h-3.5 w-3.5" />
             </div>
           </button>
+        </div>
+
+        {/* 3.5 One-Click Quick Meeting Templates */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-black uppercase tracking-widest text-gray-400 flex items-center gap-2">
+              <Sparkles className="h-3.5 w-3.5 text-[#FFA033]" />
+              One-Click Meeting Templates
+            </h3>
+            <span className="text-[11px] text-gray-500">Instant room launch with preset security</span>
+          </div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            {[
+              {
+                title: 'Daily Standup',
+                subtitle: 'Quick 15m team sync',
+                waitingRoom: false,
+                accent: 'border-[#0066FF]/30 hover:border-[#0066FF]/70 text-[#388BFF]',
+                tag: 'Open Room',
+              },
+              {
+                title: 'Executive Boardroom',
+                subtitle: 'Protected leadership call',
+                waitingRoom: true,
+                accent: 'border-[#FF7A00]/30 hover:border-[#FF7A00]/70 text-[#FFA033]',
+                tag: 'Waiting Room',
+              },
+              {
+                title: 'Whiteboard Brainstorm',
+                subtitle: 'Sketch & collaborate live',
+                waitingRoom: false,
+                accent: 'border-violet-500/30 hover:border-violet-500/70 text-violet-300',
+                tag: 'Draw Ready',
+              },
+              {
+                title: '1-on-1 Interview',
+                subtitle: 'Private candidate lobby',
+                waitingRoom: true,
+                accent: 'border-emerald-500/30 hover:border-emerald-500/70 text-emerald-300',
+                tag: 'Waiting Room',
+              },
+            ].map((tpl) => (
+              <button
+                key={tpl.title}
+                disabled={launchingTemplate === tpl.title}
+                onClick={() => handleLaunchTemplate(tpl.title, tpl.waitingRoom)}
+                className={`group text-left p-4 rounded-2xl bg-[#091222]/85 border transition-all hover:-translate-y-0.5 cursor-pointer flex flex-col justify-between gap-2 ${tpl.accent}`}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs sm:text-sm font-extrabold text-white truncate">
+                    {tpl.title}
+                  </span>
+                  <ArrowRight className="h-3.5 w-3.5 shrink-0 opacity-60 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
+                </div>
+                <div className="flex items-center justify-between gap-1 text-[10px]">
+                  <span className="text-gray-400 truncate">{tpl.subtitle}</span>
+                  <span className="px-1.5 py-0.5 rounded-md bg-white/[0.06] font-bold shrink-0">
+                    {launchingTemplate === tpl.title ? 'Starting...' : tpl.tag}
+                  </span>
+                </div>
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* 4. Quick Meeting Code Entry Bar */}
@@ -1269,14 +1384,31 @@ export default function DashboardPage() {
                   </Button>
                 </div>
 
-                <Button
-                  size="sm"
-                  className="w-full text-xs font-bold"
-                  onClick={() => router.push(`/meeting/${personalRoomId}`)}
-                >
-                  <Video className="h-3.5 w-3.5 mr-1.5" />
-                  Launch Personal Room
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    className="flex-1 text-xs font-bold"
+                    onClick={() => router.push(`/meeting/${personalRoomId}`)}
+                  >
+                    <Video className="h-3.5 w-3.5 mr-1.5" />
+                    Launch Room
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="text-xs font-bold"
+                    onClick={() =>
+                      handleCopyFullInvite(
+                        `${user?.name || 'Host'}'s Personal Room`,
+                        personalRoomId
+                      )
+                    }
+                    title="Copy full formatted invitation for WhatsApp / Email"
+                  >
+                    <Share2 className="h-3.5 w-3.5 mr-1" />
+                    Invite
+                  </Button>
+                </div>
               </CardContent>
             </Card>
 
@@ -1317,6 +1449,40 @@ export default function DashboardPage() {
                     Host a meeting to unlock duration breakdown insights.
                   </div>
                 )}
+
+                {/* Weekly Activity Mini Bar Chart (Last 7 Days) */}
+                <div className="pt-2 border-t border-white/[0.07] space-y-2">
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="font-bold text-gray-300">Last 7 Days Activity</span>
+                    <span className="text-[10px] text-gray-500">Sessions / Day</span>
+                  </div>
+                  <div className="grid grid-cols-7 gap-1.5 items-end h-16 pt-2">
+                    {analytics.last7Days.map((day, idx) => {
+                      const heightPct =
+                        day.count > 0
+                          ? Math.max(22, Math.round((day.count / analytics.maxDailyCount) * 100))
+                          : 10;
+                      return (
+                        <div key={idx} className="flex flex-col items-center gap-1 h-full justify-end">
+                          <div className="w-full flex-1 flex items-end justify-center">
+                            <div
+                              title={`${day.label}: ${day.count} meeting${day.count !== 1 ? 's' : ''}`}
+                              className={`w-full rounded-t-md transition-all duration-500 ${
+                                day.count > 0
+                                  ? 'bg-gradient-to-t from-[#0066FF] to-[#FF7A00]'
+                                  : 'bg-white/[0.07]'
+                              }`}
+                              style={{ height: `${heightPct}%` }}
+                            />
+                          </div>
+                          <span className="text-[9px] font-semibold text-gray-400">
+                            {day.label}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
 
                 {/* Duration Distribution Bars */}
                 <div className="space-y-2.5 pt-1">

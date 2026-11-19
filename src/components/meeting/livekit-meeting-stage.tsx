@@ -45,6 +45,10 @@ import {
   Crown,
   UserCheck,
   UserMinus,
+  BarChart2,
+  Megaphone,
+  Camera,
+  Keyboard,
 } from 'lucide-react';
 import { BrandLogo } from '@/components/ui/brand-logo';
 import { soundEngine } from '@/lib/audio/sound-engine';
@@ -53,6 +57,7 @@ import { useMeetingRecorder } from '@/lib/recording/use-meeting-recorder';
 import { RTC_CONFIG } from '@/lib/webrtc/webrtc-mesh';
 import { ChatAndNotesDrawer, ChatMessage } from './chat-and-notes-drawer';
 import { WhiteboardCanvas, WhiteboardElement } from './whiteboard-canvas';
+import { BroadcastNameplate } from './broadcast-nameplate';
 
 interface LiveKitMeetingStageProps {
   meetingId: string;
@@ -125,6 +130,25 @@ function LiveKitInnerStage({
     if (showChatAndNotes) setUnreadChatCount(0);
   }, [showChatAndNotes]);
   const [showReactionsBar, setShowReactionsBar] = useState(false);
+
+  // Live Interactive Poll State
+  const [showPollModal, setShowPollModal] = useState(false);
+  const [pollQuestion, setPollQuestion] = useState('');
+  const [pollOptionsInput, setPollOptionsInput] = useState(['Yes', 'No', 'Need more info']);
+  const [activePoll, setActivePoll] = useState<{
+    id: string;
+    question: string;
+    createdBy: string;
+    options: Array<{ id: string; text: string; votes: string[] }>;
+  } | null>(null);
+
+  // TV Broadcast Breaking Banner State
+  const [broadcastBanner, setBroadcastBanner] = useState<{ text: string; author: string } | null>(null);
+  const [showBannerModal, setShowBannerModal] = useState(false);
+  const [bannerDraft, setBannerDraft] = useState('');
+
+  // Keyboard Shortcuts Modal
+  const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   const [activeReaction, setActiveReaction] = useState<string | null>(null);
   const [isCopied, setIsCopied] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
@@ -280,6 +304,30 @@ function LiveKitInnerStage({
               toast.info(`💬 ${incomingMsg.sender}: ${incomingMsg.text.slice(0, 40)}`);
             }
           }
+        } else if (data.type === 'poll-create' && data.poll) {
+          setActivePoll(data.poll);
+          soundEngine.playIntroChime();
+          toast.info(`📊 New Live Poll: ${data.poll.question}`);
+        } else if (data.type === 'poll-vote' && data.pollId && data.optionId && data.voterId) {
+          setActivePoll((prev) => {
+            if (!prev || prev.id !== data.pollId) return prev;
+            return {
+              ...prev,
+              options: prev.options.map((opt) => {
+                const withoutVoter = opt.votes.filter((v) => v !== data.voterId);
+                return opt.id === data.optionId
+                  ? { ...opt, votes: [...withoutVoter, data.voterId] }
+                  : { ...opt, votes: withoutVoter };
+              }),
+            };
+          });
+        } else if (data.type === 'poll-close') {
+          setActivePoll(null);
+        } else if (data.type === 'broadcast-banner') {
+          setBroadcastBanner(data.banner || null);
+          if (data.banner?.text) {
+            soundEngine.playIntroChime();
+          }
         }
       } catch {}
     };
@@ -289,6 +337,136 @@ function LiveKitInnerStage({
       room.off('dataReceived', handleDataReceived);
     };
   }, [room, toast, isHost]);
+
+  const handleLaunchPoll = (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanOptions = pollOptionsInput.map((o) => o.trim()).filter(Boolean);
+    if (!pollQuestion.trim() || cleanOptions.length < 2) {
+      toast.error('Please enter a question and at least 2 options');
+      return;
+    }
+    const newPoll = {
+      id: `poll_${Date.now()}`,
+      question: pollQuestion.trim(),
+      createdBy: displayName || 'Host',
+      options: cleanOptions.map((text, idx) => ({
+        id: `opt_${idx}_${Date.now()}`,
+        text,
+        votes: [] as string[],
+      })),
+    };
+    setActivePoll(newPoll);
+    setShowPollModal(false);
+    setPollQuestion('');
+    toast.success('Live poll launched to all participants!');
+    try {
+      const payload = new TextEncoder().encode(
+        JSON.stringify({ type: 'poll-create', poll: newPoll })
+      );
+      room?.localParticipant.publishData(payload, { reliable: true });
+    } catch {}
+  };
+
+  const handleVotePoll = (optionId: string) => {
+    if (!activePoll) return;
+    const voterId = localParticipant?.identity || 'local';
+    setActivePoll((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        options: prev.options.map((opt) => {
+          const withoutVoter = opt.votes.filter((v) => v !== voterId);
+          return opt.id === optionId
+            ? { ...opt, votes: [...withoutVoter, voterId] }
+            : { ...opt, votes: withoutVoter };
+        }),
+      };
+    });
+    try {
+      const payload = new TextEncoder().encode(
+        JSON.stringify({
+          type: 'poll-vote',
+          pollId: activePoll.id,
+          optionId,
+          voterId,
+        })
+      );
+      room?.localParticipant.publishData(payload, { reliable: true });
+    } catch {}
+  };
+
+  const handleClosePoll = () => {
+    setActivePoll(null);
+    try {
+      const payload = new TextEncoder().encode(JSON.stringify({ type: 'poll-close' }));
+      room?.localParticipant.publishData(payload, { reliable: true });
+    } catch {}
+  };
+
+  const handleSetBroadcastBanner = (banner: { text: string; author: string } | null) => {
+    setBroadcastBanner(banner);
+    setShowBannerModal(false);
+    try {
+      const payload = new TextEncoder().encode(
+        JSON.stringify({ type: 'broadcast-banner', banner })
+      );
+      room?.localParticipant.publishData(payload, { reliable: true });
+    } catch {}
+    toast.success(banner ? 'TV Announcement Banner is now ON AIR' : 'Announcement banner cleared');
+  };
+
+  const handleCaptureSnapshot = () => {
+    try {
+      const videos = Array.from(document.querySelectorAll('video'));
+      const activeVideo = videos.find((v) => v.readyState >= 2 && v.videoWidth > 0);
+      if (!activeVideo) {
+        toast.info('No active vedio stream to capture');
+        return;
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = activeVideo.videoWidth;
+      canvas.height = activeVideo.videoHeight;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      ctx.drawImage(activeVideo, 0, 0, canvas.width, canvas.height);
+      const link = document.createElement('a');
+      link.download = `MetroMeet-Snapshot-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+      soundEngine.playKnockChime();
+      toast.success('Snapshot captured & downloaded as PNG!');
+    } catch {
+      toast.error('Could not capture snapshot');
+    }
+  };
+
+  // Global keyboard shortcuts inside the live meeting
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+      const key = e.key.toLowerCase();
+      if (key === 'm' && localParticipant) {
+        localParticipant.setMicrophoneEnabled(!localParticipant.isMicrophoneEnabled).catch(() => {});
+      } else if (key === 'v' && localParticipant) {
+        localParticipant.setCameraEnabled(!localParticipant.isCameraEnabled).catch(() => {});
+      } else if (key === 'w') {
+        setShowWhiteboard((prev) => !prev);
+      } else if (key === 'p') {
+        setShowParticipantsDrawer((prev) => !prev);
+      } else if (key === 'c') {
+        setShowChatAndNotes((prev) => !prev);
+      } else if (key === 'f') {
+        toggleFullscreen();
+      } else if (key === '?') {
+        setShowShortcutsModal((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [localParticipant]);
 
   const hasHostPrivileges = isHost || Boolean(localParticipant && coHosts[localParticipant.identity]);
 
@@ -660,6 +838,24 @@ function LiveKitInnerStage({
 
         {/* Right Controls */}
         <div className="flex items-center gap-2">
+          {/* Snapshot Capture */}
+          <button
+            onClick={handleCaptureSnapshot}
+            className="h-8 w-8 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.08] text-gray-300 hover:text-white flex items-center justify-center transition-all cursor-pointer shadow-sm active:scale-95"
+            title="Capture Live Snapshot (PNG)"
+          >
+            <Camera className="h-3.5 w-3.5 text-cyan-300" />
+          </button>
+
+          {/* Keyboard Shortcuts */}
+          <button
+            onClick={() => setShowShortcutsModal(true)}
+            className="hidden sm:flex h-8 w-8 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.08] text-gray-300 hover:text-white items-center justify-center transition-all cursor-pointer shadow-sm active:scale-95"
+            title="Keyboard Shortcuts (?)"
+          >
+            <Keyboard className="h-3.5 w-3.5" />
+          </button>
+
           {/* Fullscreen Toggle */}
           <button
             onClick={toggleFullscreen}
@@ -682,6 +878,88 @@ function LiveKitInnerStage({
 
       {/* Main Video Stage */}
       <main className="flex-1 overflow-hidden p-3 sm:p-5 flex items-center justify-center relative">
+        {/* TV Broadcast Breaking Announcement Banner */}
+        {broadcastBanner && (
+          <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 max-w-3xl w-[94%] rounded-2xl overflow-hidden shadow-2xl border border-[#FF7A00]/50 bg-[#070e1d]/95 backdrop-blur-xl flex items-stretch animate-in fade-in slide-in-from-top-3 duration-300">
+            <div className="px-3.5 py-2 bg-gradient-to-r from-[#FF7A00] to-rose-600 text-white text-[10px] sm:text-xs font-black uppercase tracking-widest flex items-center gap-1.5 shrink-0">
+              <Megaphone className="h-3.5 w-3.5 animate-pulse" />
+              <span>ON AIR</span>
+            </div>
+            <div className="flex-1 px-4 py-2 flex items-center justify-between gap-3 min-w-0">
+              <p className="text-xs sm:text-sm font-bold text-white truncate">
+                {broadcastBanner.text}
+              </p>
+              {hasHostPrivileges && (
+                <button
+                  onClick={() => handleSetBroadcastBanner(null)}
+                  className="p-1 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white cursor-pointer shrink-0"
+                  title="Clear Broadcast Banner"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Floating Live Poll Voting Card */}
+        {activePoll && (
+          <div className="absolute bottom-4 right-4 z-30 w-80 max-w-[92vw] rounded-3xl bg-[#091222]/96 border border-[#0066FF]/40 backdrop-blur-2xl shadow-2xl p-4 space-y-3 animate-in fade-in slide-in-from-bottom-4 duration-200">
+            <div className="flex items-start justify-between gap-2">
+              <div className="space-y-0.5 min-w-0">
+                <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-[#388BFF]">
+                  <BarChart2 className="h-3.5 w-3.5 text-[#FF7A00]" />
+                  <span>Live Poll • By {activePoll.createdBy}</span>
+                </div>
+                <h4 className="text-xs sm:text-sm font-black text-white leading-snug">
+                  {activePoll.question}
+                </h4>
+              </div>
+              {hasHostPrivileges && (
+                <button
+                  onClick={handleClosePoll}
+                  className="p-1 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white cursor-pointer"
+                  title="Close Poll for Everyone"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              {(() => {
+                const totalVotes = activePoll.options.reduce((s, o) => s + o.votes.length, 0);
+                const myId = localParticipant?.identity || 'local';
+                return activePoll.options.map((opt) => {
+                  const pct = totalVotes > 0 ? Math.round((opt.votes.length / totalVotes) * 100) : 0;
+                  const voted = opt.votes.includes(myId);
+                  return (
+                    <button
+                      key={opt.id}
+                      onClick={() => handleVotePoll(opt.id)}
+                      className={`w-full text-left relative overflow-hidden rounded-xl border p-2.5 transition-all cursor-pointer ${
+                        voted
+                          ? 'border-[#0066FF] bg-[#0066FF]/15'
+                          : 'border-white/[0.1] bg-white/[0.03] hover:border-[#388BFF]/50'
+                      }`}
+                    >
+                      <div
+                        className="absolute inset-y-0 left-0 bg-gradient-to-r from-[#0066FF]/30 to-[#FF7A00]/20 transition-all duration-500"
+                        style={{ width: `${pct}%` }}
+                      />
+                      <div className="relative z-10 flex items-center justify-between gap-2 text-xs">
+                        <span className="font-bold text-white truncate">{opt.text}</span>
+                        <span className="font-mono text-[11px] font-bold text-cyan-300 shrink-0">
+                          {pct}% ({opt.votes.length})
+                        </span>
+                      </div>
+                    </button>
+                  );
+                });
+              })()}
+            </div>
+          </div>
+        )}
         <div className="w-full h-full flex items-center justify-center">
           <div className={getGridClasses()}>
             {orderedTracks.map((trackRef) => {
@@ -784,31 +1062,16 @@ function LiveKitInnerStage({
                     <span className="tracking-wider uppercase text-emerald-400 font-extrabold text-[10px]">LIVE</span>
                   </div>
 
-                  {/* Bottom Participant Info Bar */}
-                  <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between pointer-events-none">
-                    <div className="px-3 py-1.5 rounded-xl bg-black/70 backdrop-blur-md border border-white/10 text-xs font-semibold text-white flex items-center gap-2 shadow-lg">
-                      <span className="truncate max-w-[120px] sm:max-w-[180px]">
-                        {pName} {isLocal ? '(You)' : ''}
-                      </span>
-                      {isLocal && isHost && (
-                        <span className="px-1.5 py-0.5 rounded-md bg-[#FF7A00]/25 text-[#FFA033] border border-[#FF7A00]/40 text-[9px] font-black uppercase">
-                          Host
-                        </span>
-                      )}
-                      {coHosts[participant.identity] && (
-                        <span className="px-1.5 py-0.5 rounded-md bg-[#0066FF]/25 text-[#388BFF] border border-[#0066FF]/40 text-[9px] font-black uppercase">
-                          Co-Host
-                        </span>
-                      )}
-                      {!participant.isMicrophoneEnabled && (
-                        <MicOff className="h-3.5 w-3.5 text-rose-400 shrink-0" />
-                      )}
-                      {isSpeaking && (
-                        <span className="flex items-center gap-1 text-[10px] text-emerald-400 font-bold">
-                          Speaking
-                        </span>
-                      )}
-                    </div>
+                  {/* Bottom TV Broadcast Lower-Third Nameplate */}
+                  <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between pointer-events-none z-20">
+                    <BroadcastNameplate
+                      name={pName}
+                      isLocal={isLocal}
+                      isHost={isLocal && isHost}
+                      isCoHost={Boolean(coHosts[participant.identity])}
+                      isMuted={!participant.isMicrophoneEnabled}
+                      isSpeaking={isSpeaking}
+                    />
                   </div>
                 </div>
               );
@@ -1005,11 +1268,38 @@ function LiveKitInnerStage({
                 ? 'bg-gradient-to-r from-[#0066FF] to-[#FF7A00] text-white border border-white/25'
                 : 'bg-white/[0.08] hover:bg-white/[0.15] text-gray-200 hover:text-white border border-white/10'
             }`}
-            title="Live Collaborative Whiteboard & Draw Studio"
+            title="Live Collaborative Whiteboard & Draw Studio (W)"
           >
             <PenTool className="h-4 w-4 text-[#388BFF]" />
             <span className="hidden sm:inline">Draw</span>
           </button>
+
+          {/* Host / Co-Host Live Poll & TV Banner Studio Buttons */}
+          {hasHostPrivileges && (
+            <>
+              <button
+                onClick={() => setShowPollModal(true)}
+                className="h-11 w-11 sm:h-12 sm:w-12 rounded-2xl bg-white/[0.08] hover:bg-white/[0.15] border border-white/10 text-amber-300 hover:text-white flex items-center justify-center transition-all cursor-pointer shadow-lg active:scale-95"
+                title="Launch Live Poll"
+              >
+                <BarChart2 className="h-5 w-5" />
+              </button>
+              <button
+                onClick={() => {
+                  setBannerDraft(broadcastBanner?.text || '');
+                  setShowBannerModal(true);
+                }}
+                className={`h-11 w-11 sm:h-12 sm:w-12 rounded-2xl flex items-center justify-center transition-all cursor-pointer shadow-lg active:scale-95 ${
+                  broadcastBanner
+                    ? 'bg-[#FF7A00] text-white border border-amber-300'
+                    : 'bg-white/[0.08] hover:bg-white/[0.15] border border-white/10 text-gray-300 hover:text-white'
+                }`}
+                title="TV On-Air Announcement Banner"
+              >
+                <Megaphone className="h-5 w-5" />
+              </button>
+            </>
+          )}
 
           {/* Participants & Co-Host Management Drawer */}
           <button
@@ -1065,6 +1355,176 @@ function LiveKitInnerStage({
           <span className="font-mono text-[11px] text-gray-500">MetroMeet Pro v2.6</span>
         </div>
       </footer>
+
+      {/* Live Poll Creator Modal */}
+      {showPollModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+          <form
+            onSubmit={handleLaunchPoll}
+            className="w-full max-w-md p-6 rounded-3xl bg-[#091222] border border-[#0066FF]/35 shadow-2xl space-y-4 animate-in fade-in zoom-in-95"
+          >
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-black text-white flex items-center gap-2">
+                <BarChart2 className="h-5 w-5 text-[#FF7A00]" />
+                Launch Live Interactive Poll
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowPollModal(false)}
+                className="p-1.5 rounded-xl bg-white/[0.06] text-gray-400 hover:text-white cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-gray-300">Poll Question</label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. Are we ready to launch v2.0?"
+                value={pollQuestion}
+                onChange={(e) => setPollQuestion(e.target.value)}
+                className="w-full rounded-xl bg-black/50 border border-white/[0.12] px-3.5 py-2.5 text-xs sm:text-sm text-white outline-none focus:border-[#0066FF]"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-gray-300">Options</label>
+              {pollOptionsInput.map((opt, idx) => (
+                <input
+                  key={idx}
+                  type="text"
+                  placeholder={`Option ${idx + 1}`}
+                  value={opt}
+                  onChange={(e) => {
+                    const next = [...pollOptionsInput];
+                    next[idx] = e.target.value;
+                    setPollOptionsInput(next);
+                  }}
+                  className="w-full rounded-xl bg-black/50 border border-white/[0.1] px-3 py-2 text-xs text-white outline-none focus:border-[#0066FF]"
+                />
+              ))}
+              {pollOptionsInput.length < 4 && (
+                <button
+                  type="button"
+                  onClick={() => setPollOptionsInput((p) => [...p, ''])}
+                  className="text-xs font-bold text-[#388BFF] hover:underline cursor-pointer"
+                >
+                  + Add another option
+                </button>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowPollModal(false)}
+                className="px-4 py-2 rounded-xl bg-white/[0.06] text-xs font-bold text-gray-300 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#0066FF] to-[#FF7A00] text-xs font-black text-white shadow-lg cursor-pointer"
+              >
+                Broadcast Poll
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* TV On-Air Announcement Banner Modal */}
+      {showBannerModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+          <div className="w-full max-w-md p-6 rounded-3xl bg-[#091222] border border-[#FF7A00]/40 shadow-2xl space-y-4 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-black text-white flex items-center gap-2">
+                <Megaphone className="h-5 w-5 text-[#FF7A00]" />
+                TV On-Air Broadcast Banner
+              </h3>
+              <button
+                onClick={() => setShowBannerModal(false)}
+                className="p-1.5 rounded-xl bg-white/[0.06] text-gray-400 hover:text-white cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <p className="text-xs text-gray-400">
+              Display a live news-channel style announcement ticker across every participant&apos;s screen.
+            </p>
+            <input
+              type="text"
+              placeholder="e.g. Welcome! Q&A session starts in 5 minutes..."
+              value={bannerDraft}
+              onChange={(e) => setBannerDraft(e.target.value)}
+              className="w-full rounded-xl bg-black/50 border border-white/[0.12] px-3.5 py-2.5 text-xs sm:text-sm text-white outline-none focus:border-[#FF7A00]"
+            />
+            <div className="flex justify-end gap-2 pt-1">
+              {broadcastBanner && (
+                <button
+                  onClick={() => handleSetBroadcastBanner(null)}
+                  className="px-3.5 py-2 rounded-xl bg-rose-600/20 border border-rose-500/35 text-xs font-bold text-rose-300 cursor-pointer"
+                >
+                  Clear Banner
+                </button>
+              )}
+              <button
+                onClick={() =>
+                  bannerDraft.trim()
+                    ? handleSetBroadcastBanner({ text: bannerDraft.trim(), author: displayName })
+                    : handleSetBroadcastBanner(null)
+                }
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#FF7A00] to-rose-600 text-xs font-black text-white shadow-lg cursor-pointer"
+              >
+                Go On Air
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Keyboard Shortcuts Modal */}
+      {showShortcutsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+          <div className="w-full max-w-sm p-6 rounded-3xl bg-[#091222] border border-[#0066FF]/35 shadow-2xl space-y-4 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-black text-white flex items-center gap-2">
+                <Keyboard className="h-5 w-5 text-[#388BFF]" />
+                Studio Keyboard Shortcuts
+              </h3>
+              <button
+                onClick={() => setShowShortcutsModal(false)}
+                className="p-1.5 rounded-xl bg-white/[0.06] text-gray-400 hover:text-white cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="space-y-2 text-xs">
+              {[
+                ['M', 'Mute / Unmute Microphone'],
+                ['V', 'Turn Vedio (Camera) On / Off'],
+                ['W', 'Open / Close Whiteboard Studio'],
+                ['P', 'Toggle Participants Drawer'],
+                ['C', 'Toggle Chat & Private DMs'],
+                ['F', 'Toggle Fullscreen Mode'],
+                ['?', 'Show / Hide Shortcuts'],
+              ].map(([k, desc]) => (
+                <div
+                  key={k}
+                  className="flex items-center justify-between p-2 rounded-xl bg-white/[0.03] border border-white/[0.06]"
+                >
+                  <span className="text-gray-300">{desc}</span>
+                  <kbd className="px-2 py-0.5 rounded-lg bg-[#0066FF]/20 border border-[#0066FF]/40 text-[#388BFF] font-mono font-black">
+                    {k}
+                  </kbd>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Host Leave vs End Meeting Confirmation Modal */}
       {showHostExitModal && (

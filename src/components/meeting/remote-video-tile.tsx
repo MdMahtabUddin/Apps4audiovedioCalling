@@ -3,6 +3,7 @@
 import React, { useEffect, useRef } from 'react';
 import { MicOff, Wifi, WifiOff, Volume2 } from 'lucide-react';
 import { NetworkQuality } from '@/lib/webrtc/webrtc-mesh';
+import { BroadcastNameplate } from './broadcast-nameplate';
 
 interface RemoteVideoTileProps {
   peerId: string;
@@ -113,21 +114,16 @@ export function RemoteVideoTile({
         )}
       </div>
 
-      {/* Bottom Bar Info with Join Time */}
-      <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between pointer-events-none">
-        <div className="px-3 py-1.5 rounded-xl bg-black/70 backdrop-blur-md border border-white/10 text-xs font-semibold text-white flex items-center gap-2 shadow-lg">
-          <span className="truncate max-w-[120px] sm:max-w-[180px]">{displayName}</span>
-          {!isAudioEnabled && <MicOff className="h-3.5 w-3.5 text-rose-400 shrink-0" />}
-          {isSpeaking && (
-            <span className="flex items-center gap-1 text-[10px] text-emerald-400 font-bold">
-              <Volume2 className="h-3.5 w-3.5 animate-pulse" />
-              Speaking
-            </span>
-          )}
-        </div>
+      {/* Bottom TV Broadcast Lower-Third Nameplate with Join Time */}
+      <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between gap-2 pointer-events-none">
+        <BroadcastNameplate
+          name={displayName}
+          isMuted={!isAudioEnabled}
+          isSpeaking={isSpeaking}
+        />
 
         {joinedAt && (
-          <div className="px-2.5 py-1 rounded-xl bg-black/60 backdrop-blur-md border border-white/10 text-[10px] font-mono text-gray-300">
+          <div className="px-2.5 py-1 rounded-xl bg-black/65 backdrop-blur-md border border-white/10 text-[10px] font-mono text-gray-300 shrink-0">
             {typeof joinedAt === 'number'
               ? new Date(joinedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
               : new Date(String(joinedAt)).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}

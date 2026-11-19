@@ -39,6 +39,7 @@ import { ParticipantDrawer } from './participant-drawer';
 import { WaitingRoomScreen } from './waiting-room-screen';
 import { ChatAndNotesDrawer } from './chat-and-notes-drawer';
 import { WhiteboardCanvas, WhiteboardElement } from './whiteboard-canvas';
+import { BroadcastNameplate } from './broadcast-nameplate';
 import { BrandLogo } from '@/components/ui/brand-logo';
 import { soundEngine } from '@/lib/audio/sound-engine';
 import { useMeetingRecorder } from '@/lib/recording/use-meeting-recorder';
@@ -781,18 +782,16 @@ export function MeetingRoomView() {
                   </div>
                 )}
 
-                {/* Local Status Badges */}
-                <div className="absolute bottom-4 left-4 flex items-center gap-2">
-                  <div className="px-3 py-1.5 rounded-xl bg-black/70 backdrop-blur-md border border-white/10 text-xs font-semibold text-white flex items-center gap-2 shadow-lg">
-                    <span>You {isHost ? '(Host)' : ''}</span>
-                    {!isAudioEnabled && <MicOff className="h-3.5 w-3.5 text-rose-400" />}
-                    {isLocalSpeaking && (
-                      <span className="flex items-center gap-1 text-[10px] text-emerald-400 font-bold">
-                        <Volume2 className="h-3.5 w-3.5 animate-pulse" />
-                        Speaking
-                      </span>
-                    )}
-                  </div>
+                {/* Local TV Broadcast Lower-Third Nameplate */}
+                <div className="absolute bottom-4 left-4 flex items-end gap-2.5">
+                  <BroadcastNameplate
+                    name={myDisplayName || 'You'}
+                    isLocal={true}
+                    isHost={isHost}
+                    isCoHost={currentRole === 'CO_HOST'}
+                    isMuted={!isAudioEnabled}
+                    isSpeaking={isLocalSpeaking}
+                  />
 
                   {isAudioEnabled && (
                     <div className="px-2.5 py-1.5 rounded-xl bg-black/70 backdrop-blur-md border border-white/10 flex items-center gap-1.5 shadow-lg">
