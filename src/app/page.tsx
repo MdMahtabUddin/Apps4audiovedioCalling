@@ -266,10 +266,6 @@ export default function HomePage() {
             </span>
           </h1>
 
-          <p className="text-base sm:text-xl text-gray-300 max-w-3xl mx-auto leading-relaxed font-normal">
-            Direct peer-to-peer WebRTC mesh architecture, crystal-clear 48kHz Opus audio, host knock-admission governance, and 4K ultra-HD presentation streaming engineered by MetroNet.
-          </p>
-
           {/* Quick Launch & Join Bar */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3.5 pt-3 max-w-2xl mx-auto w-full">
             <Button
@@ -666,41 +662,6 @@ export default function HomePage() {
             </div>
           </div>
         </div>
-
-        {/* ========================================================================= */}
-        {/* METRONET ENTERPRISE METRICS COUNTER BAR                                   */}
-        {/* ========================================================================= */}
-        <section className="max-w-6xl mx-auto px-4 mt-20 sm:mt-28 w-full">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-6 rounded-3xl bg-[#091222]/80 border border-[#0066FF]/25 backdrop-blur-xl shadow-2xl">
-            <div className="text-center p-3 border-r border-white/[0.06] last:border-0">
-              <p className="text-3xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#0066FF] to-[#388BFF]">
-                &lt; 15ms
-              </p>
-              <p className="text-xs text-gray-400 font-semibold mt-1">P2P Mesh Latency</p>
-            </div>
-
-            <div className="text-center p-3 border-r border-white/[0.06] last:border-0">
-              <p className="text-3xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#FF7A00] to-[#FFA033]">
-                99.99%
-              </p>
-              <p className="text-xs text-gray-400 font-semibold mt-1">Enterprise Backbone Uptime</p>
-            </div>
-
-            <div className="text-center p-3 border-r border-white/[0.06] last:border-0">
-              <p className="text-3xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#0066FF] to-[#388BFF]">
-                48 kHz
-              </p>
-              <p className="text-xs text-gray-400 font-semibold mt-1">Studio Opus Audio</p>
-            </div>
-
-            <div className="text-center p-3">
-              <p className="text-3xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#FF7A00] to-[#FFA033]">
-                100%
-              </p>
-              <p className="text-xs text-gray-400 font-semibold mt-1">End-to-End P2P Encrypted</p>
-            </div>
-          </div>
-        </section>
 
         {/* ========================================================================= */}
         {/* ENTERPRISE GRADE CORE CAPABILITIES GRID                                   */}
