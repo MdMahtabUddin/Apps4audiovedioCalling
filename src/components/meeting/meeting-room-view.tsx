@@ -26,6 +26,7 @@ import {
   MessageSquare,
   FileText,
   Clock,
+  PenTool,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -37,6 +38,7 @@ import { RemoteVideoTile } from './remote-video-tile';
 import { ParticipantDrawer } from './participant-drawer';
 import { WaitingRoomScreen } from './waiting-room-screen';
 import { ChatAndNotesDrawer } from './chat-and-notes-drawer';
+import { WhiteboardCanvas, WhiteboardElement } from './whiteboard-canvas';
 import { BrandLogo } from '@/components/ui/brand-logo';
 import { soundEngine } from '@/lib/audio/sound-engine';
 import { useMeetingRecorder } from '@/lib/recording/use-meeting-recorder';
@@ -53,6 +55,7 @@ export function MeetingRoomView() {
     endRoom,
     toggleLock,
     myParticipantId,
+    myDisplayName,
   } = useMeeting();
 
   const {
@@ -100,13 +103,16 @@ export function MeetingRoomView() {
     endMeetingForAll,
   } = useMeetingSocket({
     meetingId,
-    displayName: isHost ? 'Host' : 'Participant',
+    displayName: myDisplayName || (isHost ? 'Host' : 'Participant'),
     role: isHost ? 'HOST' : 'PARTICIPANT',
     isJoined: true,
   });
 
   const [showParticipantsDrawer, setShowParticipantsDrawer] = useState(false);
   const [showChatAndNotes, setShowChatAndNotes] = useState(false);
+  const [showWhiteboard, setShowWhiteboard] = useState(false);
+  const [wbElements, setWbElements] = useState<WhiteboardElement[]>([]);
+  const [wbRedoStack, setWbRedoStack] = useState<WhiteboardElement[]>([]);
   const [httpKnocks, setHttpKnocks] = useState<Array<{ socketId: string; displayName: string; userId: string; requestedAt: number }>>([]);
   const [apiParticipants, setApiParticipants] = useState<Array<{ id: string; userId?: string; displayName: string; name: string; role: string; avatar?: string | null; joinedAt?: string | number | null }>>([]);
 
@@ -1110,6 +1116,20 @@ export function MeetingRoomView() {
             {isRecording ? <Square className="h-4 w-4 fill-white" /> : <Disc className="h-5 w-5 text-rose-400" />}
           </button>
 
+          {/* Live Whiteboard / Draw Studio */}
+          <button
+            onClick={() => setShowWhiteboard(true)}
+            className={`h-11 px-3 sm:h-12 sm:px-4 rounded-2xl flex items-center gap-1.5 transition-all cursor-pointer shadow-lg text-xs font-bold ${
+              showWhiteboard
+                ? 'bg-gradient-to-r from-[#0066FF] to-[#FF7A00] text-white'
+                : 'bg-white/[0.08] hover:bg-white/[0.14] text-white'
+            }`}
+            title="Live Whiteboard & Draw Studio"
+          >
+            <PenTool className="h-4 w-4 text-[#388BFF]" />
+            <span className="hidden sm:inline">Draw</span>
+          </button>
+
           {/* Meeting Chat & Notepad Drawer Toggle */}
           <button
             onClick={() => setShowChatAndNotes(!showChatAndNotes)}
@@ -1194,7 +1214,7 @@ export function MeetingRoomView() {
         participants={drawerParticipants}
         waitingParticipants={activeWaitingList}
         localUser={{
-          name: isHost ? 'Host' : 'Participant',
+          name: myDisplayName || (isHost ? 'Host' : 'Participant'),
           role: currentRole,
           isAudioEnabled,
           isVideoEnabled,
@@ -1216,13 +1236,48 @@ export function MeetingRoomView() {
         onAdmitAll={handleAdmitAllCandidates}
       />
 
+      {/* Live Collaborative Whiteboard */}
+      <WhiteboardCanvas
+        isOpen={showWhiteboard}
+        onClose={() => setShowWhiteboard(false)}
+        meetingTitle={title}
+        authorName={myDisplayName || (isHost ? 'Host' : 'Participant')}
+        elements={wbElements}
+        onAddElement={(el) => {
+          setWbElements((prev) => [...prev, el]);
+          setWbRedoStack([]);
+        }}
+        onUndo={() => {
+          setWbElements((prev) => {
+            if (prev.length === 0) return prev;
+            const last = prev[prev.length - 1];
+            setWbRedoStack((r) => [...r, last]);
+            return prev.slice(0, -1);
+          });
+        }}
+        onRedo={() => {
+          setWbRedoStack((prev) => {
+            if (prev.length === 0) return prev;
+            const last = prev[prev.length - 1];
+            setWbElements((els) => [...els, last]);
+            return prev.slice(0, -1);
+          });
+        }}
+        canUndo={wbElements.length > 0}
+        canRedo={wbRedoStack.length > 0}
+        onClear={() => {
+          setWbElements([]);
+          setWbRedoStack([]);
+        }}
+      />
+
       {/* In-Meeting Group Chat & Collaborative Notepad Drawer */}
       <ChatAndNotesDrawer
         isOpen={showChatAndNotes}
         onClose={() => setShowChatAndNotes(false)}
         meetingId={meetingId}
         meetingTitle={title}
-        localUserName={isHost ? 'Person 1 (Host)' : 'Person 2'}
+        localUserName={myDisplayName || (isHost ? 'Host' : 'Participant')}
       />
     </div>
   );

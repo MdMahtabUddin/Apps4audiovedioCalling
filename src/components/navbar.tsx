@@ -49,19 +49,6 @@ export function Navbar({ user, onOpenSettings, onQuickNewMeeting }: NavbarProps)
         {/* Brand Logo with MetroNet Corporate Identity */}
         <div className="flex items-center gap-6">
           <BrandLogo size="md" showTagline={true} href={user ? '/dashboard' : '/'} />
-
-          {user && (
-            <div className="hidden lg:flex items-center gap-2 pl-4 border-l border-white/[0.08]">
-              <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#0066FF]/15 border border-[#0066FF]/30 text-[11px] font-semibold text-[#388BFF]">
-                <Radio className="h-3 w-3 animate-pulse text-[#FF7A00]" />
-                <span>MetroNet Backbone 100G</span>
-              </div>
-              <div className="flex items-center gap-1 text-[11px] text-gray-400 font-mono px-2 py-1 rounded-lg bg-white/[0.03]">
-                <Zap className="h-3 w-3 text-[#FFA033]" />
-                <span>12ms</span>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Right Actions */}

@@ -201,7 +201,7 @@ export function MeetingProvider({
     sendLeave();
     setIsJoined(false);
     setIsWaitingApproval(false);
-    router.push('/');
+    router.push('/dashboard');
   }, [router, sendLeave]);
 
   const endRoom = useCallback(async () => {

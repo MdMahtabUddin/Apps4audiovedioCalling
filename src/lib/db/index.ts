@@ -837,27 +837,16 @@ export const meetingService = {
     return meeting;
   },
 
-  async leaveMeeting(meetingId: string, participantId: string, isHost?: boolean) {
+  async leaveMeeting(meetingId: string, participantId: string, _isHost?: boolean) {
     const now = new Date();
     const usePg = await checkPrisma();
     if (usePg) {
+      // Only record participant leftAt so the meeting remains open if the host leaves accidentally
+      // and wants to rejoin as Host. Permanent termination happens only via explicit endMeeting().
       await prisma.meetingParticipant.updateMany({
         where: { id: participantId, meetingId, leftAt: null },
         data: { leftAt: now },
       });
-      // Check remaining participants still in the room
-      const remaining = await prisma.meetingParticipant.count({
-        where: { meetingId, isApproved: true, leftAt: null },
-      });
-      if (remaining === 0 || isHost) {
-        // Automatically close meeting if host left or room is empty
-        await prisma.meeting
-          .update({
-            where: { id: meetingId },
-            data: { isActive: false, endTime: now },
-          })
-          .catch(() => {});
-      }
       return true;
     }
 
@@ -865,16 +854,6 @@ export const meetingService = {
     const p = store.participants.find((x) => x.id === participantId && x.meetingId === meetingId);
     if (p && !p.leftAt) {
       p.leftAt = now.toISOString();
-    }
-    const remaining = store.participants.filter(
-      (x) => x.meetingId === meetingId && x.isApproved && !x.leftAt
-    ).length;
-    if (remaining === 0 || isHost) {
-      const meeting = store.meetings.find((m) => m.id === meetingId);
-      if (meeting && meeting.isActive) {
-        meeting.isActive = false;
-        meeting.endTime = now.toISOString();
-      }
     }
     saveDevStore(store);
     return p;

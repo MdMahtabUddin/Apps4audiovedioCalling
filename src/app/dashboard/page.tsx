@@ -550,10 +550,6 @@ export default function DashboardPage() {
                 <Badge variant="success" dot>
                   Enterprise Studio Online
                 </Badge>
-                <Badge variant="blue">
-                  <Sparkles className="h-3 w-3 mr-1 text-cyan-300" />
-                  SFU Cloud + WebRTC Mesh
-                </Badge>
                 {analytics.activeMeetings > 0 && (
                   <Badge variant="orange" dot>
                     {analytics.activeMeetings} Live Session{analytics.activeMeetings > 1 ? 's' : ''} Active
@@ -1466,9 +1462,9 @@ export default function DashboardPage() {
                 </div>
                 <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06]">
                   <span className="text-gray-400 flex items-center gap-2">
-                    <Zap className="h-3.5 w-3.5 text-[#FFA033]" /> Backbone Transport
+                    <Zap className="h-3.5 w-3.5 text-[#FFA033]" /> Connection Status
                   </span>
-                  <span className="font-mono font-bold text-[#FFA033]">Low Latency (~12ms)</span>
+                  <span className="font-semibold text-emerald-400">Encrypted &amp; Ready</span>
                 </div>
               </CardContent>
             </Card>

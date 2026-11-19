@@ -41,6 +41,10 @@ import {
   PinOff,
   Volume2,
   VolumeX,
+  X,
+  Crown,
+  UserCheck,
+  UserMinus,
 } from 'lucide-react';
 import { BrandLogo } from '@/components/ui/brand-logo';
 import { soundEngine } from '@/lib/audio/sound-engine';
@@ -48,6 +52,7 @@ import { useToast } from '@/components/ui/toast';
 import { useMeetingRecorder } from '@/lib/recording/use-meeting-recorder';
 import { RTC_CONFIG } from '@/lib/webrtc/webrtc-mesh';
 import { ChatAndNotesDrawer } from './chat-and-notes-drawer';
+import { WhiteboardCanvas, WhiteboardElement } from './whiteboard-canvas';
 
 interface LiveKitMeetingStageProps {
   meetingId: string;
@@ -97,6 +102,12 @@ function LiveKitInnerStage({
 
   // Drawers & Modals
   const [showChatAndNotes, setShowChatAndNotes] = useState(false);
+  const [showParticipantsDrawer, setShowParticipantsDrawer] = useState(false);
+  const [showWhiteboard, setShowWhiteboard] = useState(false);
+  const [showHostExitModal, setShowHostExitModal] = useState(false);
+  const [coHosts, setCoHosts] = useState<Record<string, boolean>>({});
+  const [wbElements, setWbElements] = useState<WhiteboardElement[]>([]);
+  const [wbRedoStack, setWbRedoStack] = useState<WhiteboardElement[]>([]);
   const [showReactionsBar, setShowReactionsBar] = useState(false);
   const [activeReaction, setActiveReaction] = useState<string | null>(null);
   const [isCopied, setIsCopied] = useState(false);
@@ -182,6 +193,22 @@ function LiveKitInnerStage({
             soundEngine.playIntroChime();
             toast.info(`✋ ${name} raised their hand!`);
           }
+        } else if (data.type === 'cohost-update' && data.identity) {
+          setCoHosts((prev) => ({ ...prev, [data.identity]: Boolean(data.isCoHost) }));
+          if (data.name) {
+            toast.info(
+              data.isCoHost
+                ? `🛡️ ${data.name} is now a Co-Host`
+                : `${data.name} is no longer a Co-Host`
+            );
+          }
+        } else if (data.type === 'wb-add' && data.element) {
+          setWbElements((prev) =>
+            prev.some((e) => e.id === data.element.id) ? prev : [...prev, data.element]
+          );
+        } else if (data.type === 'wb-clear') {
+          setWbElements([]);
+          setWbRedoStack([]);
         }
       } catch {}
     };
@@ -191,6 +218,58 @@ function LiveKitInnerStage({
       room.off('dataReceived', handleDataReceived);
     };
   }, [room, toast]);
+
+  const handleToggleCoHost = (identity: string, name: string) => {
+    const nextIsCoHost = !coHosts[identity];
+    setCoHosts((prev) => ({ ...prev, [identity]: nextIsCoHost }));
+    toast.success(
+      nextIsCoHost
+        ? `${name} has been promoted to Co-Host`
+        : `Co-Host role removed from ${name}`
+    );
+    try {
+      const payload = new TextEncoder().encode(
+        JSON.stringify({ type: 'cohost-update', identity, name, isCoHost: nextIsCoHost })
+      );
+      room?.localParticipant.publishData(payload, { reliable: true });
+    } catch {}
+  };
+
+  const handleWhiteboardAdd = (el: WhiteboardElement) => {
+    setWbElements((prev) => [...prev, el]);
+    setWbRedoStack([]);
+    try {
+      const payload = new TextEncoder().encode(JSON.stringify({ type: 'wb-add', element: el }));
+      room?.localParticipant.publishData(payload, { reliable: true });
+    } catch {}
+  };
+
+  const handleWhiteboardUndo = () => {
+    setWbElements((prev) => {
+      if (prev.length === 0) return prev;
+      const last = prev[prev.length - 1];
+      setWbRedoStack((r) => [...r, last]);
+      return prev.slice(0, -1);
+    });
+  };
+
+  const handleWhiteboardRedo = () => {
+    setWbRedoStack((prev) => {
+      if (prev.length === 0) return prev;
+      const last = prev[prev.length - 1];
+      setWbElements((els) => [...els, last]);
+      return prev.slice(0, -1);
+    });
+  };
+
+  const handleWhiteboardClear = () => {
+    setWbElements([]);
+    setWbRedoStack([]);
+    try {
+      const payload = new TextEncoder().encode(JSON.stringify({ type: 'wb-clear' }));
+      room?.localParticipant.publishData(payload, { reliable: true });
+    } catch {}
+  };
 
   // Hand Raise Toggle
   const toggleHandRaise = () => {
@@ -543,6 +622,16 @@ function LiveKitInnerStage({
                       <span className="truncate max-w-[120px] sm:max-w-[180px]">
                         {pName} {isLocal ? '(You)' : ''}
                       </span>
+                      {isLocal && isHost && (
+                        <span className="px-1.5 py-0.5 rounded-md bg-[#FF7A00]/25 text-[#FFA033] border border-[#FF7A00]/40 text-[9px] font-black uppercase">
+                          Host
+                        </span>
+                      )}
+                      {coHosts[participant.identity] && (
+                        <span className="px-1.5 py-0.5 rounded-md bg-[#0066FF]/25 text-[#388BFF] border border-[#0066FF]/40 text-[9px] font-black uppercase">
+                          Co-Host
+                        </span>
+                      )}
                       {!participant.isMicrophoneEnabled && (
                         <MicOff className="h-3.5 w-3.5 text-rose-400 shrink-0" />
                       )}
@@ -740,6 +829,36 @@ function LiveKitInnerStage({
             </span>
           </button>
 
+          {/* Live Whiteboard / Draw Studio */}
+          <button
+            onClick={() => setShowWhiteboard(true)}
+            className={`h-11 px-3 sm:h-12 sm:px-4 rounded-2xl flex items-center gap-1.5 sm:gap-2 transition-all cursor-pointer shadow-lg active:scale-95 text-xs font-bold ${
+              showWhiteboard
+                ? 'bg-gradient-to-r from-[#0066FF] to-[#FF7A00] text-white border border-white/25'
+                : 'bg-white/[0.08] hover:bg-white/[0.15] text-gray-200 hover:text-white border border-white/10'
+            }`}
+            title="Live Collaborative Whiteboard & Draw Studio"
+          >
+            <PenTool className="h-4 w-4 text-[#388BFF]" />
+            <span className="hidden sm:inline">Draw</span>
+          </button>
+
+          {/* Participants & Co-Host Management Drawer */}
+          <button
+            onClick={() => setShowParticipantsDrawer(true)}
+            className={`relative h-11 w-11 sm:h-12 sm:w-12 rounded-2xl flex items-center justify-center transition-all cursor-pointer shadow-lg active:scale-95 ${
+              showParticipantsDrawer
+                ? 'bg-[#0066FF] text-white border border-[#388BFF]'
+                : 'bg-white/[0.08] hover:bg-white/[0.15] border border-white/10 text-gray-300 hover:text-white'
+            }`}
+            title="Participants & Co-Host Controls"
+          >
+            <Users className="h-5 w-5" />
+            <span className="absolute -top-1 -right-1 h-5 min-w-5 px-1 rounded-full bg-[#0066FF] text-white text-[10px] font-black flex items-center justify-center border-2 border-[#06080e]">
+              {totalCount}
+            </span>
+          </button>
+
           {/* Chat & Notes Drawer */}
           <button
             onClick={() => setShowChatAndNotes(true)}
@@ -756,7 +875,7 @@ function LiveKitInnerStage({
                 recorder.stopRecording();
               }
               if (isHost && onEndMeeting) {
-                onEndMeeting();
+                setShowHostExitModal(true);
               } else {
                 onLeave();
               }
@@ -764,7 +883,7 @@ function LiveKitInnerStage({
             className="h-11 px-5 sm:h-12 sm:px-6 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs sm:text-sm flex items-center gap-2 shadow-xl shadow-rose-600/30 transition-all cursor-pointer active:scale-95"
           >
             <PhoneOff className="h-4 w-4" />
-            <span>{isHost ? 'End Call' : 'Leave'}</span>
+            <span>{isHost ? 'End / Leave' : 'Leave'}</span>
           </button>
         </div>
 
@@ -773,6 +892,162 @@ function LiveKitInnerStage({
           <span className="font-mono text-[11px] text-gray-500">MetroMeet Pro v2.6</span>
         </div>
       </footer>
+
+      {/* Host Leave vs End Meeting Confirmation Modal */}
+      {showHostExitModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+          <div className="w-full max-w-md p-6 rounded-3xl bg-[#091222] border border-[#0066FF]/30 shadow-2xl space-y-4 animate-in fade-in zoom-in-95">
+            <h3 className="text-lg font-black text-white">Leave or End Meeting?</h3>
+            <p className="text-xs sm:text-sm text-gray-400 leading-relaxed">
+              If you choose <strong className="text-white">Leave Only</strong>, the room stays open and you can rejoin anytime as the <strong className="text-[#388BFF]">Host</strong>.
+            </p>
+            <div className="flex flex-col gap-2.5 pt-2">
+              <button
+                onClick={() => {
+                  setShowHostExitModal(false);
+                  onLeave();
+                }}
+                className="w-full py-2.5 px-4 rounded-2xl bg-[#0066FF] hover:bg-[#1E78FF] text-white text-xs sm:text-sm font-bold transition-all cursor-pointer shadow-lg shadow-[#0066FF]/25"
+              >
+                Leave Only (Rejoin Later as Host)
+              </button>
+              <button
+                onClick={async () => {
+                  setShowHostExitModal(false);
+                  if (onEndMeeting) await onEndMeeting();
+                }}
+                className="w-full py-2.5 px-4 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white text-xs sm:text-sm font-bold transition-all cursor-pointer shadow-lg shadow-rose-600/25"
+              >
+                End Meeting for Everyone
+              </button>
+              <button
+                onClick={() => setShowHostExitModal(false)}
+                className="w-full py-2 text-xs text-gray-400 hover:text-white transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Participants & Co-Host Drawer */}
+      {showParticipantsDrawer && (
+        <aside className="fixed inset-y-0 right-0 z-50 w-full sm:w-96 bg-[#091222]/96 backdrop-blur-2xl border-l border-[#0066FF]/25 shadow-2xl flex flex-col animate-in slide-in-from-right duration-200">
+          <div className="p-4 border-b border-white/[0.08] flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="h-9 w-9 rounded-xl bg-[#0066FF]/15 border border-[#0066FF]/30 text-[#388BFF] flex items-center justify-center">
+                <Users className="h-4 w-4" />
+              </div>
+              <div>
+                <h3 className="text-sm font-black text-white flex items-center gap-2">
+                  Participants
+                  <span className="px-2 py-0.5 rounded-full bg-[#0066FF]/20 text-[#388BFF] text-[11px] font-mono">
+                    {totalCount}
+                  </span>
+                </h3>
+                <p className="text-[11px] text-gray-400">
+                  {isHost ? 'Manage attendees & assign Co-Hosts' : 'Live attendees in this meeting'}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowParticipantsDrawer(false)}
+              className="h-8 w-8 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] text-gray-400 hover:text-white flex items-center justify-center cursor-pointer"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-4 space-y-2.5">
+            {participants.map((p) => {
+              const pName = p.name || p.identity || 'Participant';
+              const isLocalP = p.isLocal;
+              const isPeerCoHost = Boolean(coHosts[p.identity]);
+              const isPeerHost = isLocalP && isHost;
+
+              return (
+                <div
+                  key={p.identity}
+                  className="p-3.5 rounded-2xl bg-white/[0.04] border border-white/[0.08] hover:border-[#0066FF]/35 transition-all flex items-center justify-between gap-3"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="h-10 w-10 rounded-xl bg-gradient-to-tr from-[#0066FF] to-[#FF7A00] text-white font-black text-xs flex items-center justify-center shrink-0 shadow-md">
+                      {pName.slice(0, 2).toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-xs sm:text-sm font-bold text-white truncate max-w-[140px]">
+                          {pName} {isLocalP ? '(You)' : ''}
+                        </span>
+                        {isPeerHost && (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[#FF7A00]/20 text-[#FFA033] border border-[#FF7A00]/35 text-[9px] font-black uppercase">
+                            <Crown className="h-2.5 w-2.5" /> Host
+                          </span>
+                        )}
+                        {isPeerCoHost && (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[#0066FF]/20 text-[#388BFF] border border-[#0066FF]/35 text-[9px] font-black uppercase">
+                            <Shield className="h-2.5 w-2.5" /> Co-Host
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 text-[10px] text-gray-400 mt-0.5">
+                        <span className={p.isMicrophoneEnabled ? 'text-emerald-400' : 'text-rose-400'}>
+                          {p.isMicrophoneEnabled ? 'Mic On' : 'Muted'}
+                        </span>
+                        <span>•</span>
+                        <span className={p.isCameraEnabled ? 'text-emerald-400' : 'text-gray-500'}>
+                          {p.isCameraEnabled ? 'Camera On' : 'Camera Off'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Host Action: Make / Remove Co-Host */}
+                  {isHost && !isLocalP && (
+                    <button
+                      onClick={() => handleToggleCoHost(p.identity, pName)}
+                      className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold flex items-center gap-1 shrink-0 transition-all cursor-pointer ${
+                        isPeerCoHost
+                          ? 'bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30'
+                          : 'bg-[#0066FF]/20 hover:bg-[#0066FF]/35 text-[#388BFF] border border-[#0066FF]/40'
+                      }`}
+                      title={isPeerCoHost ? 'Remove Co-Host role' : 'Promote to Co-Host'}
+                    >
+                      {isPeerCoHost ? (
+                        <>
+                          <UserMinus className="h-3.5 w-3.5" />
+                          <span>Remove</span>
+                        </>
+                      ) : (
+                        <>
+                          <UserCheck className="h-3.5 w-3.5" />
+                          <span>Co-Host</span>
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </aside>
+      )}
+
+      {/* Live Collaborative Whiteboard */}
+      <WhiteboardCanvas
+        isOpen={showWhiteboard}
+        onClose={() => setShowWhiteboard(false)}
+        meetingTitle={meetingTitle}
+        authorName={displayName}
+        elements={wbElements}
+        onAddElement={handleWhiteboardAdd}
+        onUndo={handleWhiteboardUndo}
+        onRedo={handleWhiteboardRedo}
+        canUndo={wbElements.length > 0}
+        canRedo={wbRedoStack.length > 0}
+        onClear={handleWhiteboardClear}
+      />
 
       {/* Drawers */}
       <ChatAndNotesDrawer
