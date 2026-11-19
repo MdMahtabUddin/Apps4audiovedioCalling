@@ -23,7 +23,7 @@ function MeetingContainer({ meetingId }: { meetingId: string }) {
   const [livekitData, setLivekitData] = useState<{ token: string; wsUrl: string } | null>(null);
   const [livekitFailed, setLivekitFailed] = useState(false);
 
-  const { isJoined, isWaitingApproval, leaveRoom, myDisplayName } = useMeeting();
+  const { isJoined, isWaitingApproval, leaveRoom, endRoom, myDisplayName } = useMeeting();
 
   // Check if LiveKit Cloud credentials are configured
   useEffect(() => {
@@ -169,6 +169,7 @@ function MeetingContainer({ meetingId }: { meetingId: string }) {
           serverUrl={livekitData.wsUrl}
           displayName={myDisplayName || currentUser?.name || 'Participant'}
           onLeave={leaveRoom}
+          onEndMeeting={endRoom}
           onFallback={() => setLivekitFailed(true)}
         />
       );

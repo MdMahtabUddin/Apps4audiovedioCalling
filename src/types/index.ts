@@ -31,6 +31,7 @@ export interface MeetingItem {
   isActive: boolean;
   startTime: string;
   endTime?: string | null;
+  durationSeconds?: number;
   durationMinutes?: number;
   participantCount?: number;
   createdAt: string;

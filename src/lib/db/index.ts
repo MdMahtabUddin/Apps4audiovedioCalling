@@ -331,6 +331,14 @@ export const meetingService = {
   },
 
   async getRecentAndHistory(userId: string) {
+    const computeDuration = (startIso: string, endIso?: string | null) => {
+      const startMs = new Date(startIso).getTime();
+      const endMs = endIso ? new Date(endIso).getTime() : Date.now();
+      const durationSeconds = Math.max(0, Math.round((endMs - startMs) / 1000));
+      const durationMinutes = Math.max(1, Math.round(durationSeconds / 60));
+      return { durationSeconds, durationMinutes };
+    };
+
     const usePg = await checkPrisma();
     if (usePg) {
       const meetings = await prisma.meeting.findMany({
@@ -341,39 +349,57 @@ export const meetingService = {
           ],
         },
         orderBy: { startTime: 'desc' },
-        take: 10,
         include: {
           host: { select: { id: true, name: true, email: true } },
           _count: { select: { participants: true } },
         },
       });
-      return meetings.map((m) => ({
-        id: m.id,
-        title: m.title,
-        hostId: m.hostId,
-        hostName: m.host.name,
-        hostEmail: m.host.email,
-        password: m.password,
-        isLocked: m.isLocked,
-        waitingRoom: m.waitingRoom,
-        isActive: m.isActive,
-        startTime: m.startTime.toISOString(),
-        endTime: m.endTime ? m.endTime.toISOString() : null,
-        participantCount: m._count.participants,
-        createdAt: m.createdAt.toISOString(),
-      }));
+      return meetings.map((m) => {
+        const startIso = m.startTime.toISOString();
+        const endIso = m.endTime ? m.endTime.toISOString() : null;
+        const { durationSeconds, durationMinutes } = computeDuration(startIso, endIso);
+        return {
+          id: m.id,
+          title: m.title,
+          hostId: m.hostId,
+          hostName: m.host.name,
+          hostEmail: m.host.email,
+          password: m.password,
+          isLocked: m.isLocked,
+          waitingRoom: m.waitingRoom,
+          isActive: m.isActive,
+          startTime: startIso,
+          endTime: endIso,
+          durationSeconds,
+          durationMinutes,
+          participantCount: Math.max(1, m._count.participants),
+          createdAt: m.createdAt.toISOString(),
+        };
+      });
     }
 
     const store = loadDevStore();
+    const participatedIds = new Set(
+      store.participants.filter((p) => p.userId === userId).map((p) => p.meetingId)
+    );
     return store.meetings
-      .filter((m) => m.hostId === userId)
-      .slice(-10)
-      .reverse()
-      .map((m) => ({
-        ...m,
-        hostName: 'Host',
-        participantCount: store.participants.filter((p) => p.meetingId === m.id).length || 1,
-      }));
+      .filter((m) => m.hostId === userId || participatedIds.has(m.id))
+      .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime())
+      .map((m) => {
+        const host = store.users.find((u) => u.id === m.hostId);
+        const { durationSeconds, durationMinutes } = computeDuration(m.startTime, m.endTime);
+        return {
+          ...m,
+          hostName: host ? host.name : 'Host',
+          hostEmail: host ? host.email : '',
+          durationSeconds,
+          durationMinutes,
+          participantCount: Math.max(
+            1,
+            store.participants.filter((p) => p.meetingId === m.id).length
+          ),
+        };
+      });
   },
 
   async getScheduledMeetings(userId: string) {
@@ -382,11 +408,12 @@ export const meetingService = {
       return prisma.scheduledMeeting.findMany({
         where: { hostId: userId },
         orderBy: { date: 'asc' },
-        take: 10,
       });
     }
     const store = loadDevStore();
-    return store.scheduledMeetings.filter((s) => s.hostId === userId);
+    return store.scheduledMeetings
+      .filter((s) => s.hostId === userId)
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   },
 
   async create(data: {

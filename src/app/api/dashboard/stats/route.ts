@@ -22,6 +22,17 @@ export async function GET() {
     meetingService.getScheduledMeetings(session.userId),
   ]);
 
+  const totalDurationSeconds = recentMeetings.reduce(
+    (sum, m) => sum + (m.durationSeconds || 0),
+    0
+  );
+  const totalParticipants = recentMeetings.reduce(
+    (sum, m) => sum + (m.participantCount || 1),
+    0
+  );
+  const activeCount = recentMeetings.filter((m) => m.isActive).length;
+  const completedCount = recentMeetings.filter((m) => !m.isActive).length;
+
   return NextResponse.json({
     user: {
       id: user.id,
@@ -35,6 +46,10 @@ export async function GET() {
     stats: {
       totalHosted: recentMeetings.length,
       upcomingCount: scheduledMeetings.length,
+      activeCount,
+      completedCount,
+      totalDurationSeconds,
+      totalParticipants,
     },
   });
 }

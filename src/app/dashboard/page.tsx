@@ -4,16 +4,13 @@ import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Video,
-  Plus,
   LogIn,
   Calendar,
   Clock,
   Copy,
   Check,
-  ExternalLink,
   Users,
   Sparkles,
-  Settings,
   ArrowRight,
   Search,
   Camera,
@@ -22,8 +19,20 @@ import {
   History,
   Radio,
   Zap,
-  Globe,
   Lock,
+  Timer,
+  Download,
+  RotateCcw,
+  StopCircle,
+  TrendingUp,
+  FileText,
+  Trash2,
+  CheckCircle2,
+  Shield,
+  SlidersHorizontal,
+  Award,
+  Activity,
+  ExternalLink,
 } from 'lucide-react';
 import { Navbar } from '@/components/navbar';
 import { Button } from '@/components/ui/button';
@@ -36,7 +45,77 @@ import { ScheduleMeetingModal } from '@/components/dashboard/schedule-meeting-mo
 import { SettingsModal } from '@/components/dashboard/settings-modal';
 import { useToast } from '@/components/ui/toast';
 import { UserProfile, MeetingItem, ScheduledMeetingItem } from '@/types';
-import { formatDate } from '@/lib/utils';
+import { generateMeetingId } from '@/lib/utils';
+
+type HistoryFilter = 'all' | 'active' | 'completed';
+type HistorySort = 'newest' | 'longest' | 'participants';
+
+function computeDurationSeconds(item: MeetingItem, nowMs: number): number {
+  const startMs = new Date(item.startTime || item.createdAt).getTime();
+  if (Number.isNaN(startMs)) return item.durationSeconds || 0;
+  if (item.endTime) {
+    const endMs = new Date(item.endTime).getTime();
+    if (!Number.isNaN(endMs) && endMs >= startMs) {
+      return Math.round((endMs - startMs) / 1000);
+    }
+  }
+  if (typeof item.durationSeconds === 'number' && !item.isActive) {
+    return item.durationSeconds;
+  }
+  return Math.max(0, Math.round((nowMs - startMs) / 1000));
+}
+
+function formatDurationDetailed(totalSeconds: number): string {
+  if (!totalSeconds || totalSeconds <= 0) return '< 1 min';
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  if (hours > 0) {
+    return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
+  }
+  if (minutes > 0) {
+    return seconds > 0 ? `${minutes}m ${seconds}s` : `${minutes} min${minutes > 1 ? 's' : ''}`;
+  }
+  return `${seconds}s`;
+}
+
+function formatMeetingDate(dateString: string): string {
+  const d = new Date(dateString);
+  if (Number.isNaN(d.getTime())) return 'Unknown date';
+  return d.toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
+function formatMeetingTime(dateString?: string | null): string {
+  if (!dateString) return '';
+  const d = new Date(dateString);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  });
+}
+
+function getRelativeDayLabel(dateString: string): string {
+  const d = new Date(dateString);
+  if (Number.isNaN(d.getTime())) return '';
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const startOfTarget = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const diffDays = Math.round((startOfToday - startOfTarget) / 86400000);
+
+  if (diffDays === 0) return 'Today';
+  if (diffDays === 1) return 'Yesterday';
+  if (diffDays > 1 && diffDays < 7) return `${diffDays} days ago`;
+  if (diffDays < 0) return 'Upcoming';
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -44,17 +123,58 @@ export default function DashboardPage() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [recentMeetings, setRecentMeetings] = useState<MeetingItem[]>([]);
   const [scheduledMeetings, setScheduledMeetings] = useState<ScheduledMeetingItem[]>([]);
-  const [activeTab, setActiveTab] = useState<'upcoming' | 'history'>('upcoming');
+  const [activeTab, setActiveTab] = useState<'history' | 'upcoming'>('history');
+  const [historyFilter, setHistoryFilter] = useState<HistoryFilter>('all');
+  const [historySort, setHistorySort] = useState<HistorySort>('newest');
   const [searchQuery, setSearchQuery] = useState('');
   const [inlineCode, setInlineCode] = useState('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [endingId, setEndingId] = useState<string | null>(null);
+  const [repeatingId, setRepeatingId] = useState<string | null>(null);
+  const [nowMs, setNowMs] = useState<number>(() => Date.now());
+
+  // Studio quick scratchpad (persisted locally)
+  const [scratchpad, setScratchpad] = useState('');
+  const [deviceCount, setDeviceCount] = useState<{ audio: number; video: number }>({ audio: 1, video: 1 });
 
   // Modals
   const [isNewMeetingOpen, setIsNewMeetingOpen] = useState(false);
   const [isJoinMeetingOpen, setIsJoinMeetingOpen] = useState(false);
   const [isScheduleOpen, setIsScheduleOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  // Live ticker for active meeting duration updates
+  useEffect(() => {
+    const timer = setInterval(() => setNowMs(Date.now()), 10000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Load local scratchpad & inspect connected media hardware count
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedNotes = localStorage.getItem('metromeet_dashboard_scratchpad');
+      if (savedNotes) setScratchpad(savedNotes);
+
+      if (navigator.mediaDevices?.enumerateDevices) {
+        navigator.mediaDevices
+          .enumerateDevices()
+          .then((devices) => {
+            const audio = devices.filter((d) => d.kind === 'audioinput').length || 1;
+            const video = devices.filter((d) => d.kind === 'videoinput').length || 1;
+            setDeviceCount({ audio, video });
+          })
+          .catch(() => {});
+      }
+    }
+  }, []);
+
+  const handleScratchpadChange = (val: string) => {
+    setScratchpad(val);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('metromeet_dashboard_scratchpad', val);
+    }
+  };
 
   const fetchDashboardData = useCallback(async () => {
     try {
@@ -98,6 +218,105 @@ export default function DashboardPage() {
     router.push(`/meeting/${code}`);
   };
 
+  const handleEndActiveMeeting = async (meetingId: string) => {
+    setEndingId(meetingId);
+    try {
+      const res = await fetch(`/api/meetings/${meetingId}/end`, { method: 'POST' });
+      if (res.ok) {
+        toast.success('Meeting session ended and duration recorded in history');
+        await fetchDashboardData();
+      } else {
+        toast.error('Could not end meeting session');
+      }
+    } catch {
+      toast.error('Network error while ending meeting');
+    } finally {
+      setEndingId(null);
+    }
+  };
+
+  const handleHostAgain = async (item: MeetingItem) => {
+    setRepeatingId(item.id);
+    const newId = generateMeetingId();
+    try {
+      const res = await fetch('/api/meetings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: newId,
+          title: item.title || 'Instant Meeting',
+          waitingRoom: item.waitingRoom,
+        }),
+      });
+      if (res.ok && typeof window !== 'undefined') {
+        localStorage.setItem(`metromeet_host_${newId}`, 'true');
+      }
+      router.push(`/meeting/${newId}`);
+    } catch {
+      router.push(`/meeting/${newId}`);
+    } finally {
+      setRepeatingId(null);
+    }
+  };
+
+  const handleExportHistoryCSV = () => {
+    if (recentMeetings.length === 0) {
+      toast.info('No meeting history to export yet');
+      return;
+    }
+    const headers = [
+      'Meeting Title',
+      'Meeting ID',
+      'Status',
+      'Date',
+      'Start Time',
+      'End Time',
+      'Duration',
+      'Participants',
+    ];
+    const rows = recentMeetings.map((m) => {
+      const secs = computeDurationSeconds(m, nowMs);
+      const startDate = formatMeetingDate(m.startTime || m.createdAt);
+      const startT = formatMeetingTime(m.startTime || m.createdAt);
+      const endT = m.endTime ? formatMeetingTime(m.endTime) : m.isActive ? 'Ongoing' : 'Completed';
+      return [
+        `"${(m.title || 'Untitled Meeting').replace(/"/g, '""')}"`,
+        m.id,
+        m.isActive ? 'Active' : 'Completed',
+        `"${startDate}"`,
+        `"${startT}"`,
+        `"${endT}"`,
+        `"${formatDurationDetailed(secs)}"`,
+        m.participantCount || 1,
+      ].join(',');
+    });
+    const csvContent = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `MetroMeet-History-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success('Meeting history exported as CSV');
+  };
+
+  // Enrich meetings with computed live/recorded duration
+  const enrichedHistory = useMemo(() => {
+    return recentMeetings.map((m) => {
+      const durationSec = computeDurationSeconds(m, nowMs);
+      return {
+        ...m,
+        computedDurationSeconds: durationSec,
+        formattedDuration: formatDurationDetailed(durationSec),
+        formattedDate: formatMeetingDate(m.startTime || m.createdAt),
+        formattedStartTime: formatMeetingTime(m.startTime || m.createdAt),
+        formattedEndTime: m.endTime ? formatMeetingTime(m.endTime) : null,
+        relativeDay: getRelativeDayLabel(m.startTime || m.createdAt),
+      };
+    });
+  }, [recentMeetings, nowMs]);
+
   const filteredScheduled = useMemo(() => {
     if (!searchQuery.trim()) return scheduledMeetings;
     const q = searchQuery.toLowerCase();
@@ -109,14 +328,72 @@ export default function DashboardPage() {
   }, [scheduledMeetings, searchQuery]);
 
   const filteredRecent = useMemo(() => {
-    if (!searchQuery.trim()) return recentMeetings;
-    const q = searchQuery.toLowerCase();
-    return recentMeetings.filter(
-      (m) =>
-        m.title.toLowerCase().includes(q) ||
-        m.id.toLowerCase().includes(q)
-    );
-  }, [recentMeetings, searchQuery]);
+    let list = enrichedHistory;
+
+    if (historyFilter === 'active') {
+      list = list.filter((m) => m.isActive);
+    } else if (historyFilter === 'completed') {
+      list = list.filter((m) => !m.isActive);
+    }
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      list = list.filter(
+        (m) =>
+          m.title.toLowerCase().includes(q) ||
+          m.id.toLowerCase().includes(q)
+      );
+    }
+
+    const sorted = [...list];
+    if (historySort === 'longest') {
+      sorted.sort((a, b) => b.computedDurationSeconds - a.computedDurationSeconds);
+    } else if (historySort === 'participants') {
+      sorted.sort((a, b) => (b.participantCount || 1) - (a.participantCount || 1));
+    } else {
+      sorted.sort(
+        (a, b) =>
+          new Date(b.startTime || b.createdAt).getTime() -
+          new Date(a.startTime || a.createdAt).getTime()
+      );
+    }
+    return sorted;
+  }, [enrichedHistory, historyFilter, historySort, searchQuery]);
+
+  // Aggregate Analytics & KPIs
+  const analytics = useMemo(() => {
+    const totalMeetings = enrichedHistory.length;
+    const activeMeetings = enrichedHistory.filter((m) => m.isActive).length;
+    const completedMeetings = totalMeetings - activeMeetings;
+    const totalSeconds = enrichedHistory.reduce((acc, m) => acc + m.computedDurationSeconds, 0);
+    const avgSeconds = totalMeetings > 0 ? Math.round(totalSeconds / totalMeetings) : 0;
+    const totalParticipants = enrichedHistory.reduce((acc, m) => acc + (m.participantCount || 1), 0);
+
+    const longestMeeting =
+      enrichedHistory.length > 0
+        ? [...enrichedHistory].sort((a, b) => b.computedDurationSeconds - a.computedDurationSeconds)[0]
+        : null;
+
+    const shortCalls = enrichedHistory.filter((m) => m.computedDurationSeconds < 900).length;
+    const mediumCalls = enrichedHistory.filter(
+      (m) => m.computedDurationSeconds >= 900 && m.computedDurationSeconds < 2700
+    ).length;
+    const longCalls = enrichedHistory.filter((m) => m.computedDurationSeconds >= 2700).length;
+
+    return {
+      totalMeetings,
+      activeMeetings,
+      completedMeetings,
+      totalSeconds,
+      formattedTotalTime: totalSeconds > 0 ? formatDurationDetailed(totalSeconds) : '0m',
+      formattedAvgTime: avgSeconds > 0 ? formatDurationDetailed(avgSeconds) : '0m',
+      totalParticipants,
+      longestMeeting,
+      shortCalls,
+      mediumCalls,
+      longCalls,
+    };
+  }, [enrichedHistory]);
 
   const personalRoomId = useMemo(() => {
     if (!user?.id) return 'my-personal-room';
@@ -124,27 +401,56 @@ export default function DashboardPage() {
     return `${clean.substring(0, 3)}-${clean.substring(3, 7) || 'room'}-${clean.substring(7, 10) || 'hub'}`;
   }, [user?.id]);
 
+  const greetingText = useMemo(() => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good Morning';
+    if (hour < 17) return 'Good Afternoon';
+    return 'Good Evening';
+  }, []);
+
+  // Helper to highlight search matches inside already-highlighted meeting titles
+  const renderHighlightedTitle = (title: string) => {
+    const cleanTitle = title || 'Untitled Meeting';
+    if (!searchQuery.trim()) return cleanTitle;
+    const q = searchQuery.trim();
+    const idx = cleanTitle.toLowerCase().indexOf(q.toLowerCase());
+    if (idx === -1) return cleanTitle;
+    const before = cleanTitle.slice(0, idx);
+    const match = cleanTitle.slice(idx, idx + q.length);
+    const after = cleanTitle.slice(idx + q.length);
+    return (
+      <>
+        {before}
+        <mark className="bg-[#FF7A00] text-black px-1 rounded font-black">{match}</mark>
+        {after}
+      </>
+    );
+  };
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#06080e] flex items-center justify-center">
+      <div className="min-h-screen bg-[#050a14] flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <div className="relative">
-            <div className="h-12 w-12 rounded-2xl bg-indigo-600/30 border border-indigo-500/40 animate-ping absolute inset-0" />
-            <div className="h-12 w-12 rounded-2xl bg-indigo-600 flex items-center justify-center relative z-10 shadow-xl shadow-indigo-600/50">
-              <Video className="h-6 w-6 text-white animate-pulse" />
+            <div className="h-14 w-14 rounded-2xl bg-[#0066FF]/30 border border-[#0066FF]/40 animate-ping absolute inset-0" />
+            <div className="h-14 w-14 rounded-2xl bg-gradient-to-tr from-[#0066FF] to-[#FF7A00] flex items-center justify-center relative z-10 shadow-2xl shadow-[#0066FF]/50">
+              <Video className="h-7 w-7 text-white animate-pulse" />
             </div>
           </div>
-          <p className="text-xs text-gray-400 font-semibold tracking-wider uppercase">Loading MetroMeet Studio...</p>
+          <p className="text-xs text-gray-400 font-bold tracking-widest uppercase">
+            Initializing MetroMeet Workspace...
+          </p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#06080e] text-slate-100 flex flex-col selection:bg-indigo-500 selection:text-white relative">
-      {/* Background ambient light */}
-      <div className="absolute top-0 right-1/4 w-[600px] h-[350px] bg-indigo-600/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute top-96 left-0 w-[500px] h-[300px] bg-purple-600/10 rounded-full blur-3xl pointer-events-none" />
+    <div className="min-h-screen bg-[#050a14] text-slate-100 flex flex-col selection:bg-[#0066FF] selection:text-white relative overflow-x-hidden">
+      {/* Ambient Executive Background Orbs & Grid */}
+      <div className="fixed inset-0 bg-grid-pattern opacity-35 pointer-events-none" />
+      <div className="absolute top-0 right-1/4 w-[650px] h-[380px] bg-[#0066FF]/12 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-80 left-0 w-[520px] h-[340px] bg-[#FF7A00]/8 rounded-full blur-3xl pointer-events-none" />
 
       <Navbar
         user={user}
@@ -152,194 +458,608 @@ export default function DashboardPage() {
         onQuickNewMeeting={() => setIsNewMeetingOpen(true)}
       />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 relative z-10">
-        {/* Top Header & Live Google Meet-Style Digital Clock */}
-        <div className="relative overflow-hidden rounded-3xl border border-white/[0.08] bg-gradient-to-r from-[#0d1222]/90 via-[#10172e]/80 to-[#0b0f1a]/90 p-6 sm:p-8 backdrop-blur-2xl shadow-2xl shadow-black/50">
-          <div className="absolute top-0 right-1/3 w-80 h-80 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-7 space-y-7 relative z-10">
+        {/* 1. Executive Studio Command Header */}
+        <div className="relative overflow-hidden rounded-3xl border border-[#0066FF]/25 bg-gradient-to-r from-[#091326]/95 via-[#0d1b35]/90 to-[#091220]/95 p-6 sm:p-8 backdrop-blur-2xl shadow-2xl shadow-black/60">
+          <div className="absolute -top-24 -right-24 w-96 h-96 bg-[#0066FF]/15 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-24 left-1/3 w-80 h-80 bg-[#FF7A00]/10 rounded-full blur-3xl pointer-events-none" />
 
-          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
+          <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center gap-2.5">
                 <Badge variant="success" dot>
-                  Host Studio Online
+                  Enterprise Studio Online
                 </Badge>
-                <span className="text-xs text-gray-400">• WebRTC Opus Engine</span>
+                <Badge variant="blue">
+                  <Sparkles className="h-3 w-3 mr-1 text-cyan-300" />
+                  SFU Cloud + WebRTC Mesh
+                </Badge>
+                {analytics.activeMeetings > 0 && (
+                  <Badge variant="orange" dot>
+                    {analytics.activeMeetings} Live Session{analytics.activeMeetings > 1 ? 's' : ''} Active
+                  </Badge>
+                )}
               </div>
+
               <h1 className="text-2xl sm:text-4xl font-black tracking-tight text-white">
-                Welcome, <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-violet-300">{user?.name || 'there'}</span>
+                {greetingText},{' '}
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#388BFF] via-cyan-300 to-[#FF7A00]">
+                  {user?.name || 'Host'}
+                </span>
               </h1>
-              <p className="text-xs sm:text-sm text-gray-400 max-w-xl font-normal leading-relaxed">
-                Start an instant meeting, schedule your next team sprint, or test your audio and webcam preview in the studio.
+
+              <p className="text-xs sm:text-sm text-gray-300/90 max-w-2xl font-normal leading-relaxed">
+                Manage your global video conferences, monitor complete session history with real-time duration telemetry, and launch high-definition rooms in one click.
               </p>
             </div>
 
-            <div className="shrink-0 flex items-center gap-4">
+            <div className="shrink-0 flex flex-col sm:flex-row lg:flex-col items-start sm:items-center lg:items-end justify-between gap-4 pt-2 lg:pt-0 border-t lg:border-t-0 border-white/[0.08]">
               <ClockWidget />
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleExportHistoryCSV}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.1] text-xs font-semibold text-gray-300 hover:text-white transition-all cursor-pointer"
+                  title="Download complete meeting history report (CSV)"
+                >
+                  <Download className="h-3.5 w-3.5 text-[#388BFF]" />
+                  <span>Export CSV Log</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* 4 Signature Action Cards */}
+        {/* 2. International-Standard Executive Telemetry & KPI Strip */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-5">
+          {/* KPI 1: Total Meetings Conducted */}
+          <div className="p-4 sm:p-5 rounded-3xl bg-[#091222]/85 border border-[#0066FF]/20 backdrop-blur-xl shadow-xl flex flex-col justify-between gap-3 hover:border-[#0066FF]/45 transition-all">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-gray-400">
+                Total Meetings
+              </span>
+              <div className="h-9 w-9 rounded-2xl bg-[#0066FF]/15 border border-[#0066FF]/30 text-[#388BFF] flex items-center justify-center">
+                <Video className="h-4 w-4" />
+              </div>
+            </div>
+            <div>
+              <div className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+                {analytics.totalMeetings}
+              </div>
+              <p className="text-[11px] text-gray-400 mt-1 flex items-center gap-1.5">
+                <span className="text-emerald-400 font-semibold">{analytics.completedMeetings} completed</span>
+                <span>•</span>
+                <span className="text-[#FFA033] font-semibold">{analytics.activeMeetings} live</span>
+              </p>
+            </div>
+          </div>
+
+          {/* KPI 2: Total Collaboration Time & Duration */}
+          <div className="p-4 sm:p-5 rounded-3xl bg-[#091222]/85 border border-[#FF7A00]/20 backdrop-blur-xl shadow-xl flex flex-col justify-between gap-3 hover:border-[#FF7A00]/45 transition-all">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-gray-400">
+                Total Meeting Time
+              </span>
+              <div className="h-9 w-9 rounded-2xl bg-[#FF7A00]/15 border border-[#FF7A00]/30 text-[#FFA033] flex items-center justify-center">
+                <Timer className="h-4 w-4" />
+              </div>
+            </div>
+            <div>
+              <div className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+                {analytics.formattedTotalTime}
+              </div>
+              <p className="text-[11px] text-gray-400 mt-1">
+                Avg. duration:{' '}
+                <span className="text-amber-300 font-semibold">{analytics.formattedAvgTime}</span> / call
+              </p>
+            </div>
+          </div>
+
+          {/* KPI 3: Total Participants Connected */}
+          <div className="p-4 sm:p-5 rounded-3xl bg-[#091222]/85 border border-emerald-500/20 backdrop-blur-xl shadow-xl flex flex-col justify-between gap-3 hover:border-emerald-500/45 transition-all">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-gray-400">
+                Total Attendees
+              </span>
+              <div className="h-9 w-9 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center">
+                <Users className="h-4 w-4" />
+              </div>
+            </div>
+            <div>
+              <div className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+                {analytics.totalParticipants}
+              </div>
+              <p className="text-[11px] text-gray-400 mt-1">
+                Across all hosted & joined rooms
+              </p>
+            </div>
+          </div>
+
+          {/* KPI 4: Upcoming Scheduled Syncs */}
+          <div className="p-4 sm:p-5 rounded-3xl bg-[#091222]/85 border border-violet-500/20 backdrop-blur-xl shadow-xl flex flex-col justify-between gap-3 hover:border-violet-500/45 transition-all">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-gray-400">
+                Scheduled Agenda
+              </span>
+              <div className="h-9 w-9 rounded-2xl bg-violet-500/15 border border-violet-500/30 text-violet-400 flex items-center justify-center">
+                <CalendarDays className="h-4 w-4" />
+              </div>
+            </div>
+            <div>
+              <div className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+                {scheduledMeetings.length}
+              </div>
+              <p className="text-[11px] text-gray-400 mt-1 truncate">
+                {scheduledMeetings.length > 0
+                  ? `Next: ${scheduledMeetings[0].title}`
+                  : 'No upcoming calls scheduled'}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* 3. 4 Signature Quick-Launch Studio Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
           {/* Card 1: New Meeting */}
           <button
             onClick={() => setIsNewMeetingOpen(true)}
-            className="group text-left p-6 rounded-3xl bg-gradient-to-br from-amber-500/15 via-orange-600/10 to-[#0d1220] border border-orange-500/25 hover:border-orange-500/60 transition-all hover:scale-[1.02] hover:shadow-2xl hover:shadow-orange-500/15 cursor-pointer relative overflow-hidden flex flex-col justify-between h-48"
+            className="group text-left p-6 rounded-3xl bg-gradient-to-br from-[#FF7A00]/20 via-orange-600/10 to-[#091222] border border-[#FF7A00]/30 hover:border-[#FF7A00]/70 transition-all hover:-translate-y-1 hover:shadow-2xl hover:shadow-[#FF7A00]/20 cursor-pointer relative overflow-hidden flex flex-col justify-between h-44"
           >
-            <div className="h-12 w-12 rounded-2xl bg-gradient-to-tr from-amber-500 to-orange-500 text-white flex items-center justify-center shadow-lg shadow-orange-500/30 group-hover:scale-110 transition-transform">
-              <Video className="h-6 w-6" />
+            <div className="flex items-center justify-between w-full">
+              <div className="h-12 w-12 rounded-2xl bg-gradient-to-tr from-[#FF7A00] to-amber-500 text-white flex items-center justify-center shadow-lg shadow-[#FF7A00]/30 group-hover:scale-110 transition-transform">
+                <Video className="h-6 w-6" />
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-[#FF7A00]/15 text-[#FFA033] border border-[#FF7A00]/30">
+                Instant HD
+              </span>
             </div>
             <div>
-              <h3 className="text-base sm:text-lg font-bold text-white group-hover:text-orange-300 transition-colors">
+              <h3 className="text-base sm:text-lg font-extrabold text-white group-hover:text-[#FFA033] transition-colors">
                 New Meeting
               </h3>
-              <p className="text-xs text-gray-400 mt-1">Start now or generate instant link</p>
+              <p className="text-xs text-gray-400 mt-0.5">Start an instant room or shareable link</p>
             </div>
-            <div className="flex items-center gap-1.5 text-xs font-bold text-orange-400 group-hover:translate-x-1 transition-transform">
-              Launch room <ArrowRight className="h-3.5 w-3.5" />
+            <div className="flex items-center gap-1.5 text-xs font-bold text-[#FFA033] group-hover:translate-x-1 transition-transform">
+              Launch studio room <ArrowRight className="h-3.5 w-3.5" />
             </div>
           </button>
 
           {/* Card 2: Join Meeting */}
           <button
             onClick={() => setIsJoinMeetingOpen(true)}
-            className="group text-left p-6 rounded-3xl bg-gradient-to-br from-blue-500/15 via-indigo-600/10 to-[#0d1220] border border-blue-500/25 hover:border-blue-500/60 transition-all hover:scale-[1.02] hover:shadow-2xl hover:shadow-blue-500/15 cursor-pointer relative overflow-hidden flex flex-col justify-between h-48"
+            className="group text-left p-6 rounded-3xl bg-gradient-to-br from-[#0066FF]/20 via-blue-600/10 to-[#091222] border border-[#0066FF]/30 hover:border-[#0066FF]/70 transition-all hover:-translate-y-1 hover:shadow-2xl hover:shadow-[#0066FF]/20 cursor-pointer relative overflow-hidden flex flex-col justify-between h-44"
           >
-            <div className="h-12 w-12 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-lg shadow-blue-500/30 group-hover:scale-110 transition-transform">
-              <LogIn className="h-6 w-6" />
+            <div className="flex items-center justify-between w-full">
+              <div className="h-12 w-12 rounded-2xl bg-gradient-to-tr from-[#0066FF] to-cyan-500 text-white flex items-center justify-center shadow-lg shadow-[#0066FF]/30 group-hover:scale-110 transition-transform">
+                <LogIn className="h-6 w-6" />
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-[#0066FF]/15 text-[#388BFF] border border-[#0066FF]/30">
+                Direct Code
+              </span>
             </div>
             <div>
-              <h3 className="text-base sm:text-lg font-bold text-white group-hover:text-blue-300 transition-colors">
+              <h3 className="text-base sm:text-lg font-extrabold text-white group-hover:text-[#388BFF] transition-colors">
                 Join Meeting
               </h3>
-              <p className="text-xs text-gray-400 mt-1">Via meeting code or room URL</p>
+              <p className="text-xs text-gray-400 mt-0.5">Connect via room code or invitation link</p>
             </div>
-            <div className="flex items-center gap-1.5 text-xs font-bold text-blue-400 group-hover:translate-x-1 transition-transform">
-              Enter room <ArrowRight className="h-3.5 w-3.5" />
+            <div className="flex items-center gap-1.5 text-xs font-bold text-[#388BFF] group-hover:translate-x-1 transition-transform">
+              Enter room lobby <ArrowRight className="h-3.5 w-3.5" />
             </div>
           </button>
 
           {/* Card 3: Schedule */}
           <button
             onClick={() => setIsScheduleOpen(true)}
-            className="group text-left p-6 rounded-3xl bg-gradient-to-br from-violet-500/15 via-purple-600/10 to-[#0d1220] border border-violet-500/25 hover:border-violet-500/60 transition-all hover:scale-[1.02] hover:shadow-2xl hover:shadow-violet-500/15 cursor-pointer relative overflow-hidden flex flex-col justify-between h-48"
+            className="group text-left p-6 rounded-3xl bg-gradient-to-br from-violet-500/20 via-purple-600/10 to-[#091222] border border-violet-500/30 hover:border-violet-500/70 transition-all hover:-translate-y-1 hover:shadow-2xl hover:shadow-violet-500/20 cursor-pointer relative overflow-hidden flex flex-col justify-between h-44"
           >
-            <div className="h-12 w-12 rounded-2xl bg-gradient-to-tr from-violet-600 to-purple-600 text-white flex items-center justify-center shadow-lg shadow-violet-500/30 group-hover:scale-110 transition-transform">
-              <Calendar className="h-6 w-6" />
+            <div className="flex items-center justify-between w-full">
+              <div className="h-12 w-12 rounded-2xl bg-gradient-to-tr from-violet-600 to-purple-500 text-white flex items-center justify-center shadow-lg shadow-violet-500/30 group-hover:scale-110 transition-transform">
+                <Calendar className="h-6 w-6" />
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-violet-500/15 text-violet-300 border border-violet-500/30">
+                Calendar
+              </span>
             </div>
             <div>
-              <h3 className="text-base sm:text-lg font-bold text-white group-hover:text-violet-300 transition-colors">
+              <h3 className="text-base sm:text-lg font-extrabold text-white group-hover:text-violet-300 transition-colors">
                 Schedule Call
               </h3>
-              <p className="text-xs text-gray-400 mt-1">Plan future video conferences</p>
+              <p className="text-xs text-gray-400 mt-0.5">Plan future sessions with passcodes</p>
             </div>
             <div className="flex items-center gap-1.5 text-xs font-bold text-violet-400 group-hover:translate-x-1 transition-transform">
-              Add to agenda <ArrowRight className="h-3.5 w-3.5" />
+              Book time slot <ArrowRight className="h-3.5 w-3.5" />
             </div>
           </button>
 
-          {/* Card 4: Audio/Video Test */}
+          {/* Card 4: Audio/Video Device Studio */}
           <button
             onClick={() => setIsSettingsOpen(true)}
-            className="group text-left p-6 rounded-3xl bg-gradient-to-br from-emerald-500/15 via-teal-600/10 to-[#0d1220] border border-emerald-500/25 hover:border-emerald-500/60 transition-all hover:scale-[1.02] hover:shadow-2xl hover:shadow-emerald-500/15 cursor-pointer relative overflow-hidden flex flex-col justify-between h-48"
+            className="group text-left p-6 rounded-3xl bg-gradient-to-br from-emerald-500/20 via-teal-600/10 to-[#091222] border border-emerald-500/30 hover:border-emerald-500/70 transition-all hover:-translate-y-1 hover:shadow-2xl hover:shadow-emerald-500/20 cursor-pointer relative overflow-hidden flex flex-col justify-between h-44"
           >
-            <div className="h-12 w-12 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-600 text-white flex items-center justify-center shadow-lg shadow-emerald-500/30 group-hover:scale-110 transition-transform">
-              <Camera className="h-6 w-6" />
+            <div className="flex items-center justify-between w-full">
+              <div className="h-12 w-12 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/30 group-hover:scale-110 transition-transform">
+                <Camera className="h-6 w-6" />
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                AV Check
+              </span>
             </div>
             <div>
-              <h3 className="text-base sm:text-lg font-bold text-white group-hover:text-emerald-300 transition-colors">
+              <h3 className="text-base sm:text-lg font-extrabold text-white group-hover:text-emerald-300 transition-colors">
                 Device Studio
               </h3>
-              <p className="text-xs text-gray-400 mt-1">Live audio meter & webcam check</p>
+              <p className="text-xs text-gray-400 mt-0.5">Test microphone level & HD camera</p>
             </div>
             <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-400 group-hover:translate-x-1 transition-transform">
-              Test hardware <ArrowRight className="h-3.5 w-3.5" />
+              Configure hardware <ArrowRight className="h-3.5 w-3.5" />
             </div>
           </button>
         </div>
 
-        {/* Quick Meeting Code Entry Bar */}
-        <div className="p-4 sm:p-5 rounded-3xl bg-white/[0.03] border border-white/[0.08] backdrop-blur-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        {/* 4. Quick Meeting Code Entry Bar */}
+        <div className="p-4 sm:p-5 rounded-3xl bg-[#091222]/90 border border-[#0066FF]/20 backdrop-blur-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-lg">
           <div className="flex items-center gap-3.5">
-            <div className="h-10 w-10 rounded-2xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center border border-indigo-500/20 shrink-0">
+            <div className="h-11 w-11 rounded-2xl bg-[#0066FF]/15 text-[#388BFF] flex items-center justify-center border border-[#0066FF]/30 shrink-0">
               <LogIn className="h-5 w-5" />
             </div>
             <div>
               <h4 className="text-sm font-bold text-white">Instant Room Connect</h4>
-              <p className="text-xs text-gray-400">Type or paste any meeting code to jump directly into the room</p>
+              <p className="text-xs text-gray-400">
+                Paste any meeting code or full URL to jump straight into the conference
+              </p>
             </div>
           </div>
 
-          <form onSubmit={handleInlineJoin} className="flex items-center gap-2 max-w-md w-full">
+          <form onSubmit={handleInlineJoin} className="flex items-center gap-2.5 max-w-md w-full">
             <input
               type="text"
-              placeholder="e.g. abc-defg-hij"
+              placeholder="e.g. abc-defg-hij or full link"
               value={inlineCode}
               onChange={(e) => setInlineCode(e.target.value)}
-              className="flex-1 bg-black/40 border border-white/[0.1] rounded-2xl px-4 py-2.5 text-xs sm:text-sm text-gray-100 placeholder:text-gray-500 outline-none focus:border-indigo-500 transition-all font-mono"
+              className="flex-1 bg-black/50 border border-white/[0.12] rounded-2xl px-4 py-2.5 text-xs sm:text-sm text-gray-100 placeholder:text-gray-500 outline-none focus:border-[#0066FF] transition-all font-mono"
             />
             <Button size="md" type="submit" disabled={!inlineCode.trim()}>
-              Join Call
+              Join Room
             </Button>
           </form>
         </div>
 
-        {/* Meetings Section & Right Sidebar */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main 2 Cols: Tabs & Meeting Items */}
-          <div className="lg:col-span-2 space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/[0.08] pb-3">
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setActiveTab('upcoming')}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-2xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
-                    activeTab === 'upcoming'
-                      ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-lg shadow-indigo-600/30'
-                      : 'text-gray-400 hover:text-white hover:bg-white/[0.06]'
-                  }`}
-                >
-                  <CalendarDays className="h-4 w-4" />
-                  Upcoming ({scheduledMeetings.length})
-                </button>
-                <button
-                  onClick={() => setActiveTab('history')}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-2xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
-                    activeTab === 'history'
-                      ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-lg shadow-indigo-600/30'
-                      : 'text-gray-400 hover:text-white hover:bg-white/[0.06]'
-                  }`}
-                >
-                  <History className="h-4 w-4" />
-                  Recent & History ({recentMeetings.length})
-                </button>
+        {/* 5. Main Content Grid: Complete Meeting History & Analytics Sidebar */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-7">
+          {/* Left 2 Columns: Meeting History Log & Upcoming Schedule */}
+          <div className="lg:col-span-2 space-y-5">
+            {/* Control Header: Primary Tabs + Search + Filter & Sort */}
+            <div className="p-4 sm:p-5 rounded-3xl bg-[#091222]/85 border border-white/[0.08] backdrop-blur-xl space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={() => setActiveTab('history')}
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                      activeTab === 'history'
+                        ? 'bg-gradient-to-r from-[#0066FF] to-[#0052CC] text-white shadow-lg shadow-[#0066FF]/30 border border-[#388BFF]/40'
+                        : 'text-gray-400 hover:text-white hover:bg-white/[0.06] border border-transparent'
+                    }`}
+                  >
+                    <History className="h-4 w-4" />
+                    <span>Meeting History ({recentMeetings.length})</span>
+                  </button>
+
+                  <button
+                    onClick={() => setActiveTab('upcoming')}
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                      activeTab === 'upcoming'
+                        ? 'bg-gradient-to-r from-[#0066FF] to-[#0052CC] text-white shadow-lg shadow-[#0066FF]/30 border border-[#388BFF]/40'
+                        : 'text-gray-400 hover:text-white hover:bg-white/[0.06] border border-transparent'
+                    }`}
+                  >
+                    <CalendarDays className="h-4 w-4" />
+                    <span>Upcoming Schedule ({scheduledMeetings.length})</span>
+                  </button>
+                </div>
+
+                {/* Search Input */}
+                <div className="relative w-full sm:w-64">
+                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search title or meeting ID..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="bg-black/50 border border-white/[0.12] rounded-2xl pl-9 pr-4 py-2 text-xs text-gray-100 placeholder:text-gray-500 outline-none focus:border-[#0066FF] transition-colors w-full"
+                  />
+                </div>
               </div>
 
-              {/* Search Bar */}
-              <div className="relative">
-                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-500" />
-                <input
-                  type="text"
-                  placeholder="Filter meetings..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="bg-black/40 border border-white/[0.1] rounded-2xl pl-9 pr-3.5 py-2 text-xs text-gray-200 placeholder:text-gray-500 outline-none focus:border-indigo-500 transition-colors w-full sm:w-56"
-                />
-              </div>
+              {/* Sub-bar for History Filtering & Sorting */}
+              {activeTab === 'history' && (
+                <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-white/[0.07]">
+                  <div className="flex items-center gap-1.5">
+                    {(
+                      [
+                        { key: 'all', label: `All (${recentMeetings.length})` },
+                        { key: 'active', label: `Live Now (${analytics.activeMeetings})` },
+                        { key: 'completed', label: `Completed (${analytics.completedMeetings})` },
+                      ] as const
+                    ).map((tab) => (
+                      <button
+                        key={tab.key}
+                        onClick={() => setHistoryFilter(tab.key)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                          historyFilter === tab.key
+                            ? 'bg-[#0066FF]/20 text-[#388BFF] border border-[#0066FF]/40'
+                            : 'text-gray-400 hover:text-gray-200 hover:bg-white/[0.04]'
+                        }`}
+                      >
+                        {tab.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <SlidersHorizontal className="h-3.5 w-3.5 text-gray-400" />
+                    <span className="text-[11px] text-gray-400 font-medium">Sort by:</span>
+                    <select
+                      value={historySort}
+                      onChange={(e) => setHistorySort(e.target.value as HistorySort)}
+                      className="bg-black/50 border border-white/[0.12] rounded-xl px-2.5 py-1 text-xs text-gray-200 outline-none focus:border-[#0066FF] cursor-pointer"
+                    >
+                      <option value="newest">Newest First</option>
+                      <option value="longest">Longest Duration</option>
+                      <option value="participants">Most Participants</option>
+                    </select>
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* Upcoming Tab */}
+            {/* TAB 1: Complete Meeting History List */}
+            {activeTab === 'history' && (
+              <div className="space-y-3.5">
+                {filteredRecent.length === 0 ? (
+                  <div className="p-12 rounded-3xl border border-dashed border-white/[0.12] bg-[#091222]/50 text-center space-y-3.5">
+                    <div className="h-14 w-14 rounded-2xl bg-[#0066FF]/10 border border-[#0066FF]/25 text-[#388BFF] flex items-center justify-center mx-auto">
+                      <History className="h-7 w-7" />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-base font-bold text-white">
+                        {searchQuery || historyFilter !== 'all'
+                          ? 'No meetings match your current filter'
+                          : 'No meeting history recorded yet'}
+                      </p>
+                      <p className="text-xs text-gray-400 max-w-md mx-auto leading-relaxed">
+                        Every meeting you host or join is automatically logged here with its highlighted title, exact date & start/end time, and total call duration.
+                      </p>
+                    </div>
+                    <Button size="sm" onClick={() => setIsNewMeetingOpen(true)}>
+                      <Video className="h-4 w-4 mr-1.5" />
+                      Start Your First Meeting
+                    </Button>
+                  </div>
+                ) : (
+                  filteredRecent.map((item, index) => {
+                    const isUserHost = !user || item.hostId === user.id;
+                    return (
+                      <div
+                        key={item.id}
+                        className="group relative overflow-hidden rounded-3xl border border-white/[0.09] bg-gradient-to-br from-[#0b1528]/95 via-[#091222]/95 to-[#070e1b]/95 hover:border-[#0066FF]/50 transition-all duration-200 p-5 sm:p-6 shadow-xl hover:shadow-[#0066FF]/10"
+                      >
+                        {/* Left Highlight Accent Bar */}
+                        <div
+                          className={`absolute left-0 top-0 bottom-0 w-1.5 ${
+                            item.isActive
+                              ? 'bg-gradient-to-b from-emerald-400 via-teal-400 to-cyan-500'
+                              : 'bg-gradient-to-b from-[#0066FF] via-indigo-500 to-[#FF7A00]'
+                          }`}
+                        />
+
+                        <div className="flex flex-col gap-4 pl-2">
+                          {/* Top Row: HIGHLIGHTED Meeting Title Banner + Status & Duration Pill */}
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div className="flex flex-wrap items-center gap-2.5">
+                              {/* Session Index Badge */}
+                              <span className="h-7 px-2.5 rounded-xl bg-white/[0.05] border border-white/[0.08] text-[11px] font-mono font-bold text-gray-400 flex items-center justify-center">
+                                #{filteredRecent.length - index}
+                              </span>
+
+                              {/* HIGHLIGHTED MEETING TITLE */}
+                              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-2xl bg-gradient-to-r from-[#0066FF]/25 via-indigo-500/20 to-[#FF7A00]/15 border border-[#388BFF]/50 shadow-[0_0_24px_rgba(0,102,255,0.22)]">
+                                <Sparkles className="h-4 w-4 text-[#FFA033] shrink-0" />
+                                <h4 className="text-sm sm:text-base font-black tracking-tight text-white">
+                                  {renderHighlightedTitle(item.title)}
+                                </h4>
+                              </div>
+
+                              {/* Live or Completed Status Badge */}
+                              {item.isActive ? (
+                                <Badge variant="success" dot>
+                                  LIVE ROOM
+                                </Badge>
+                              ) : (
+                                <Badge variant="default">
+                                  <CheckCircle2 className="h-3 w-3 mr-1 text-emerald-400" />
+                                  Completed
+                                </Badge>
+                              )}
+
+                              {/* Role Badge */}
+                              <Badge variant={isUserHost ? 'blue' : 'outline'}>
+                                {isUserHost ? 'Host' : 'Participant'}
+                              </Badge>
+                            </div>
+
+                            {/* Prominent Duration Highlight Pill (KOTOKHON) */}
+                            <div
+                              className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-2xl border text-xs font-extrabold shrink-0 self-start sm:self-auto ${
+                                item.isActive
+                                  ? 'bg-emerald-500/15 border-emerald-500/35 text-emerald-300'
+                                  : 'bg-[#FF7A00]/15 border-[#FF7A00]/40 text-[#FFA033] shadow-sm shadow-[#FF7A00]/10'
+                              }`}
+                              title="Total meeting duration"
+                            >
+                              <Timer className="h-4 w-4 shrink-0" />
+                              <span>
+                                {item.isActive
+                                  ? `Live • ${item.formattedDuration}`
+                                  : `Duration: ${item.formattedDuration}`}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Middle Row: Detailed When (KOKHON) & Telemetry Pills */}
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 p-3.5 rounded-2xl bg-black/40 border border-white/[0.06]">
+                            {/* 1. Date & Relative Day (Kokhon - Date) */}
+                            <div className="flex items-center gap-2.5">
+                              <div className="h-8 w-8 rounded-xl bg-[#0066FF]/15 text-[#388BFF] flex items-center justify-center shrink-0">
+                                <Calendar className="h-4 w-4" />
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-[10px] uppercase tracking-wider text-gray-400 font-bold">
+                                  Meeting Date ({item.relativeDay})
+                                </p>
+                                <p className="text-xs font-bold text-gray-100 truncate">
+                                  {item.formattedDate}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* 2. Start & End Time Window (Kokhon - Time) */}
+                            <div className="flex items-center gap-2.5">
+                              <div className="h-8 w-8 rounded-xl bg-violet-500/15 text-violet-400 flex items-center justify-center shrink-0">
+                                <Clock className="h-4 w-4" />
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-[10px] uppercase tracking-wider text-gray-400 font-bold">
+                                  Time Window
+                                </p>
+                                <p className="text-xs font-bold text-gray-100 truncate">
+                                  {item.formattedStartTime}
+                                  {item.formattedEndTime
+                                    ? ` – ${item.formattedEndTime}`
+                                    : item.isActive
+                                    ? ' – Ongoing'
+                                    : ''}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* 3. Participants & Room Code */}
+                            <div className="flex items-center gap-2.5">
+                              <div className="h-8 w-8 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center shrink-0">
+                                <Users className="h-4 w-4" />
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-[10px] uppercase tracking-wider text-gray-400 font-bold">
+                                  Attendance & ID
+                                </p>
+                                <p className="text-xs font-bold text-gray-100 truncate">
+                                  {item.participantCount || 1} participant
+                                  {(item.participantCount || 1) !== 1 ? 's' : ''} •{' '}
+                                  <span className="font-mono text-[#388BFF]">{item.id}</span>
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Bottom Row: Security Indicators & Action Buttons */}
+                          <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+                            <div className="flex flex-wrap items-center gap-2 text-[11px] text-gray-400">
+                              {item.waitingRoom && (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-amber-500/10 text-amber-300 border border-amber-500/20">
+                                  <Shield className="h-3 w-3" /> Waiting Room
+                                </span>
+                              )}
+                              {item.isLocked && (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-rose-500/10 text-rose-300 border border-rose-500/20">
+                                  <Lock className="h-3 w-3" /> Locked
+                                </span>
+                              )}
+                              <span className="text-gray-500">
+                                Room ID: <code className="text-gray-300 font-mono">{item.id}</code>
+                              </span>
+                            </div>
+
+                            <div className="flex items-center gap-2 ml-auto">
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                onClick={() => handleCopyLink(item.id)}
+                                title="Copy room link"
+                              >
+                                {copiedId === item.id ? (
+                                  <>
+                                    <Check className="h-3.5 w-3.5 text-emerald-400" />
+                                    <span>Copied</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Copy className="h-3.5 w-3.5" />
+                                    <span>Copy Link</span>
+                                  </>
+                                )}
+                              </Button>
+
+                              {item.isActive ? (
+                                <>
+                                  {isUserHost && (
+                                    <Button
+                                      size="sm"
+                                      variant="danger"
+                                      isLoading={endingId === item.id}
+                                      onClick={() => handleEndActiveMeeting(item.id)}
+                                      title="End this active session and finalize duration"
+                                    >
+                                      <StopCircle className="h-3.5 w-3.5" />
+                                      <span>End Session</span>
+                                    </Button>
+                                  )}
+                                  <Button
+                                    size="sm"
+                                    onClick={() => router.push(`/meeting/${item.id}`)}
+                                  >
+                                    <ExternalLink className="h-3.5 w-3.5" />
+                                    <span>Rejoin Live</span>
+                                  </Button>
+                                </>
+                              ) : (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  isLoading={repeatingId === item.id}
+                                  onClick={() => handleHostAgain(item)}
+                                  title="Start a new meeting session with this same title"
+                                >
+                                  <RotateCcw className="h-3.5 w-3.5 text-[#388BFF]" />
+                                  <span>Host Again</span>
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            )}
+
+            {/* TAB 2: Upcoming Scheduled Meetings List */}
             {activeTab === 'upcoming' && (
-              <div className="space-y-3">
+              <div className="space-y-3.5">
                 {filteredScheduled.length === 0 ? (
-                  <div className="p-12 rounded-3xl border border-dashed border-white/[0.1] bg-white/[0.02] text-center space-y-3">
-                    <Calendar className="h-10 w-10 text-gray-600 mx-auto" />
-                    <p className="text-sm font-bold text-gray-300">
-                      {searchQuery ? 'No meetings match your filter' : 'No upcoming scheduled meetings'}
-                    </p>
-                    <p className="text-xs text-gray-500 max-w-sm mx-auto">
-                      Plan ahead, set passcodes, and prepare meetings with waiting room controls for your team.
-                    </p>
+                  <div className="p-12 rounded-3xl border border-dashed border-white/[0.12] bg-[#091222]/50 text-center space-y-3.5">
+                    <div className="h-14 w-14 rounded-2xl bg-violet-500/10 border border-violet-500/25 text-violet-400 flex items-center justify-center mx-auto">
+                      <Calendar className="h-7 w-7" />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-base font-bold text-white">
+                        {searchQuery ? 'No scheduled meetings match your filter' : 'No upcoming scheduled meetings'}
+                      </p>
+                      <p className="text-xs text-gray-400 max-w-sm mx-auto leading-relaxed">
+                        Plan ahead, set passcodes, and prepare meetings with waiting room controls for your team.
+                      </p>
+                    </div>
                     <Button size="sm" variant="secondary" onClick={() => setIsScheduleOpen(true)}>
+                      <Calendar className="h-4 w-4 mr-1.5" />
                       Schedule a Meeting
                     </Button>
                   </div>
@@ -347,28 +1067,40 @@ export default function DashboardPage() {
                   filteredScheduled.map((item) => (
                     <div
                       key={item.id}
-                      className="p-5 rounded-3xl border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06] hover:border-indigo-500/40 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm"
+                      className="relative overflow-hidden p-5 sm:p-6 rounded-3xl border border-white/[0.09] bg-gradient-to-br from-[#0b1528]/95 via-[#091222]/95 to-[#070e1b]/95 hover:border-violet-500/50 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl"
                     >
-                      <div className="space-y-1.5">
-                        <div className="flex items-center gap-2">
-                          <h4 className="text-sm font-bold text-white">{item.title}</h4>
-                          {item.waitingRoom && (
-                            <Badge variant="warning">Waiting Room</Badge>
-                          )}
+                      <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-violet-500 to-[#0066FF]" />
+
+                      <div className="space-y-2.5 pl-2">
+                        <div className="flex flex-wrap items-center gap-2.5">
+                          {/* Highlighted Scheduled Meeting Title */}
+                          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-2xl bg-gradient-to-r from-violet-500/25 via-[#0066FF]/20 to-indigo-500/15 border border-violet-400/50 shadow-[0_0_20px_rgba(139,92,246,0.2)]">
+                            <Sparkles className="h-4 w-4 text-violet-300 shrink-0" />
+                            <h4 className="text-sm sm:text-base font-black text-white">
+                              {renderHighlightedTitle(item.title)}
+                            </h4>
+                          </div>
+                          {item.waitingRoom && <Badge variant="warning">Waiting Room</Badge>}
+                          <Badge variant="indigo">Planned • {item.duration} mins</Badge>
                         </div>
-                        <div className="flex flex-wrap items-center gap-3 text-xs text-gray-400">
-                          <span className="flex items-center gap-1.5 text-indigo-300 font-medium">
-                            <Clock className="h-3.5 w-3.5 text-indigo-400" />
-                            {new Date(item.date).toLocaleDateString()} at {item.startTime}
+
+                        <div className="flex flex-wrap items-center gap-3 text-xs text-gray-300">
+                          <span className="flex items-center gap-1.5 text-violet-300 font-semibold">
+                            <Clock className="h-3.5 w-3.5 text-violet-400" />
+                            {formatMeetingDate(item.date)} at {item.startTime}
                           </span>
                           <span>•</span>
-                          <span>{item.duration} mins</span>
+                          <span className="text-amber-300 font-semibold">
+                            Allocated Duration: {item.duration} mins
+                          </span>
                           <span>•</span>
-                          <span className="font-mono text-gray-500">ID: {item.meetingId || item.id}</span>
+                          <span className="font-mono text-gray-400">
+                            ID: {item.meetingId || item.id}
+                          </span>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 self-end sm:self-center">
                         {item.meetingId && (
                           <Button
                             size="sm"
@@ -395,103 +1127,41 @@ export default function DashboardPage() {
                 )}
               </div>
             )}
-
-            {/* History Tab */}
-            {activeTab === 'history' && (
-              <div className="space-y-3">
-                {filteredRecent.length === 0 ? (
-                  <div className="p-12 rounded-3xl border border-dashed border-white/[0.1] bg-white/[0.02] text-center space-y-3">
-                    <History className="h-10 w-10 text-gray-600 mx-auto" />
-                    <p className="text-sm font-bold text-gray-300">
-                      {searchQuery ? 'No past meetings match your filter' : 'No meeting history yet'}
-                    </p>
-                    <p className="text-xs text-gray-500 max-w-sm mx-auto">
-                      Calls you host or join will appear here with participant records and timestamps.
-                    </p>
-                  </div>
-                ) : (
-                  filteredRecent.map((item) => (
-                    <div
-                      key={item.id}
-                      className="p-5 rounded-3xl border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06] hover:border-indigo-500/40 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm"
-                    >
-                      <div className="space-y-1.5">
-                        <div className="flex items-center gap-2">
-                          <h4 className="text-sm font-bold text-white">{item.title}</h4>
-                          <span className="text-xs text-gray-400 font-mono">({item.id})</span>
-                          {item.isActive ? (
-                            <Badge variant="success" dot>Active Room</Badge>
-                          ) : (
-                            <Badge variant="default">Completed</Badge>
-                          )}
-                        </div>
-                        <div className="flex flex-wrap items-center gap-3 text-xs text-gray-400">
-                          <span>{formatDate(item.createdAt)}</span>
-                          {item.participantCount !== undefined && (
-                            <>
-                              <span>•</span>
-                              <span className="flex items-center gap-1 text-gray-300">
-                                <Users className="h-3 w-3 text-indigo-400" />
-                                {item.participantCount} participant{item.participantCount !== 1 ? 's' : ''}
-                              </span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => handleCopyLink(item.id)}
-                          title="Copy meeting link"
-                        >
-                          {copiedId === item.id ? (
-                            <Check className="h-3.5 w-3.5 text-emerald-400" />
-                          ) : (
-                            <Copy className="h-3.5 w-3.5" />
-                          )}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => router.push(`/meeting/${item.id}`)}
-                        >
-                          Rejoin
-                        </Button>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            )}
           </div>
 
-          {/* Right 1 Col: PMI VIP Card & Engine Health */}
+          {/* Right 1 Column: Enterprise Tools & Insights (User Profile Card Removed) */}
           <div className="space-y-6">
-            {/* Personal Meeting Room (PMI) VIP Card */}
-            <Card className="bg-gradient-to-br from-indigo-950/50 via-[#0e1424] to-[#070a12] border-indigo-500/30 shadow-2xl">
+            {/* 1. Personal Meeting Room (PMI) VIP Hub */}
+            <Card className="bg-gradient-to-br from-[#0d1b38]/90 via-[#091222] to-[#060b16] border-[#0066FF]/35 shadow-2xl relative overflow-hidden">
+              <div className="absolute -top-12 -right-12 w-36 h-36 bg-[#0066FF]/15 rounded-full blur-2xl pointer-events-none" />
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm flex items-center gap-2">
-                    <Share2 className="h-4 w-4 text-indigo-400" />
+                    <Share2 className="h-4 w-4 text-[#388BFF]" />
                     Personal Meeting Room
                   </CardTitle>
-                  <Badge variant="indigo">Permanent</Badge>
+                  <Badge variant="indigo">Always Ready</Badge>
                 </div>
                 <CardDescription className="text-xs">
-                  Your dedicated personal room URL for standups and 1:1 syncs
+                  Your permanent instant bridge for daily standups and quick executive syncs
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3.5">
-                <div className="p-3.5 rounded-2xl bg-black/50 border border-white/[0.08] flex items-center justify-between gap-2">
-                  <span className="text-xs font-mono text-indigo-300 truncate">{personalRoomId}</span>
+                <div className="p-3.5 rounded-2xl bg-black/50 border border-white/[0.1] flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-[10px] uppercase tracking-wider text-gray-500 font-bold">
+                      Personal Room ID
+                    </p>
+                    <span className="text-xs font-mono font-bold text-[#388BFF] truncate block">
+                      {personalRoomId}
+                    </span>
+                  </div>
                   <Button
                     size="sm"
                     variant="ghost"
                     className="h-8 w-8 p-0 shrink-0"
                     onClick={() => handleCopyLink(personalRoomId)}
-                    title="Copy Personal Link"
+                    title="Copy Personal Room Link"
                   >
                     {copiedId === personalRoomId ? (
                       <Check className="h-3.5 w-3.5 text-emerald-400" />
@@ -506,64 +1176,200 @@ export default function DashboardPage() {
                   className="w-full text-xs font-bold"
                   onClick={() => router.push(`/meeting/${personalRoomId}`)}
                 >
-                  Start Personal Room Call
+                  <Video className="h-3.5 w-3.5 mr-1.5" />
+                  Launch Personal Room
                 </Button>
               </CardContent>
             </Card>
 
-            {/* Profile Overview Card */}
-            {user && (
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between pb-3">
-                  <CardTitle className="text-sm">User Profile</CardTitle>
-                  <button
-                    onClick={() => setIsSettingsOpen(true)}
-                    className="p-2 rounded-xl text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer"
-                  >
-                    <Settings className="h-4 w-4" />
-                  </button>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center gap-3.5">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={user.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=user'}
-                      alt={user.name}
-                      className="h-12 w-12 rounded-full border border-indigo-400/40 object-cover bg-gray-800 shrink-0 shadow-md"
-                    />
-                    <div className="min-w-0">
-                      <h4 className="text-sm font-bold text-white truncate">{user.name}</h4>
-                      <p className="text-xs text-gray-400 truncate">{user.email}</p>
-                      <Badge variant="success" dot className="mt-1">
-                        Verified Host
-                      </Badge>
+            {/* 2. Duration & Collaboration Analytics Card */}
+            <Card className="bg-[#091222]/90 border-white/[0.08]">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4 text-[#FFA033]" />
+                    Duration & Call Analytics
+                  </CardTitle>
+                  <Badge variant="orange">Telemetry</Badge>
+                </div>
+                <CardDescription className="text-xs">
+                  Breakdown of your meeting lengths and longest session highlight
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Longest Meeting Highlight Box */}
+                {analytics.longestMeeting ? (
+                  <div className="p-3.5 rounded-2xl bg-gradient-to-r from-[#FF7A00]/15 via-[#0066FF]/10 to-transparent border border-[#FF7A00]/30 space-y-1.5">
+                    <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-[#FFA033]">
+                      <span className="flex items-center gap-1">
+                        <Award className="h-3.5 w-3.5" /> Longest Session Highlight
+                      </span>
+                      <span>{analytics.longestMeeting.formattedDuration}</span>
+                    </div>
+                    <p className="text-xs sm:text-sm font-black text-white truncate">
+                      {analytics.longestMeeting.title}
+                    </p>
+                    <p className="text-[11px] text-gray-400">
+                      {analytics.longestMeeting.formattedDate} at{' '}
+                      {analytics.longestMeeting.formattedStartTime}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/[0.06] text-xs text-gray-400 text-center">
+                    Host a meeting to unlock duration breakdown insights.
+                  </div>
+                )}
+
+                {/* Duration Distribution Bars */}
+                <div className="space-y-2.5 pt-1">
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-[11px]">
+                      <span className="text-gray-400">Quick Syncs (&lt; 15 mins)</span>
+                      <span className="font-bold text-gray-200">{analytics.shortCalls} calls</span>
+                    </div>
+                    <div className="h-1.5 w-full rounded-full bg-white/[0.06] overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-[#388BFF] transition-all duration-500"
+                        style={{
+                          width: `${
+                            analytics.totalMeetings > 0
+                              ? Math.max(8, Math.round((analytics.shortCalls / analytics.totalMeetings) * 100))
+                              : 0
+                          }%`,
+                        }}
+                      />
                     </div>
                   </div>
 
-                  <div className="pt-2 border-t border-white/[0.08] space-y-2 text-xs">
-                    <div className="flex justify-between text-gray-400">
-                      <span>Total Meetings Hosted</span>
-                      <span className="font-semibold text-gray-200">{recentMeetings.length}</span>
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-[11px]">
+                      <span className="text-gray-400">Standard Sessions (15–45 mins)</span>
+                      <span className="font-bold text-gray-200">{analytics.mediumCalls} calls</span>
                     </div>
-                    <div className="flex justify-between text-gray-400">
-                      <span>Upcoming Calendar Syncs</span>
-                      <span className="font-semibold text-gray-200">{scheduledMeetings.length}</span>
+                    <div className="h-1.5 w-full rounded-full bg-white/[0.06] overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-emerald-400 transition-all duration-500"
+                        style={{
+                          width: `${
+                            analytics.totalMeetings > 0
+                              ? Math.max(8, Math.round((analytics.mediumCalls / analytics.totalMeetings) * 100))
+                              : 0
+                          }%`,
+                        }}
+                      />
                     </div>
                   </div>
 
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-[11px]">
+                      <span className="text-gray-400">Deep Dives (45+ mins)</span>
+                      <span className="font-bold text-gray-200">{analytics.longCalls} calls</span>
+                    </div>
+                    <div className="h-1.5 w-full rounded-full bg-white/[0.06] overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-[#FF7A00] transition-all duration-500"
+                        style={{
+                          width: `${
+                            analytics.totalMeetings > 0
+                              ? Math.max(8, Math.round((analytics.longCalls / analytics.totalMeetings) * 100))
+                              : 0
+                          }%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* 3. Quick Meeting Agenda & Host Scratchpad */}
+            <Card className="bg-[#091222]/90 border-white/[0.08]">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-emerald-400" />
+                    Host Agenda Scratchpad
+                  </CardTitle>
+                  <Badge variant="success">Auto-Saved</Badge>
+                </div>
+                <CardDescription className="text-xs">
+                  Jot down key talking points or action items before starting your next meeting
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <textarea
+                  rows={4}
+                  value={scratchpad}
+                  onChange={(e) => handleScratchpadChange(e.target.value)}
+                  placeholder="• Review sprint deliverables&#10;• Discuss Q4 architecture milestones&#10;• Action items & follow-ups..."
+                  className="w-full rounded-2xl bg-black/50 border border-white/[0.1] p-3 text-xs text-gray-200 placeholder:text-gray-500 outline-none focus:border-[#0066FF] resize-none leading-relaxed"
+                />
+                <div className="flex items-center justify-between gap-2">
                   <Button
-                    variant="outline"
                     size="sm"
-                    className="w-full text-xs font-bold"
-                    onClick={() => setIsSettingsOpen(true)}
+                    variant="secondary"
+                    className="flex-1 text-xs"
+                    disabled={!scratchpad.trim()}
+                    onClick={() => {
+                      navigator.clipboard.writeText(scratchpad);
+                      toast.success('Agenda notes copied to clipboard');
+                    }}
                   >
-                    Studio & Hardware Settings
+                    <Copy className="h-3.5 w-3.5 mr-1" />
+                    Copy Notes
                   </Button>
-                </CardContent>
-              </Card>
-            )}
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="text-xs text-gray-400 hover:text-rose-400"
+                    disabled={!scratchpad.trim()}
+                    onClick={() => {
+                      handleScratchpadChange('');
+                      toast.info('Scratchpad cleared');
+                    }}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
 
-            {/* Personal Meeting Room (PMI) VIP Card */}
+            {/* 4. Studio System & Media Readiness */}
+            <Card className="bg-[#091222]/90 border-white/[0.08]">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <Activity className="h-4 w-4 text-[#388BFF]" />
+                    Studio Media Readiness
+                  </CardTitle>
+                  <Badge variant="success" dot>
+                    Optimal
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-2.5 text-xs">
+                <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                  <span className="text-gray-400 flex items-center gap-2">
+                    <Radio className="h-3.5 w-3.5 text-emerald-400" /> WebRTC & SFU Engine
+                  </span>
+                  <span className="font-bold text-emerald-400">Ready (Opus 48kHz)</span>
+                </div>
+                <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                  <span className="text-gray-400 flex items-center gap-2">
+                    <Camera className="h-3.5 w-3.5 text-[#388BFF]" /> Detected AV Inputs
+                  </span>
+                  <span className="font-bold text-gray-200">
+                    {deviceCount.video} Cam • {deviceCount.audio} Mic
+                  </span>
+                </div>
+                <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                  <span className="text-gray-400 flex items-center gap-2">
+                    <Zap className="h-3.5 w-3.5 text-[#FFA033]" /> Backbone Transport
+                  </span>
+                  <span className="font-mono font-bold text-[#FFA033]">Low Latency (~12ms)</span>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </main>
