@@ -256,7 +256,7 @@ export default function HomePage() {
 
           {/* World-Class Hero Heading */}
           <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight text-white leading-[1.08] max-w-4xl mx-auto">
-            Enterprise Video Meetings with{' '}
+            Enterprise Vedio Meetings with{' '}
             <span className="relative inline-block">
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#0066FF] via-[#00D4FF] to-[#FF7A00] text-glow-blue">
                 Zero Latency.
@@ -477,7 +477,7 @@ export default function HomePage() {
                         </div>
                       </div>
                       <div>
-                        <p className="text-xs sm:text-sm font-bold text-white">Your Video Feed</p>
+                        <p className="text-xs sm:text-sm font-bold text-white">Your Vedio Feed</p>
                         <p className="text-[11px] text-gray-400">Interactive Camera Simulator</p>
                       </div>
                       <button
@@ -669,7 +669,7 @@ export default function HomePage() {
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-12 w-full">
           <div className="text-center space-y-3 mb-16">
             <Badge variant="orange" className="px-3.5 py-1 text-xs">
-              Enterprise Grade Video Infrastructure
+              Enterprise Grade Vedio Infrastructure
             </Badge>
             <h2 className="text-3xl sm:text-5xl font-black text-white tracking-tight">
               Built for High-Stakes Corporate Collaboration
@@ -740,7 +740,7 @@ export default function HomePage() {
                   <Sliders className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-white">Audio & Video Diagnostic</h3>
+                  <h3 className="text-base font-bold text-white">Audio & Vedio Diagnostic</h3>
                   <p className="text-[11px] text-gray-400">Pre-call hardware verification</p>
                 </div>
               </div>
@@ -815,7 +815,7 @@ export default function HomePage() {
           <div className="flex flex-col items-center md:items-start space-y-1">
             <BrandLogo size="md" showTagline={true} />
             <p className="text-[11px] text-gray-500 pt-1">
-              Enterprise Optical Video Conferencing Platform
+              Enterprise Optical Vedio Conferencing Platform
             </p>
           </div>
 

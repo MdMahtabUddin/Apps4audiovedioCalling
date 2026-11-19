@@ -290,7 +290,7 @@ export function SettingsModal({ isOpen, onClose, user, onUserUpdated }: Settings
         stopMedia();
         onClose();
       }}
-      title="Settings & Audio/Video Testing"
+      title="Settings & Audio/Vedio Testing"
       description="Configure your profile, check devices, and adjust meeting preferences"
       className="max-w-2xl"
     >
@@ -529,7 +529,7 @@ export function SettingsModal({ isOpen, onClose, user, onUserUpdated }: Settings
             <label className="flex items-center justify-between p-3.5 rounded-xl border border-gray-800 bg-gray-900/50 cursor-pointer hover:border-gray-700 transition-colors">
               <div>
                 <p className="text-xs font-semibold text-gray-200">Turn camera off when joining</p>
-                <p className="text-[11px] text-gray-400">Video feed will start disabled upon entry</p>
+                <p className="text-[11px] text-gray-400">Vedio feed will start disabled upon entry</p>
               </div>
               <input
                 type="checkbox"
@@ -541,8 +541,8 @@ export function SettingsModal({ isOpen, onClose, user, onUserUpdated }: Settings
 
             <label className="flex items-center justify-between p-3.5 rounded-xl border border-gray-800 bg-gray-900/50 cursor-pointer hover:border-gray-700 transition-colors">
               <div>
-                <p className="text-xs font-semibold text-gray-200">Mirror my video preview</p>
-                <p className="text-[11px] text-gray-400">Flips your local video tile horizontally for natural view</p>
+                <p className="text-xs font-semibold text-gray-200">Mirror my vedio preview</p>
+                <p className="text-[11px] text-gray-400">Flips your local vedio tile horizontally for natural view</p>
               </div>
               <input
                 type="checkbox"

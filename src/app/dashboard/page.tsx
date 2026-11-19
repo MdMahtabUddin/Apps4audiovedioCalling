@@ -569,7 +569,7 @@ export default function DashboardPage() {
               </h1>
 
               <p className="text-xs sm:text-sm text-gray-300/90 max-w-2xl font-normal leading-relaxed">
-                Manage your global video conferences, monitor complete session history with real-time duration telemetry, and launch high-definition rooms in one click.
+                Manage your global vedio conferences, monitor complete session history with real-time duration telemetry, and launch high-definition rooms in one click.
               </p>
             </div>
 

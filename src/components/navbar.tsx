@@ -156,7 +156,7 @@ export function Navbar({ user, onOpenSettings, onQuickNewMeeting }: NavbarProps)
                           className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs text-gray-300 hover:text-white hover:bg-white/[0.06] rounded-xl transition-colors cursor-pointer font-medium"
                         >
                           <Settings className="h-4 w-4 text-[#388BFF]" />
-                          Audio/Video Studio & Settings
+                          Audio/Vedio Studio & Settings
                         </button>
                       )}
 

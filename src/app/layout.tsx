@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'MetroMeet — Enterprise Video Infrastructure by MetroNet',
-  description: 'Ultra low-latency video conferencing platform powered by MetroNet optical backbone network with WebRTC mesh, waiting room security, and crystal-clear Opus audio.',
+  title: 'MetroMeet — Enterprise Vedio Infrastructure by MetroNet',
+  description: 'Ultra low-latency vedio conferencing platform powered by MetroNet optical backbone network with WebRTC mesh, waiting room security, and crystal-clear Opus audio.',
 };
 
 export default function RootLayout({

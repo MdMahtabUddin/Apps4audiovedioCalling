@@ -99,7 +99,7 @@ export function BrandLogo({
           </span>
           <span className="text-[9px] text-gray-500">|</span>
           <span className="text-[9px] text-gray-400 font-medium tracking-tight">
-            Enterprise Video Infrastructure
+            Enterprise Vedio Infrastructure
           </span>
         </div>
       )}

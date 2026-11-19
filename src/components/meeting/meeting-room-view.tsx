@@ -127,7 +127,7 @@ export function MeetingRoomView() {
       const streamToRecord = isScreenSharing && screenStream ? screenStream : localStream;
       const started = await startRecording(streamToRecord, remoteAudioList);
       if (started) {
-        toast.success('Recording started: Capturing Audio & Video');
+        toast.success('Recording started: Capturing Audio & Vedio');
       } else {
         toast.warning('Recording was canceled');
       }
@@ -1105,7 +1105,7 @@ export function MeetingRoomView() {
                 ? 'bg-rose-600 hover:bg-rose-500 text-white ring-4 ring-rose-600/40 shadow-xl shadow-rose-600/40 animate-pulse'
                 : 'bg-white/[0.08] hover:bg-white/[0.14] text-white'
             }`}
-            title={isRecording ? `Stop Recording (${recordingDuration})` : 'Record Audio & Video'}
+            title={isRecording ? `Stop Recording (${recordingDuration})` : 'Record Audio & Vedio'}
           >
             {isRecording ? <Square className="h-4 w-4 fill-white" /> : <Disc className="h-5 w-5 text-rose-400" />}
           </button>

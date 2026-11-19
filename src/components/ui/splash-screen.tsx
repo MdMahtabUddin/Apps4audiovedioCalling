@@ -128,7 +128,7 @@ export function SplashScreen() {
           </div>
 
           <p className="text-[11px] text-[#388BFF] font-medium tracking-wider uppercase mt-1 opacity-90">
-            Enterprise Video Infrastructure
+            Enterprise Vedio Infrastructure
           </p>
         </div>
 
@@ -139,7 +139,7 @@ export function SplashScreen() {
 
         <div className="space-y-1">
           <p className="text-[11px] text-gray-400 font-semibold tracking-widest uppercase">
-            Initializing Encrypted Video Network...
+            Initializing Encrypted Vedio Network...
           </p>
           <p className="text-[10px] text-gray-500 italic">
             Tap anywhere to skip • High-fidelity audio enabled

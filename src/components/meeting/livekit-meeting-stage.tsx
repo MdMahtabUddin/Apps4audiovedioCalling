@@ -387,7 +387,7 @@ function LiveKitInnerStage({
             <div className="flex items-center gap-2 text-[11px] text-gray-400 font-mono">
               <span className="text-emerald-400 flex items-center gap-1 font-semibold">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-ping" />
-                HD Audio & Video
+                HD Audio & Vedio
               </span>
               <span>•</span>
               <span className="text-gray-300 font-semibold">{formatDuration(callDuration)}</span>
@@ -732,7 +732,7 @@ function LiveKitInnerStage({
                 ? 'bg-rose-600 hover:bg-rose-700 text-white animate-pulse border border-rose-400'
                 : 'bg-white/[0.08] hover:bg-white/[0.15] text-gray-300 hover:text-white border border-white/10'
             }`}
-            title={recorder.isRecording ? 'Stop Recording' : 'Record Video & Audio'}
+            title={recorder.isRecording ? 'Stop Recording' : 'Record Vedio & Audio'}
           >
             <Disc className={`h-4 w-4 ${recorder.isRecording ? 'text-white animate-spin' : 'text-rose-400'}`} />
             <span className="hidden sm:inline">

@@ -71,7 +71,7 @@ export function WaitingRoomScreen({ meetingTitle, hostName, onLeave }: WaitingRo
             </span>
           </div>
           <p className="text-[11px] text-gray-400 leading-normal">
-            Your camera and microphone are muted while waiting. As soon as the host admits you, your audio/video will activate smoothly.
+            Your camera and microphone are muted while waiting. As soon as the host admits you, your audio/vedio will activate smoothly.
           </p>
         </div>
 
