@@ -72,10 +72,13 @@ export default function HomePage() {
     fetch('/api/auth/me')
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (data?.user) setUser(data.user);
+        if (data?.user) {
+          setUser(data.user);
+          router.replace('/dashboard');
+        }
       })
       .catch(() => {});
-  }, []);
+  }, [router]);
 
   // Cleanup webcam stream on unmount
   useEffect(() => {
