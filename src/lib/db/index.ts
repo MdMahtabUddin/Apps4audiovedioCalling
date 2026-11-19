@@ -351,20 +351,24 @@ export const meetingService = {
         orderBy: { startTime: 'desc' },
         include: {
           host: { select: { id: true, name: true, email: true } },
-          _count: { select: { participants: true } },
+          participants: { select: { userId: true, guestName: true } },
         },
       });
       return meetings.map((m) => {
         const startIso = m.startTime.toISOString();
         const endIso = m.endTime ? m.endTime.toISOString() : null;
         const { durationSeconds, durationMinutes } = computeDuration(startIso, endIso);
+        // Count distinct people: rejoining creates a new row, which must not inflate attendance.
+        const uniquePeople = new Set(
+          m.participants.map((p) => p.userId || `guest:${(p.guestName || '').toLowerCase()}`)
+        );
         return {
           id: m.id,
           title: m.title,
           hostId: m.hostId,
           hostName: m.host.name,
           hostEmail: m.host.email,
-          password: m.password,
+          hasPassword: !!m.password,
           isLocked: m.isLocked,
           waitingRoom: m.waitingRoom,
           isActive: m.isActive,
@@ -372,7 +376,7 @@ export const meetingService = {
           endTime: endIso,
           durationSeconds,
           durationMinutes,
-          participantCount: Math.max(1, m._count.participants),
+          participantCount: Math.max(1, uniquePeople.size),
           createdAt: m.createdAt.toISOString(),
         };
       });
@@ -388,16 +392,20 @@ export const meetingService = {
       .map((m) => {
         const host = store.users.find((u) => u.id === m.hostId);
         const { durationSeconds, durationMinutes } = computeDuration(m.startTime, m.endTime);
+        const { password, ...safeMeeting } = m;
+        const uniquePeople = new Set(
+          store.participants
+            .filter((p) => p.meetingId === m.id)
+            .map((p) => p.userId || `guest:${(p.guestName || '').toLowerCase()}`)
+        );
         return {
-          ...m,
+          ...safeMeeting,
+          hasPassword: !!password,
           hostName: host ? host.name : 'Host',
           hostEmail: host ? host.email : '',
           durationSeconds,
           durationMinutes,
-          participantCount: Math.max(
-            1,
-            store.participants.filter((p) => p.meetingId === m.id).length
-          ),
+          participantCount: Math.max(1, uniquePeople.size),
         };
       });
   },

@@ -26,6 +26,7 @@ export interface MeetingItem {
   hostName?: string;
   hostEmail?: string;
   password?: string | null;
+  hasPassword?: boolean;
   isLocked: boolean;
   waitingRoom: boolean;
   isActive: boolean;

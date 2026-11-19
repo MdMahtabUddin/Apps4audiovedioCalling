@@ -163,8 +163,19 @@ export function MeetingProvider({
   }, [meetingId, router]);
 
   const toggleLock = useCallback(async () => {
-    setIsLocked((prev) => !prev);
-  }, []);
+    const next = !isLocked;
+    setIsLocked(next);
+    try {
+      const res = await fetch(`/api/meetings/${meetingId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isLocked: next }),
+      });
+      if (!res.ok) setIsLocked(!next);
+    } catch {
+      setIsLocked(!next);
+    }
+  }, [isLocked, meetingId]);
 
   return (
     <MeetingContext.Provider

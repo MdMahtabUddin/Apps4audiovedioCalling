@@ -3,6 +3,34 @@ import { getCurrentUser } from '@/lib/auth/session';
 import { meetingService, userService } from '@/lib/db';
 import { getMeetingFromLiveKit } from '@/lib/livekit/livekit-knocks';
 
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const session = await getCurrentUser();
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const meeting = await meetingService.getById(id);
+    if (!meeting) {
+      return NextResponse.json({ error: 'Meeting not found' }, { status: 404 });
+    }
+    if (meeting.hostId !== session.userId) {
+      return NextResponse.json({ error: 'Only the host can change room settings.' }, { status: 403 });
+    }
+    const body = await req.json();
+    if (typeof body.isLocked === 'boolean') {
+      await meetingService.lockMeeting(id, session.userId, body.isLocked);
+    }
+    return NextResponse.json({ success: true, isLocked: body.isLocked });
+  } catch (error) {
+    console.error('Update meeting error:', error);
+    return NextResponse.json({ error: 'Failed to update meeting' }, { status: 500 });
+  }
+}
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }

@@ -102,6 +102,62 @@ function formatMeetingTime(dateString?: string | null): string {
   });
 }
 
+function buildScheduleStart(item: ScheduledMeetingItem): Date {
+  const base = new Date(item.date);
+  const [h, m] = (item.startTime || '00:00').split(':').map((n) => parseInt(n, 10));
+  const d = new Date(base.getFullYear(), base.getMonth(), base.getDate(), h || 0, m || 0, 0);
+  return Number.isNaN(d.getTime()) ? base : d;
+}
+
+function toCalendarStamp(d: Date): string {
+  return d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+}
+
+function getScheduleJoinUrl(item: ScheduledMeetingItem): string {
+  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  return `${origin}/meeting/${item.meetingId || item.id}`;
+}
+
+function getGoogleCalendarUrl(item: ScheduledMeetingItem): string {
+  const start = buildScheduleStart(item);
+  const end = new Date(start.getTime() + (item.duration || 30) * 60000);
+  const params = new URLSearchParams({
+    action: 'TEMPLATE',
+    text: item.title,
+    dates: `${toCalendarStamp(start)}/${toCalendarStamp(end)}`,
+    details: `Join MetroMeet: ${getScheduleJoinUrl(item)}`,
+    location: getScheduleJoinUrl(item),
+  });
+  return `https://calendar.google.com/calendar/render?${params.toString()}`;
+}
+
+function downloadIcsFile(item: ScheduledMeetingItem) {
+  const start = buildScheduleStart(item);
+  const end = new Date(start.getTime() + (item.duration || 30) * 60000);
+  const lines = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//MetroMeet//Meetings//EN',
+    'BEGIN:VEVENT',
+    `UID:${item.id}@metromeet`,
+    `DTSTAMP:${toCalendarStamp(new Date())}`,
+    `DTSTART:${toCalendarStamp(start)}`,
+    `DTEND:${toCalendarStamp(end)}`,
+    `SUMMARY:${item.title.replace(/[\r\n,;]/g, ' ')}`,
+    `DESCRIPTION:Join MetroMeet: ${getScheduleJoinUrl(item)}`,
+    `URL:${getScheduleJoinUrl(item)}`,
+    'END:VEVENT',
+    'END:VCALENDAR',
+  ];
+  const blob = new Blob([lines.join('\r\n')], { type: 'text/calendar;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${item.title.replace(/[^a-z0-9]+/gi, '-').toLowerCase() || 'meeting'}.ics`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 function getRelativeDayLabel(dateString: string): string {
   const d = new Date(dateString);
   if (Number.isNaN(d.getTime())) return '';
@@ -133,6 +189,7 @@ export default function DashboardPage() {
   const [endingId, setEndingId] = useState<string | null>(null);
   const [repeatingId, setRepeatingId] = useState<string | null>(null);
   const [nowMs, setNowMs] = useState<number>(() => Date.now());
+  const [visibleCount, setVisibleCount] = useState(10);
 
   // Studio quick scratchpad (persisted locally)
   const [scratchpad, setScratchpad] = useState('');
@@ -836,7 +893,7 @@ export default function DashboardPage() {
                     </Button>
                   </div>
                 ) : (
-                  filteredRecent.map((item, index) => {
+                  filteredRecent.slice(0, visibleCount).map((item, index) => {
                     const isUserHost = !user || item.hostId === user.id;
                     return (
                       <div
@@ -858,7 +915,7 @@ export default function DashboardPage() {
                             <div className="flex flex-wrap items-center gap-2.5">
                               {/* Session Index Badge */}
                               <span className="h-7 px-2.5 rounded-xl bg-white/[0.05] border border-white/[0.08] text-[11px] font-mono font-bold text-gray-400 flex items-center justify-center">
-                                #{filteredRecent.length - index}
+                    #{filteredRecent.length - index}
                               </span>
 
                               {/* HIGHLIGHTED MEETING TITLE */}
@@ -1039,6 +1096,14 @@ export default function DashboardPage() {
                     );
                   })
                 )}
+
+                {filteredRecent.length > visibleCount && (
+                  <div className="flex justify-center pt-2">
+                    <Button variant="secondary" size="sm" onClick={() => setVisibleCount((c) => c + 10)}>
+                      Show more ({filteredRecent.length - visibleCount} older meetings)
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
 
@@ -1100,7 +1165,26 @@ export default function DashboardPage() {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2 self-end sm:self-center">
+                      <div className="flex flex-wrap items-center gap-2 self-end sm:self-center">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => downloadIcsFile(item)}
+                          title="Download .ics for Outlook / Apple Calendar"
+                        >
+                          <Download className="h-3.5 w-3.5" />
+                          <span>.ics</span>
+                        </Button>
+                        <a
+                          href={getGoogleCalendarUrl(item)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.1] text-xs font-semibold text-gray-200 transition-colors"
+                          title="Add to Google Calendar"
+                        >
+                          <CalendarDays className="h-3.5 w-3.5 text-[#388BFF]" />
+                          <span>Google Calendar</span>
+                        </a>
                         {item.meetingId && (
                           <Button
                             size="sm"
