@@ -109,7 +109,7 @@ function LiveKitInnerStage({
       soundEngine.playAdmittedChime();
       const latest = participants[participants.length - 1];
       if (latest && !latest.isLocal) {
-        toast.info(`ðŸ”” ${latest.name || 'Participant'} joined the meeting`);
+        toast.info(`${latest.name || 'Participant'} joined the meeting`);
       }
     }
     prevCountRef.current = participants.length;
@@ -253,14 +253,14 @@ function LiveKitInnerStage({
           });
           if (data.raised && !participant?.isLocal) {
             soundEngine.playIntroChime();
-            toast.info(`âœ‹ ${name} raised their hand!`);
+            toast.info(`${name} raised their hand!`);
           }
         } else if (data.type === 'cohost-update' && data.identity) {
           setCoHosts((prev) => ({ ...prev, [data.identity]: Boolean(data.isCoHost) }));
           if (data.name) {
             toast.info(
               data.isCoHost
-                ? `ðŸ›¡ï¸ ${data.name} is now a Co-Host`
+                ? `${data.name} is now a Co-Host`
                 : `${data.name} is no longer a Co-Host`
             );
           }
@@ -280,15 +280,15 @@ function LiveKitInnerStage({
               room.localParticipant.setMicrophoneEnabled(Boolean(data.enabled)).catch(() => {});
               toast.info(
                 data.enabled
-                  ? `ðŸŽ¤ ${data.byName || 'Host'} turned ON your microphone`
-                  : `ðŸ”‡ ${data.byName || 'Host'} muted your microphone`
+                  ? `${data.byName || 'Host'} turned ON your microphone`
+                  : `${data.byName || 'Host'} muted your microphone`
               );
             } else if (data.media === 'cam') {
               room.localParticipant.setCameraEnabled(Boolean(data.enabled)).catch(() => {});
               toast.info(
                 data.enabled
-                  ? `ðŸ“¹ ${data.byName || 'Host'} turned ON your vedio`
-                  : `ðŸ“· ${data.byName || 'Host'} turned OFF your vedio`
+                  ? `${data.byName || 'Host'} turned ON your vedio`
+                  : `${data.byName || 'Host'} turned OFF your vedio`
               );
             }
           }
@@ -321,15 +321,15 @@ function LiveKitInnerStage({
             setUnreadChatCount((c) => c + 1);
             soundEngine.playKnockChime();
             if (incomingMsg.isPrivate) {
-              toast.info(`ðŸ”’ Private message from ${incomingMsg.sender}`);
+              toast.info(`Private message from ${incomingMsg.sender}`);
             } else {
-              toast.info(`ðŸ’¬ ${incomingMsg.sender}: ${incomingMsg.text.slice(0, 40)}`);
+              toast.info(`${incomingMsg.sender}: ${incomingMsg.text.slice(0, 40)}`);
             }
           }
         } else if (data.type === 'poll-create' && data.poll) {
           setActivePoll(data.poll);
           soundEngine.playIntroChime();
-          toast.info(`ðŸ“Š New Live Poll: ${data.poll.question}`);
+          toast.info(`New Live Poll: ${data.poll.question}`);
         } else if (data.type === 'poll-vote' && data.pollId && data.optionId && data.voterId) {
           setActivePoll((prev) => {
             if (!prev || prev.id !== data.pollId) return prev;
@@ -645,7 +645,7 @@ function LiveKitInnerStage({
     setIsHandRaised(nextRaised);
     if (nextRaised) {
       soundEngine.playIntroChime();
-      toast.success('You raised your hand âœ‹');
+      toast.success('You raised your hand');
     } else {
       toast.info('You lowered your hand');
     }
@@ -695,7 +695,7 @@ function LiveKitInnerStage({
   useEffect(() => {
     if (knocks.length > prevKnocksCount.current) {
       soundEngine.playKnockChime();
-      toast.info(`ðŸ”” ${knocks[knocks.length - 1].displayName} is waiting to join`);
+      toast.info(`${knocks[knocks.length - 1].displayName} is waiting to join`);
     }
     prevKnocksCount.current = knocks.length;
   }, [knocks, toast]);
@@ -908,7 +908,7 @@ function LiveKitInnerStage({
         {/* Top-Left Hand Raise Badge */}
         {raisedHands[participant.identity] && (
           <div className="absolute top-3 left-3 z-20 flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#3B82F6] text-white font-bold text-[11px] shadow-md animate-bounce">
-            <span>âœ‹</span>
+            <span>✋</span>
             {variant !== 'thumb' && <span>Hand Raised</span>}
           </div>
         )}
@@ -1050,13 +1050,13 @@ function LiveKitInnerStage({
                 }`}
               >
                 <span>{todayFormatted}</span>
-                <span>â€¢</span>
+                <span>•</span>
                 <span className="font-mono font-semibold text-emerald-500">
                   {formatDuration(callDuration)}
                 </span>
                 {recorder.isRecording && (
                   <>
-                    <span>â€¢</span>
+                    <span>•</span>
                     <span className="text-rose-500 font-bold animate-pulse font-mono">
                       REC {recorder.recordingDuration}
                     </span>
@@ -1246,7 +1246,7 @@ function LiveKitInnerStage({
                 <div className="space-y-0.5 min-w-0">
                   <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-[#2563EB]">
                     <BarChart2 className="h-3.5 w-3.5 text-[#FF5B37]" />
-                    <span>Live Poll â€¢ {activePoll.createdBy}</span>
+                    <span>Live Poll • {activePoll.createdBy}</span>
                   </div>
                   <h4 className="text-xs sm:text-sm font-extrabold leading-snug">
                     {activePoll.question}
@@ -1442,21 +1442,7 @@ function LiveKitInnerStage({
                       : 'bg-white border-slate-200 text-slate-800'
                   }`}
                 >
-                  {/* Quick Emoji Reaction Bar */}
-                  <div className="flex items-center justify-between px-2 py-1.5 border-b border-slate-500/15">
-                    {['ðŸ‘', 'â¤ï¸', 'ðŸ‘', 'ðŸŽ‰', 'ðŸ”¥', 'ðŸš€'].map((emoji) => (
-                      <button
-                        key={emoji}
-                        onClick={() => {
-                          handleSendReaction(emoji);
-                          setShowMoreMenu(false);
-                        }}
-                        className="text-lg hover:scale-125 transition-transform cursor-pointer"
-                      >
-                        {emoji}
-                      </button>
-                    ))}
-                  </div>
+                  
 
                   <button
                     onClick={() => {
@@ -1830,7 +1816,7 @@ function LiveKitInnerStage({
             >
               <button
                 type="button"
-                onClick={() => setSidebarChatInput((v) => `${v}ðŸ˜Š`)}
+                onClick={() => setSidebarChatInput((v) => `${v}😊`)}
                 className="h-8 w-8 rounded-full bg-[#FFA726] hover:bg-[#FB8C00] text-white flex items-center justify-center shrink-0 cursor-pointer shadow-sm"
                 title="Add Emoji"
               >
