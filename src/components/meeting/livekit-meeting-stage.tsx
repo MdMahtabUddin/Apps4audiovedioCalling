@@ -1486,7 +1486,8 @@ function LiveKitInnerStage({
           </div>
         </header>
 
-        {/* 2. Main Video Stage (Spotlight + Thumbnails OR Grid View) */}
+        {/* 2. Main Video Stage + Floating Glassmorphic Bottom Control Dock */}
+        <div className="flex-1 min-h-0 relative flex flex-col">
         <main className="flex-1 min-h-0 flex flex-col gap-2.5 relative overflow-hidden">
           {/* On-Air Announcement Banner (Clean non-overlapping studio broadcast bar above video) */}
           {broadcastBanner && (
@@ -1529,7 +1530,7 @@ function LiveKitInnerStage({
           {/* Floating Live Poll Card (Glassmorphic Broadcast Overlay) */}
           {activePoll && (
             <div
-              className={`absolute bottom-4 right-4 z-30 w-[290px] sm:w-[315px] max-w-[92%] rounded-2xl overflow-hidden border shadow-[0_20px_50px_rgba(0,0,0,0.55)] backdrop-blur-2xl ${
+              className={`absolute bottom-20 right-4 z-30 w-[290px] sm:w-[315px] max-w-[92%] rounded-2xl overflow-hidden border shadow-[0_20px_50px_rgba(0,0,0,0.55)] backdrop-blur-2xl ${
                 isDarkStudio
                   ? 'bg-[#070f20]/82 border-white/15 text-white'
                   : 'bg-white/92 border-slate-200/90 text-slate-900'
@@ -1678,130 +1679,143 @@ function LiveKitInnerStage({
           )}
         </main>
 
-        {/* 4. Bottom Control Bar (Exact Reference Aesthetic: Circular Buttons + Center Coral "End Meeting") */}
-        <footer className="pt-1 pb-1 flex items-center justify-center gap-2.5 sm:gap-3.5 shrink-0 relative z-30">
-          {/* Screen Share */}
-          <button
-            onClick={() => localParticipant.setScreenShareEnabled(!localParticipant.isScreenShareEnabled)}
-            className={`h-11 w-11 sm:h-12 sm:w-12 rounded-full flex items-center justify-center transition-all cursor-pointer shadow-sm active:scale-95 ${
-              localParticipant.isScreenShareEnabled
-                ? 'bg-[#3B82F6] text-white shadow-blue-500/30'
-                : isDarkStudio
-                ? 'bg-white/[0.09] hover:bg-white/[0.15] text-slate-200 border border-white/10'
-                : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/80'
+        {/* 4. Floating Glassmorphic Control Dock (Overlaid cleanly on bottom-center of Vedio Screen) */}
+        <footer className="absolute bottom-4 left-1/2 -translate-x-1/2 z-40 max-w-[96%]">
+          <div
+            className={`px-2.5 sm:px-3.5 py-2 rounded-full flex items-center justify-center gap-1.5 sm:gap-2.5 backdrop-blur-2xl border transition-all ${
+              isDarkStudio
+                ? 'bg-[#070f20]/75 border-white/15 shadow-[0_16px_48px_rgba(0,0,0,0.65),inset_0_1px_0_rgba(255,255,255,0.12)]'
+                : 'bg-white/85 border-white/70 shadow-[0_16px_40px_rgba(15,23,42,0.18)]'
             }`}
-            title={localParticipant.isScreenShareEnabled ? 'Stop Screen Share' : 'Share Screen'}
           >
-            <Monitor className="h-5 w-5" />
-          </button>
-
-          {/* Mic Toggle */}
-          <button
-            onClick={() => localParticipant.setMicrophoneEnabled(!localParticipant.isMicrophoneEnabled)}
-            className={`h-11 w-11 sm:h-12 sm:w-12 rounded-full flex items-center justify-center transition-all cursor-pointer shadow-sm active:scale-95 ${
-              localParticipant.isMicrophoneEnabled
-                ? isDarkStudio
-                  ? 'bg-white/[0.09] hover:bg-white/[0.15] text-white border border-white/10'
-                  : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/80'
-                : 'bg-rose-500/15 text-rose-500 border border-rose-500/30'
-            }`}
-            title={localParticipant.isMicrophoneEnabled ? 'Mute Microphone (M)' : 'Unmute Microphone (M)'}
-          >
-            {localParticipant.isMicrophoneEnabled ? (
-              <Mic className="h-5 w-5" />
-            ) : (
-              <MicOff className="h-5 w-5" />
-            )}
-          </button>
-
-          {/* Prominent Center Coral-Red "End Meeting" / "Leave" Pill */}
-          <button
-            onClick={handleExitClick}
-            className="h-11 sm:h-12 px-6 sm:px-8 rounded-full bg-[#FF5B37] hover:bg-[#E84926] text-white font-bold text-xs sm:text-sm shadow-lg shadow-[#FF5B37]/30 transition-all cursor-pointer active:scale-95 flex items-center gap-2"
-          >
-            <PhoneOff className="h-4 w-4 sm:hidden" />
-            <span>{isHost ? 'End Meeting' : 'Leave Meeting'}</span>
-          </button>
-
-          {/* Camera (Vedio) Toggle */}
-          <button
-            onClick={() => localParticipant.setCameraEnabled(!localParticipant.isCameraEnabled)}
-            className={`h-11 w-11 sm:h-12 sm:w-12 rounded-full flex items-center justify-center transition-all cursor-pointer shadow-sm active:scale-95 ${
-              localParticipant.isCameraEnabled
-                ? isDarkStudio
-                  ? 'bg-white/[0.09] hover:bg-white/[0.15] text-white border border-white/10'
-                  : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/80'
-                : 'bg-[#FF5B37]/15 text-[#FF5B37] border border-[#FF5B37]/30'
-            }`}
-            title={localParticipant.isCameraEnabled ? 'Turn Off Vedio (V)' : 'Turn On Vedio (V)'}
-          >
-            {localParticipant.isCameraEnabled ? (
-              <Video className="h-5 w-5" />
-            ) : (
-              <VideoOff className="h-5 w-5" />
-            )}
-          </button>
-
-          {/* Collaborative Whiteboard / Draw Button */}
-          <button
-            onClick={() => setShowWhiteboard(true)}
-            className={`h-11 w-11 sm:h-12 sm:w-12 rounded-full flex items-center justify-center transition-all cursor-pointer shadow-sm active:scale-95 ${
-              showWhiteboard
-                ? 'bg-[#3B82F6] text-white shadow-blue-500/30'
-                : isDarkStudio
-                ? 'bg-white/[0.09] hover:bg-white/[0.15] text-slate-200 border border-white/10'
-                : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/80'
-            }`}
-            title="Live Whiteboard & Draw Studio (W)"
-          >
-            <PenTool className="h-5 w-5" />
-          </button>
-
-          {/* Participants & Chat Toggle Button (Right before 3 dots) */}
-          <button
-            onClick={() => {
-              setShowMobileSidebar((v) => {
-                const next = !v;
-                if (next) setUnreadChatCount(0);
-                return next;
-              });
-            }}
-            className={`relative h-11 w-11 sm:h-12 sm:w-12 rounded-full flex items-center justify-center transition-all cursor-pointer shadow-sm active:scale-95 ${
-              showMobileSidebar
-                ? 'bg-[#0066FF] text-white shadow-lg shadow-[#0066FF]/35 border border-[#00A3FF]/50'
-                : isDarkStudio
-                ? 'bg-white/[0.09] hover:bg-white/[0.15] text-slate-200 border border-white/10'
-                : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/80'
-            }`}
-            title="Participants & Chat"
-          >
-            <Users className="h-5 w-5" />
-            <span
-              className={`absolute -top-1 -right-1 h-5 min-w-5 px-1 rounded-full text-[10px] font-extrabold flex items-center justify-center shadow-md ${
-                unreadChatCount > 0
-                  ? 'bg-[#FF7A00] text-white animate-pulse'
-                  : 'bg-[#0066FF] text-white'
-              }`}
-            >
-              {unreadChatCount > 0 ? unreadChatCount : totalCount}
-            </span>
-          </button>
-
-          {/* More Options (...) Popover: Hand Raise, Reactions, Poll, Banner, Notes, PiP, Shortcuts */}
-          <div className="relative">
+            {/* Screen Share */}
             <button
-              onClick={() => setShowMoreMenu((v) => !v)}
-              className={`h-11 w-11 sm:h-12 sm:w-12 rounded-full flex items-center justify-center transition-all cursor-pointer shadow-sm active:scale-95 ${
-                showMoreMenu
-                  ? 'bg-[#3B82F6] text-white'
+              onClick={() => localParticipant.setScreenShareEnabled(!localParticipant.isScreenShareEnabled)}
+              className={`h-10 w-10 sm:h-11 sm:w-11 rounded-full flex items-center justify-center transition-all cursor-pointer hover:scale-105 active:scale-95 ${
+                localParticipant.isScreenShareEnabled
+                  ? 'bg-[#0066FF] text-white shadow-lg shadow-[#0066FF]/40'
                   : isDarkStudio
-                  ? 'bg-white/[0.09] hover:bg-white/[0.15] text-slate-200 border border-white/10'
-                  : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/80'
+                  ? 'bg-white/[0.08] hover:bg-white/[0.18] text-slate-100 border border-white/10'
+                  : 'bg-slate-100/90 hover:bg-slate-200 text-slate-700 border border-slate-200/80'
               }`}
-              title="More Studio Tools"
+              title={localParticipant.isScreenShareEnabled ? 'Stop Screen Share' : 'Share Screen'}
             >
-              <MoreHorizontal className="h-5 w-5" />
+              <Monitor className="h-[18px] w-[18px]" />
             </button>
+
+            {/* Mic Toggle */}
+            <button
+              onClick={() => localParticipant.setMicrophoneEnabled(!localParticipant.isMicrophoneEnabled)}
+              className={`h-10 w-10 sm:h-11 sm:w-11 rounded-full flex items-center justify-center transition-all cursor-pointer hover:scale-105 active:scale-95 ${
+                localParticipant.isMicrophoneEnabled
+                  ? isDarkStudio
+                    ? 'bg-white/[0.08] hover:bg-white/[0.18] text-white border border-white/10'
+                    : 'bg-slate-100/90 hover:bg-slate-200 text-slate-700 border border-slate-200/80'
+                  : 'bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 border border-rose-500/40'
+              }`}
+              title={localParticipant.isMicrophoneEnabled ? 'Mute Microphone (M)' : 'Unmute Microphone (M)'}
+            >
+              {localParticipant.isMicrophoneEnabled ? (
+                <Mic className="h-[18px] w-[18px]" />
+              ) : (
+                <MicOff className="h-[18px] w-[18px]" />
+              )}
+            </button>
+
+            {/* Camera (Vedio) Toggle */}
+            <button
+              onClick={() => localParticipant.setCameraEnabled(!localParticipant.isCameraEnabled)}
+              className={`h-10 w-10 sm:h-11 sm:w-11 rounded-full flex items-center justify-center transition-all cursor-pointer hover:scale-105 active:scale-95 ${
+                localParticipant.isCameraEnabled
+                  ? isDarkStudio
+                    ? 'bg-white/[0.08] hover:bg-white/[0.18] text-white border border-white/10'
+                    : 'bg-slate-100/90 hover:bg-slate-200 text-slate-700 border border-slate-200/80'
+                  : 'bg-[#FF5B37]/20 hover:bg-[#FF5B37]/30 text-[#FF5B37] border border-[#FF5B37]/40'
+              }`}
+              title={localParticipant.isCameraEnabled ? 'Turn Off Vedio (V)' : 'Turn On Vedio (V)'}
+            >
+              {localParticipant.isCameraEnabled ? (
+                <Video className="h-[18px] w-[18px]" />
+              ) : (
+                <VideoOff className="h-[18px] w-[18px]" />
+              )}
+            </button>
+
+            {/* Subtle Divider */}
+            <div className={`hidden sm:block h-5 w-px mx-0.5 ${isDarkStudio ? 'bg-white/15' : 'bg-slate-300/80'}`} />
+
+            {/* Prominent Center Coral-Red "End Meeting" / "Leave" Pill */}
+            <button
+              onClick={handleExitClick}
+              className="h-10 sm:h-11 px-4 sm:px-6 rounded-full bg-gradient-to-r from-[#FF5B37] to-[#FF3D2E] hover:from-[#FF6B4A] hover:to-[#E83223] text-white font-bold text-xs sm:text-[13px] shadow-[0_6px_22px_rgba(255,91,55,0.45)] transition-all cursor-pointer hover:scale-[1.03] active:scale-95 flex items-center gap-2"
+            >
+              <PhoneOff className="h-4 w-4 sm:hidden" />
+              <span className="whitespace-nowrap">{isHost ? 'End Meeting' : 'Leave Meeting'}</span>
+            </button>
+
+            {/* Subtle Divider */}
+            <div className={`hidden sm:block h-5 w-px mx-0.5 ${isDarkStudio ? 'bg-white/15' : 'bg-slate-300/80'}`} />
+
+            {/* Collaborative Whiteboard / Draw Button */}
+            <button
+              onClick={() => setShowWhiteboard(true)}
+              className={`h-10 w-10 sm:h-11 sm:w-11 rounded-full flex items-center justify-center transition-all cursor-pointer hover:scale-105 active:scale-95 ${
+                showWhiteboard
+                  ? 'bg-[#0066FF] text-white shadow-lg shadow-[#0066FF]/40'
+                  : isDarkStudio
+                  ? 'bg-white/[0.08] hover:bg-white/[0.18] text-slate-100 border border-white/10'
+                  : 'bg-slate-100/90 hover:bg-slate-200 text-slate-700 border border-slate-200/80'
+              }`}
+              title="Live Whiteboard & Draw Studio (W)"
+            >
+              <PenTool className="h-[18px] w-[18px]" />
+            </button>
+
+            {/* Participants & Chat Toggle Button (Right before 3 dots) */}
+            <button
+              onClick={() => {
+                setShowMobileSidebar((v) => {
+                  const next = !v;
+                  if (next) setUnreadChatCount(0);
+                  return next;
+                });
+              }}
+              className={`relative h-10 w-10 sm:h-11 sm:w-11 rounded-full flex items-center justify-center transition-all cursor-pointer hover:scale-105 active:scale-95 ${
+                showMobileSidebar
+                  ? 'bg-[#0066FF] text-white shadow-lg shadow-[#0066FF]/40 border border-[#00A3FF]/50'
+                  : isDarkStudio
+                  ? 'bg-white/[0.08] hover:bg-white/[0.18] text-slate-100 border border-white/10'
+                  : 'bg-slate-100/90 hover:bg-slate-200 text-slate-700 border border-slate-200/80'
+              }`}
+              title="Participants & Chat"
+            >
+              <Users className="h-[18px] w-[18px]" />
+              <span
+                className={`absolute -top-1 -right-1 h-4.5 min-w-4.5 px-1 rounded-full text-[9.5px] font-extrabold flex items-center justify-center shadow-md ${
+                  unreadChatCount > 0
+                    ? 'bg-[#FF7A00] text-white animate-pulse'
+                    : 'bg-[#0066FF] text-white'
+                }`}
+              >
+                {unreadChatCount > 0 ? unreadChatCount : totalCount}
+              </span>
+            </button>
+
+            {/* More Options (...) Popover: Quality, Hand Raise, Poll, Banner, Notes, PiP, Shortcuts */}
+            <div className="relative">
+              <button
+                onClick={() => setShowMoreMenu((v) => !v)}
+                className={`h-10 w-10 sm:h-11 sm:w-11 rounded-full flex items-center justify-center transition-all cursor-pointer hover:scale-105 active:scale-95 ${
+                  showMoreMenu
+                    ? 'bg-[#0066FF] text-white shadow-lg shadow-[#0066FF]/40'
+                    : isDarkStudio
+                    ? 'bg-white/[0.08] hover:bg-white/[0.18] text-slate-100 border border-white/10'
+                    : 'bg-slate-100/90 hover:bg-slate-200 text-slate-700 border border-slate-200/80'
+                }`}
+                title="More Studio Tools"
+              >
+                <MoreHorizontal className="h-[18px] w-[18px]" />
+              </button>
 
             {showMoreMenu && (
               <>
@@ -1898,8 +1912,10 @@ function LiveKitInnerStage({
                 </div>
               </>
             )}
+            </div>
           </div>
         </footer>
+        </div>
       </div>
 
       {/* ===================================================================== */}
