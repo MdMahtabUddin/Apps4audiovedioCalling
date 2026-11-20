@@ -905,17 +905,39 @@ function LiveKitInnerStage({
           </div>
         )}
 
-        {/* Top-Left MetroMeet Shadow Watermark Logo + Smaller LIVE & Time underneath */}
-        <div className="absolute top-3.5 left-3.5 z-20 flex flex-col items-start pointer-events-none select-none">
-          {/* Actual MetroMeet Logo in Subtle Shadow / Watermark Style */}
+        {/* Top-Left Monochrome White MetroMeet PRO Watermark Logo + Smaller LIVE & Time underneath */}
+        <div className="absolute top-3.5 left-3.5 z-20 flex flex-col items-start gap-1 pointer-events-none select-none">
+          {/* Pure White Translucent Monochrome Watermark matching uploaded reference */}
           <div
-            className={`leading-none ${
+            className={`inline-flex flex-col items-start ${
               variant === 'thumb'
-                ? 'opacity-45 scale-[0.52] origin-top-left -mb-3'
-                : 'opacity-60 scale-[0.78] origin-top-left -mb-1 drop-shadow-[0_3px_12px_rgba(0,0,0,0.95)]'
+                ? 'opacity-45 scale-[0.65] origin-top-left -mb-1.5'
+                : 'opacity-55 drop-shadow-[0_2px_8px_rgba(0,0,0,0.65)]'
             }`}
           >
-            <BrandLogo size="sm" showTagline={false} withSound={false} href="" />
+            {/* White Curved Arc Swoosh */}
+            <svg
+              className="w-full overflow-visible -mb-0.5"
+              height="9"
+              viewBox="0 0 160 14"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M 6 12 Q 80 -3 154 12"
+                stroke="rgba(255,255,255,0.85)"
+                strokeWidth="3.2"
+                strokeLinecap="round"
+              />
+            </svg>
+            {/* Monochrome White "Metro Meet" + Translucent White "PRO" Pill */}
+            <div className="flex items-center tracking-tight font-black italic leading-none">
+              <span className="text-[15px] text-white/90">Metro</span>
+              <span className="text-[15px] text-white/90 ml-1">Meet</span>
+              <span className="ml-1.5 px-2 py-[2px] text-[8px] not-italic font-black tracking-widest rounded-full bg-white/35 text-white/95 uppercase">
+                PRO
+              </span>
+            </div>
           </div>
 
           {/* Smaller LIVE + Time strip directly below the logo */}
