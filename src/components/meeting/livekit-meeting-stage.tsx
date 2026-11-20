@@ -1373,8 +1373,17 @@ function LiveKitInnerStage({
             </div>
           </div>
 
-          {/* Right Header Studio Utilities: Quality, Snapshot, Mirror, Theme, Fullscreen, Record Dot */}
+          {/* Right Header Studio Utilities: Share Link, Quality, Layout, Mirror, Theme, Fullscreen, Record Dot */}
           <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={copyMeetingLink}
+              className="h-9 px-3 sm:px-3.5 rounded-full bg-gradient-to-r from-[#FF7A00] to-[#FF5500] hover:from-[#FF8C1A] hover:to-[#E64D00] text-white text-[11px] font-bold shadow-md shadow-[#FF7A00]/25 transition-all cursor-pointer active:scale-95 flex items-center gap-1.5"
+              title="Copy Meeting Invite Link"
+            >
+              {isCopied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+              <span className="hidden sm:inline">{isCopied ? 'Link Copied' : 'Share Link'}</span>
+            </button>
+
             <button
               onClick={() => setShowQualityModal(true)}
               className={`h-9 px-2.5 sm:px-3 rounded-full flex items-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95 text-[11px] font-bold ${
@@ -1393,15 +1402,19 @@ function LiveKitInnerStage({
             </button>
 
             <button
-              onClick={handleCaptureSnapshot}
+              onClick={() => setLayoutMode((m) => (m === 'grid' ? 'spotlight' : 'grid'))}
               className={`h-9 w-9 rounded-full flex items-center justify-center transition-all cursor-pointer shadow-sm active:scale-95 ${
                 isDarkStudio
-                  ? 'bg-white/[0.07] hover:bg-white/[0.14] text-cyan-300 border border-white/10'
+                  ? 'bg-white/[0.07] hover:bg-white/[0.14] text-slate-200 border border-white/10'
                   : 'bg-white hover:bg-slate-50 text-slate-600 border border-slate-200/80'
               }`}
-              title="Capture Live Snapshot (PNG)"
+              title={layoutMode === 'grid' ? 'Switch to Spotlight View' : 'Switch to Grid View'}
             >
-              <Camera className="h-4 w-4" />
+              {layoutMode === 'grid' ? (
+                <Columns2 className="h-4 w-4" />
+              ) : (
+                <LayoutGrid className="h-4 w-4" />
+              )}
             </button>
 
             <button
@@ -1473,68 +1486,7 @@ function LiveKitInnerStage({
           </div>
         </header>
 
-        {/* 2. Sub-Toolbar Row: Attendee Count + "+ Add People" | Layout Switcher */}
-        <div className="flex items-center justify-between gap-3 shrink-0">
-          <div className="flex items-center gap-2.5">
-            <div
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold shadow-sm ${
-                isDarkStudio
-                  ? 'bg-white/[0.07] text-slate-200 border border-white/10'
-                  : 'bg-white text-slate-700 border border-slate-200/80'
-              }`}
-            >
-              <Users className="h-3.5 w-3.5 text-slate-400" />
-              <span>{totalCount}</span>
-            </div>
-
-            <button
-              onClick={copyMeetingLink}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-[#FF7A00] to-[#FF5500] hover:from-[#FF8C1A] hover:to-[#E64D00] text-white text-xs font-bold shadow-md shadow-[#FF7A00]/25 transition-all cursor-pointer active:scale-95"
-              title="Copy Invite Link to Add People"
-            >
-              {isCopied ? <Check className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
-              <span>{isCopied ? 'Link Copied' : 'Add People'}</span>
-            </button>
-          </div>
-
-          {/* Right Layout Switcher (Grid vs Spotlight + Draw Quick Trigger) */}
-          <div
-            className={`inline-flex items-center gap-1 p-1 rounded-full shadow-sm ${
-              isDarkStudio
-                ? 'bg-white/[0.06] border border-white/10'
-                : 'bg-white border border-slate-200/80'
-            }`}
-          >
-            <button
-              onClick={() => setLayoutMode('grid')}
-              className={`h-8 w-8 rounded-full flex items-center justify-center transition-all cursor-pointer ${
-                layoutMode === 'grid'
-                  ? 'bg-[#3B82F6] text-white shadow-sm'
-                  : isDarkStudio
-                  ? 'text-slate-400 hover:text-white'
-                  : 'text-slate-400 hover:text-slate-700'
-              }`}
-              title="Grid View"
-            >
-              <LayoutGrid className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => setLayoutMode('spotlight')}
-              className={`h-8 w-8 rounded-full flex items-center justify-center transition-all cursor-pointer ${
-                layoutMode === 'spotlight'
-                  ? 'bg-[#3B82F6] text-white shadow-sm'
-                  : isDarkStudio
-                  ? 'text-slate-400 hover:text-white'
-                  : 'text-slate-400 hover:text-slate-700'
-              }`}
-              title="Speaker Spotlight View"
-            >
-              <Columns2 className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-
-        {/* 3. Main Video Stage (Spotlight + Thumbnails OR Grid View) */}
+        {/* 2. Main Video Stage (Spotlight + Thumbnails OR Grid View) */}
         <main className="flex-1 min-h-0 flex flex-col gap-2.5 relative overflow-hidden">
           {/* On-Air Announcement Banner (Clean non-overlapping studio broadcast bar above video) */}
           {broadcastBanner && (
