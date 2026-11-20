@@ -1679,96 +1679,96 @@ function LiveKitInnerStage({
           )}
         </main>
 
-        {/* 4. Floating Glassmorphic Control Dock (Overlaid cleanly on bottom-center of Vedio Screen) */}
-        <footer className="absolute bottom-4 left-1/2 -translate-x-1/2 z-40 max-w-[96%]">
+        {/* 4. Floating Glassmorphic Control Dock (Compact International Standard, Overlaid on Vedio Screen) */}
+        <footer className="absolute bottom-3.5 left-1/2 -translate-x-1/2 z-40 max-w-[96%]">
           <div
-            className={`px-2.5 sm:px-3.5 py-2 rounded-full flex items-center justify-center gap-1.5 sm:gap-2.5 backdrop-blur-2xl border transition-all ${
+            className={`px-2 sm:px-2.5 py-1.5 rounded-full flex items-center justify-center gap-1 sm:gap-1.5 backdrop-blur-2xl border transition-all ${
               isDarkStudio
-                ? 'bg-[#070f20]/75 border-white/15 shadow-[0_16px_48px_rgba(0,0,0,0.65),inset_0_1px_0_rgba(255,255,255,0.12)]'
-                : 'bg-white/85 border-white/70 shadow-[0_16px_40px_rgba(15,23,42,0.18)]'
+                ? 'bg-[#060c1a]/78 border-white/14 shadow-[0_12px_36px_rgba(0,0,0,0.65),inset_0_1px_0_rgba(255,255,255,0.14)]'
+                : 'bg-white/88 border-white/75 shadow-[0_12px_32px_rgba(15,23,42,0.16)]'
             }`}
           >
             {/* Screen Share */}
             <button
               onClick={() => localParticipant.setScreenShareEnabled(!localParticipant.isScreenShareEnabled)}
-              className={`h-10 w-10 sm:h-11 sm:w-11 rounded-full flex items-center justify-center transition-all cursor-pointer hover:scale-105 active:scale-95 ${
+              className={`h-8 w-8 sm:h-9 sm:w-9 rounded-full flex items-center justify-center transition-all duration-200 cursor-pointer hover:scale-105 active:scale-95 ${
                 localParticipant.isScreenShareEnabled
-                  ? 'bg-[#0066FF] text-white shadow-lg shadow-[#0066FF]/40'
+                  ? 'bg-gradient-to-br from-[#0066FF] to-[#00A3FF] text-white shadow-[0_4px_14px_rgba(0,102,255,0.45)]'
                   : isDarkStudio
-                  ? 'bg-white/[0.08] hover:bg-white/[0.18] text-slate-100 border border-white/10'
+                  ? 'bg-white/[0.06] hover:bg-white/[0.16] text-slate-200 hover:text-white border border-white/[0.08] hover:border-white/20'
                   : 'bg-slate-100/90 hover:bg-slate-200 text-slate-700 border border-slate-200/80'
               }`}
               title={localParticipant.isScreenShareEnabled ? 'Stop Screen Share' : 'Share Screen'}
             >
-              <Monitor className="h-[18px] w-[18px]" />
+              <Monitor className="h-4 w-4" strokeWidth={1.9} />
             </button>
 
             {/* Mic Toggle */}
             <button
               onClick={() => localParticipant.setMicrophoneEnabled(!localParticipant.isMicrophoneEnabled)}
-              className={`h-10 w-10 sm:h-11 sm:w-11 rounded-full flex items-center justify-center transition-all cursor-pointer hover:scale-105 active:scale-95 ${
+              className={`h-8 w-8 sm:h-9 sm:w-9 rounded-full flex items-center justify-center transition-all duration-200 cursor-pointer hover:scale-105 active:scale-95 ${
                 localParticipant.isMicrophoneEnabled
                   ? isDarkStudio
-                    ? 'bg-white/[0.08] hover:bg-white/[0.18] text-white border border-white/10'
+                    ? 'bg-white/[0.06] hover:bg-white/[0.16] text-slate-100 hover:text-white border border-white/[0.08] hover:border-white/20'
                     : 'bg-slate-100/90 hover:bg-slate-200 text-slate-700 border border-slate-200/80'
-                  : 'bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 border border-rose-500/40'
+                  : 'bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 border border-rose-500/35'
               }`}
               title={localParticipant.isMicrophoneEnabled ? 'Mute Microphone (M)' : 'Unmute Microphone (M)'}
             >
               {localParticipant.isMicrophoneEnabled ? (
-                <Mic className="h-[18px] w-[18px]" />
+                <Mic className="h-4 w-4" strokeWidth={1.9} />
               ) : (
-                <MicOff className="h-[18px] w-[18px]" />
+                <MicOff className="h-4 w-4" strokeWidth={1.9} />
               )}
             </button>
 
             {/* Camera (Vedio) Toggle */}
             <button
               onClick={() => localParticipant.setCameraEnabled(!localParticipant.isCameraEnabled)}
-              className={`h-10 w-10 sm:h-11 sm:w-11 rounded-full flex items-center justify-center transition-all cursor-pointer hover:scale-105 active:scale-95 ${
+              className={`h-8 w-8 sm:h-9 sm:w-9 rounded-full flex items-center justify-center transition-all duration-200 cursor-pointer hover:scale-105 active:scale-95 ${
                 localParticipant.isCameraEnabled
                   ? isDarkStudio
-                    ? 'bg-white/[0.08] hover:bg-white/[0.18] text-white border border-white/10'
+                    ? 'bg-white/[0.06] hover:bg-white/[0.16] text-slate-100 hover:text-white border border-white/[0.08] hover:border-white/20'
                     : 'bg-slate-100/90 hover:bg-slate-200 text-slate-700 border border-slate-200/80'
-                  : 'bg-[#FF5B37]/20 hover:bg-[#FF5B37]/30 text-[#FF5B37] border border-[#FF5B37]/40'
+                  : 'bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 border border-rose-500/35'
               }`}
               title={localParticipant.isCameraEnabled ? 'Turn Off Vedio (V)' : 'Turn On Vedio (V)'}
             >
               {localParticipant.isCameraEnabled ? (
-                <Video className="h-[18px] w-[18px]" />
+                <Video className="h-4 w-4" strokeWidth={1.9} />
               ) : (
-                <VideoOff className="h-[18px] w-[18px]" />
+                <VideoOff className="h-4 w-4" strokeWidth={1.9} />
               )}
             </button>
 
             {/* Subtle Divider */}
-            <div className={`hidden sm:block h-5 w-px mx-0.5 ${isDarkStudio ? 'bg-white/15' : 'bg-slate-300/80'}`} />
+            <div className={`hidden sm:block h-4 w-px mx-1 ${isDarkStudio ? 'bg-white/12' : 'bg-slate-300/75'}`} />
 
-            {/* Prominent Center Coral-Red "End Meeting" / "Leave" Pill */}
+            {/* Compact Refined "End Meeting" / "Leave" Pill */}
             <button
               onClick={handleExitClick}
-              className="h-10 sm:h-11 px-4 sm:px-6 rounded-full bg-gradient-to-r from-[#FF5B37] to-[#FF3D2E] hover:from-[#FF6B4A] hover:to-[#E83223] text-white font-bold text-xs sm:text-[13px] shadow-[0_6px_22px_rgba(255,91,55,0.45)] transition-all cursor-pointer hover:scale-[1.03] active:scale-95 flex items-center gap-2"
+              className="h-8 sm:h-9 px-3.5 sm:px-4 rounded-full bg-gradient-to-r from-[#FF4D3A] to-[#E11D48] hover:from-[#FF5E4D] hover:to-[#F43F5E] text-white font-semibold text-[11px] sm:text-xs tracking-wide shadow-[0_4px_16px_rgba(225,29,72,0.42)] transition-all duration-200 cursor-pointer hover:scale-[1.03] active:scale-95 flex items-center gap-1.5"
             >
-              <PhoneOff className="h-4 w-4 sm:hidden" />
-              <span className="whitespace-nowrap">{isHost ? 'End Meeting' : 'Leave Meeting'}</span>
+              <PhoneOff className="h-3.5 w-3.5" strokeWidth={2.2} />
+              <span className="whitespace-nowrap">{isHost ? 'End' : 'Leave'}</span>
             </button>
 
             {/* Subtle Divider */}
-            <div className={`hidden sm:block h-5 w-px mx-0.5 ${isDarkStudio ? 'bg-white/15' : 'bg-slate-300/80'}`} />
+            <div className={`hidden sm:block h-4 w-px mx-1 ${isDarkStudio ? 'bg-white/12' : 'bg-slate-300/75'}`} />
 
             {/* Collaborative Whiteboard / Draw Button */}
             <button
               onClick={() => setShowWhiteboard(true)}
-              className={`h-10 w-10 sm:h-11 sm:w-11 rounded-full flex items-center justify-center transition-all cursor-pointer hover:scale-105 active:scale-95 ${
+              className={`h-8 w-8 sm:h-9 sm:w-9 rounded-full flex items-center justify-center transition-all duration-200 cursor-pointer hover:scale-105 active:scale-95 ${
                 showWhiteboard
-                  ? 'bg-[#0066FF] text-white shadow-lg shadow-[#0066FF]/40'
+                  ? 'bg-gradient-to-br from-[#0066FF] to-[#00A3FF] text-white shadow-[0_4px_14px_rgba(0,102,255,0.45)]'
                   : isDarkStudio
-                  ? 'bg-white/[0.08] hover:bg-white/[0.18] text-slate-100 border border-white/10'
+                  ? 'bg-white/[0.06] hover:bg-white/[0.16] text-slate-200 hover:text-white border border-white/[0.08] hover:border-white/20'
                   : 'bg-slate-100/90 hover:bg-slate-200 text-slate-700 border border-slate-200/80'
               }`}
               title="Live Whiteboard & Draw Studio (W)"
             >
-              <PenTool className="h-[18px] w-[18px]" />
+              <PenTool className="h-4 w-4" strokeWidth={1.9} />
             </button>
 
             {/* Participants & Chat Toggle Button (Right before 3 dots) */}
@@ -1780,18 +1780,20 @@ function LiveKitInnerStage({
                   return next;
                 });
               }}
-              className={`relative h-10 w-10 sm:h-11 sm:w-11 rounded-full flex items-center justify-center transition-all cursor-pointer hover:scale-105 active:scale-95 ${
+              className={`relative h-8 w-8 sm:h-9 sm:w-9 rounded-full flex items-center justify-center transition-all duration-200 cursor-pointer hover:scale-105 active:scale-95 ${
                 showMobileSidebar
-                  ? 'bg-[#0066FF] text-white shadow-lg shadow-[#0066FF]/40 border border-[#00A3FF]/50'
+                  ? 'bg-gradient-to-br from-[#0066FF] to-[#00A3FF] text-white shadow-[0_4px_14px_rgba(0,102,255,0.45)]'
                   : isDarkStudio
-                  ? 'bg-white/[0.08] hover:bg-white/[0.18] text-slate-100 border border-white/10'
+                  ? 'bg-white/[0.06] hover:bg-white/[0.16] text-slate-200 hover:text-white border border-white/[0.08] hover:border-white/20'
                   : 'bg-slate-100/90 hover:bg-slate-200 text-slate-700 border border-slate-200/80'
               }`}
               title="Participants & Chat"
             >
-              <Users className="h-[18px] w-[18px]" />
+              <Users className="h-4 w-4" strokeWidth={1.9} />
               <span
-                className={`absolute -top-1 -right-1 h-4.5 min-w-4.5 px-1 rounded-full text-[9.5px] font-extrabold flex items-center justify-center shadow-md ${
+                className={`absolute -top-0.5 -right-0.5 h-4 min-w-4 px-1 rounded-full text-[9px] font-extrabold flex items-center justify-center ring-2 ${
+                  isDarkStudio ? 'ring-[#060c1a]' : 'ring-white'
+                } ${
                   unreadChatCount > 0
                     ? 'bg-[#FF7A00] text-white animate-pulse'
                     : 'bg-[#0066FF] text-white'
@@ -1805,16 +1807,16 @@ function LiveKitInnerStage({
             <div className="relative">
               <button
                 onClick={() => setShowMoreMenu((v) => !v)}
-                className={`h-10 w-10 sm:h-11 sm:w-11 rounded-full flex items-center justify-center transition-all cursor-pointer hover:scale-105 active:scale-95 ${
+                className={`h-8 w-8 sm:h-9 sm:w-9 rounded-full flex items-center justify-center transition-all duration-200 cursor-pointer hover:scale-105 active:scale-95 ${
                   showMoreMenu
-                    ? 'bg-[#0066FF] text-white shadow-lg shadow-[#0066FF]/40'
+                    ? 'bg-gradient-to-br from-[#0066FF] to-[#00A3FF] text-white shadow-[0_4px_14px_rgba(0,102,255,0.45)]'
                     : isDarkStudio
-                    ? 'bg-white/[0.08] hover:bg-white/[0.18] text-slate-100 border border-white/10'
+                    ? 'bg-white/[0.06] hover:bg-white/[0.16] text-slate-200 hover:text-white border border-white/[0.08] hover:border-white/20'
                     : 'bg-slate-100/90 hover:bg-slate-200 text-slate-700 border border-slate-200/80'
                 }`}
                 title="More Studio Tools"
               >
-                <MoreHorizontal className="h-[18px] w-[18px]" />
+                <MoreHorizontal className="h-4 w-4" strokeWidth={1.9} />
               </button>
 
             {showMoreMenu && (
