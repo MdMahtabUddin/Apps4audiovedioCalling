@@ -905,35 +905,43 @@ function LiveKitInnerStage({
           </div>
         )}
 
-        {/* Top-Left Compact Broadcast Watermark Logo + LIVE Badge directly underneath */}
-        <div className="absolute top-3 left-3 z-20 flex flex-col items-start gap-1 pointer-events-none select-none">
-          {/* Small Translucent MetroMeet Watermark */}
+        {/* Top-Left International Broadcast Corner Bug: Refined MetroMeet Watermark + Sleek LIVE Strip */}
+        <div className="absolute top-3.5 left-3.5 z-20 flex flex-col items-start gap-1 pointer-events-none select-none">
+          {/* Ultra-Clean Native-Sized Watermark Wordmark (No bulky PRO pill or CSS scaling distortion) */}
           <div
-            className={`leading-none ${
-              variant === 'thumb'
-                ? 'opacity-35 scale-[0.45] origin-top-left -mb-3'
-                : 'opacity-45 scale-[0.65] origin-top-left -mb-2 drop-shadow-[0_2px_8px_rgba(0,0,0,0.75)]'
-            }`}
+            className={`inline-flex flex-col items-start ${
+              variant === 'thumb' ? 'opacity-50' : 'opacity-65'
+            } drop-shadow-[0_1px_6px_rgba(0,0,0,0.85)]`}
           >
-            <BrandLogo size="sm" showTagline={false} withSound={false} href="" />
-          </div>
-
-          {/* LIVE Pill + Hand Raise directly below the watermark */}
-          <div className="flex items-center gap-1.5">
+            <span className="w-full h-[1.5px] rounded-full bg-gradient-to-r from-[#FF7A00] via-[#FFA336] to-transparent mb-0.5 opacity-90" />
             <div
-              className={`inline-flex items-center gap-1.5 rounded-full bg-rose-600/85 backdrop-blur-md border border-rose-400/45 shadow-md shadow-rose-900/40 ${
-                variant === 'thumb' ? 'px-2 py-0.5 text-[8px]' : 'px-2.5 py-0.5 text-[10px]'
+              className={`flex items-baseline italic tracking-tight leading-none ${
+                variant === 'thumb' ? 'text-[10px]' : 'text-[13px]'
               }`}
             >
-              <span className="relative flex h-1.5 w-1.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-85" />
-                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white" />
+              <span className="font-black text-[#388BFF]">Metro</span>
+              <span className="font-extrabold text-white/95 ml-[1px]">Meet</span>
+            </div>
+          </div>
+
+          {/* Sleek Frosted-Glass LIVE Indicator Bar directly underneath */}
+          <div className="flex items-center gap-1.5">
+            <div
+              className={`inline-flex items-center gap-1.5 rounded-md bg-black/45 backdrop-blur-md border border-white/15 shadow-sm ${
+                variant === 'thumb' ? 'px-1.5 py-[2px] text-[8px]' : 'px-2 py-[3px] text-[9.5px]'
+              }`}
+            >
+              <span className="relative flex h-1.5 w-1.5 shrink-0">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-500 opacity-80" />
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-rose-500" />
               </span>
-              <span className="font-black tracking-[0.16em] uppercase text-white">LIVE</span>
+              <span className="font-extrabold tracking-[0.2em] uppercase text-white/95 leading-none">
+                LIVE
+              </span>
               {variant === 'main' && (
                 <>
-                  <span className="text-white/40">|</span>
-                  <span className="font-mono font-bold text-rose-100">
+                  <span className="h-2.5 w-px bg-white/20" />
+                  <span className="font-mono font-semibold text-white/80 tabular-nums leading-none">
                     {formatDuration(callDuration)}
                   </span>
                 </>
@@ -941,7 +949,7 @@ function LiveKitInnerStage({
             </div>
 
             {raisedHands[participant.identity] && (
-              <div className="flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#3B82F6] text-white font-bold text-[10px] shadow-md animate-bounce">
+              <div className="flex items-center gap-1 px-2 py-[3px] rounded-md bg-[#0066FF]/90 backdrop-blur-md text-white font-bold text-[9.5px] shadow-md animate-bounce">
                 <span>✋</span>
                 {variant !== 'thumb' && <span>Hand Raised</span>}
               </div>
