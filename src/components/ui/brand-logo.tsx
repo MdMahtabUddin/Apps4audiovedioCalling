@@ -48,7 +48,7 @@ export function BrandLogo({
       <div className="relative flex items-center">
         {/* Dynamic MetroNet Stylized SVG Arc & Wordmark */}
         <div className="relative">
-          {/* Zoom-Blue Stylized Arc Swoosh */}
+          {/* Animated Orange Arc Swoosh */}
           <svg
             className="overflow-visible absolute -top-3.5 left-0 w-full pointer-events-none"
             height="18"
@@ -58,31 +58,32 @@ export function BrandLogo({
           >
             <path
               d="M 6 16 Q 80 -4 154 16"
-              stroke="url(#zoom-blue-arc-gradient)"
+              stroke="url(#metronet-arc-gradient)"
               strokeWidth={dimensions.arcStroke}
               strokeLinecap="round"
               className={`transition-all duration-700 ${
-                isHovered
-                  ? 'filter drop-shadow-[0_0_10px_rgba(45,140,255,0.85)]'
-                  : 'drop-shadow-[0_0_5px_rgba(11,92,255,0.5)]'
+                isHovered ? 'filter drop-shadow-[0_0_8px_rgba(255,122,0,0.8)]' : 'drop-shadow-[0_0_4px_rgba(255,122,0,0.4)]'
               }`}
             />
             <defs>
-              <linearGradient id="zoom-blue-arc-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="#0B5CFF" />
-                <stop offset="50%" stopColor="#2D8CFF" />
-                <stop offset="100%" stopColor="#66B2FF" />
+              <linearGradient id="metronet-arc-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#FF7A00" />
+                <stop offset="50%" stopColor="#FFA336" />
+                <stop offset="100%" stopColor="#FF6200" />
               </linearGradient>
             </defs>
           </svg>
 
-          {/* Typography (Zoom Signature Blue + Crisp White, PRO removed) */}
+          {/* Typography */}
           <div className="flex items-center tracking-tight font-black italic relative overflow-hidden rounded-lg">
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#0B5CFF] via-[#2D8CFF] to-[#4DA3FF] drop-shadow-[0_0_14px_rgba(45,140,255,0.55)] transition-all group-hover:drop-shadow-[0_0_20px_rgba(45,140,255,0.85)]">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#2B82FF] via-[#00D4FF] to-[#0057FF] drop-shadow-[0_0_14px_rgba(0,102,255,0.45)] transition-all group-hover:drop-shadow-[0_0_20px_rgba(0,212,255,0.7)]">
               Metro
             </span>
             <span className="text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.3)] ml-0.5 font-black">
               Meet
+            </span>
+            <span className="ml-1.5 px-2 py-0.5 text-[8.5px] not-italic font-black tracking-widest rounded-full bg-gradient-to-r from-[#FF7A00] via-[#FFA336] to-[#FF4500] text-white shadow-md shadow-orange-500/35 uppercase border border-white/20 animate-pulse">
+              PRO
             </span>
             {/* Ambient Shimmer Beam Sweep */}
             <span className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/25 to-transparent pointer-events-none" />
