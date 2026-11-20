@@ -905,13 +905,35 @@ function LiveKitInnerStage({
           </div>
         )}
 
-        {/* Top-Left Hand Raise Badge */}
-        {raisedHands[participant.identity] && (
-          <div className="absolute top-3 left-3 z-20 flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#3B82F6] text-white font-bold text-[11px] shadow-md animate-bounce">
-            <span>✋</span>
-            {variant !== 'thumb' && <span>Hand Raised</span>}
+        {/* Top-Left LIVE Badge & Hand Raise Indicator */}
+        <div className="absolute top-3 left-3 z-20 flex items-center gap-2 pointer-events-none">
+          <div
+            className={`inline-flex items-center gap-1.5 rounded-full bg-black/60 backdrop-blur-md border border-rose-500/40 shadow-lg ${
+              variant === 'thumb' ? 'px-2 py-0.5 text-[9px]' : 'px-3 py-1 text-[11px]'
+            }`}
+          >
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-500 opacity-80" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500" />
+            </span>
+            <span className="font-black tracking-[0.14em] uppercase text-white">LIVE</span>
+            {variant === 'main' && (
+              <>
+                <span className="text-white/30">|</span>
+                <span className="font-mono font-bold text-rose-200">
+                  {formatDuration(callDuration)}
+                </span>
+              </>
+            )}
           </div>
-        )}
+
+          {raisedHands[participant.identity] && (
+            <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#3B82F6] text-white font-bold text-[11px] shadow-md animate-bounce">
+              <span>✋</span>
+              {variant !== 'thumb' && <span>Hand Raised</span>}
+            </div>
+          )}
+        </div>
 
         {/* Top-Right Circular Action Badges (Pin + Mic Status, matching reference design) */}
         <div className="absolute top-3 right-3 z-20 flex items-center gap-2">
@@ -949,8 +971,8 @@ function LiveKitInnerStage({
           </div>
         </div>
 
-        {/* Bottom-Left Clean Frosted Nameplate Pill */}
-        <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between pointer-events-none z-20">
+        {/* Bottom-Left Nameplate Pill + Bottom-Right MetroMeet Logo Watermark (Jolchap) */}
+        <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between gap-2 pointer-events-none z-20">
           <BroadcastNameplate
             name={pName}
             isLocal={isLocal}
@@ -959,6 +981,17 @@ function LiveKitInnerStage({
             isMuted={!isMicOn}
             isSpeaking={isSpeaking}
           />
+
+          {/* Subtle MetroMeet Brand Watermark on Right Side of Every Screen */}
+          <div
+            className={`pointer-events-none select-none shrink-0 transition-opacity ${
+              variant === 'thumb'
+                ? 'opacity-30 scale-[0.55] origin-bottom-right'
+                : 'opacity-40 scale-90 origin-bottom-right drop-shadow-[0_2px_10px_rgba(0,0,0,0.65)]'
+            }`}
+          >
+            <BrandLogo size="sm" showTagline={false} withSound={false} href="" />
+          </div>
         </div>
       </div>
     );
@@ -1053,20 +1086,14 @@ function LiveKitInnerStage({
               <ArrowLeft className="h-4 w-4" />
             </button>
 
-            {/* MetroMeet PRO Brand Logo */}
-            <div
-              className={`hidden sm:flex items-center px-3 py-1.5 rounded-2xl shrink-0 ${
-                isDarkStudio
-                  ? 'bg-[#091224]/80 border border-[#0066FF]/25 shadow-lg shadow-[#0066FF]/10'
-                  : 'bg-[#071022] border border-[#0066FF]/30 shadow-md'
-              }`}
-            >
+            {/* MetroMeet PRO Brand Logo (Transparent — no black box behind) */}
+            <div className="hidden sm:flex items-center shrink-0">
               <BrandLogo size="sm" showTagline={false} href="" />
             </div>
 
             <div className="h-6 w-px bg-white/10 hidden sm:block" />
 
-            {/* Title + Date & Live Duration */}
+            {/* Title + LIVE Pill + Date & Live Duration */}
             <div className="min-w-0">
               <div className="flex items-center gap-2.5 flex-wrap">
                 <h1
@@ -1076,7 +1103,14 @@ function LiveKitInnerStage({
                 >
                   {meetingTitle}
                 </h1>
-                <span className="hidden md:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-[#0066FF] to-[#00A3FF] text-white text-[11px] font-bold shadow-md shadow-[#0066FF]/30">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-rose-600/90 text-white text-[10px] font-black uppercase tracking-[0.14em] shadow-md shadow-rose-600/30 border border-rose-400/40">
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-80" />
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white" />
+                  </span>
+                  <span>LIVE</span>
+                </span>
+                <span className="hidden md:inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-gradient-to-r from-[#0066FF] to-[#00A3FF] text-white text-[11px] font-bold shadow-md shadow-[#0066FF]/30">
                   <Users className="h-3 w-3" />
                   <span>{isHost ? 'Host Meeting' : 'Live Meeting'}</span>
                 </span>
