@@ -49,6 +49,16 @@ import {
   Megaphone,
   Camera,
   Keyboard,
+  ArrowLeft,
+  Plus,
+  LayoutGrid,
+  Columns2,
+  MoreHorizontal,
+  Send,
+  Sun,
+  Moon,
+  Lock,
+  FileText,
 } from 'lucide-react';
 import { BrandLogo } from '@/components/ui/brand-logo';
 import { soundEngine } from '@/lib/audio/sound-engine';
@@ -99,7 +109,7 @@ function LiveKitInnerStage({
       soundEngine.playAdmittedChime();
       const latest = participants[participants.length - 1];
       if (latest && !latest.isLocal) {
-        toast.info(`🔔 ${latest.name || 'Participant'} joined the meeting`);
+        toast.info(`ðŸ”” ${latest.name || 'Participant'} joined the meeting`);
       }
     }
     prevCountRef.current = participants.length;
@@ -149,6 +159,18 @@ function LiveKitInnerStage({
 
   // Keyboard Shortcuts Modal
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
+
+  // Studio UI Preferences (Spotlight vs Grid, Light vs Dark Studio, More menu, inline sidebar chat)
+  const [layoutMode, setLayoutMode] = useState<'spotlight' | 'grid'>('spotlight');
+  const [isDarkStudio, setIsDarkStudio] = useState<boolean>(false);
+  const [showMoreMenu, setShowMoreMenu] = useState<boolean>(false);
+  const [sidebarChatInput, setSidebarChatInput] = useState<string>('');
+  const [showMobileSidebar, setShowMobileSidebar] = useState<boolean>(false);
+  const sidebarChatEndRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    sidebarChatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chatMessages]);
   const [activeReaction, setActiveReaction] = useState<string | null>(null);
   const [isCopied, setIsCopied] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
@@ -231,14 +253,14 @@ function LiveKitInnerStage({
           });
           if (data.raised && !participant?.isLocal) {
             soundEngine.playIntroChime();
-            toast.info(`✋ ${name} raised their hand!`);
+            toast.info(`âœ‹ ${name} raised their hand!`);
           }
         } else if (data.type === 'cohost-update' && data.identity) {
           setCoHosts((prev) => ({ ...prev, [data.identity]: Boolean(data.isCoHost) }));
           if (data.name) {
             toast.info(
               data.isCoHost
-                ? `🛡️ ${data.name} is now a Co-Host`
+                ? `ðŸ›¡ï¸ ${data.name} is now a Co-Host`
                 : `${data.name} is no longer a Co-Host`
             );
           }
@@ -258,15 +280,15 @@ function LiveKitInnerStage({
               room.localParticipant.setMicrophoneEnabled(Boolean(data.enabled)).catch(() => {});
               toast.info(
                 data.enabled
-                  ? `🎤 ${data.byName || 'Host'} turned ON your microphone`
-                  : `🔇 ${data.byName || 'Host'} muted your microphone`
+                  ? `ðŸŽ¤ ${data.byName || 'Host'} turned ON your microphone`
+                  : `ðŸ”‡ ${data.byName || 'Host'} muted your microphone`
               );
             } else if (data.media === 'cam') {
               room.localParticipant.setCameraEnabled(Boolean(data.enabled)).catch(() => {});
               toast.info(
                 data.enabled
-                  ? `📹 ${data.byName || 'Host'} turned ON your vedio`
-                  : `📷 ${data.byName || 'Host'} turned OFF your vedio`
+                  ? `ðŸ“¹ ${data.byName || 'Host'} turned ON your vedio`
+                  : `ðŸ“· ${data.byName || 'Host'} turned OFF your vedio`
               );
             }
           }
@@ -299,15 +321,15 @@ function LiveKitInnerStage({
             setUnreadChatCount((c) => c + 1);
             soundEngine.playKnockChime();
             if (incomingMsg.isPrivate) {
-              toast.info(`🔒 Private message from ${incomingMsg.sender}`);
+              toast.info(`ðŸ”’ Private message from ${incomingMsg.sender}`);
             } else {
-              toast.info(`💬 ${incomingMsg.sender}: ${incomingMsg.text.slice(0, 40)}`);
+              toast.info(`ðŸ’¬ ${incomingMsg.sender}: ${incomingMsg.text.slice(0, 40)}`);
             }
           }
         } else if (data.type === 'poll-create' && data.poll) {
           setActivePoll(data.poll);
           soundEngine.playIntroChime();
-          toast.info(`📊 New Live Poll: ${data.poll.question}`);
+          toast.info(`ðŸ“Š New Live Poll: ${data.poll.question}`);
         } else if (data.type === 'poll-vote' && data.pollId && data.optionId && data.voterId) {
           setActivePoll((prev) => {
             if (!prev || prev.id !== data.pollId) return prev;
@@ -623,7 +645,7 @@ function LiveKitInnerStage({
     setIsHandRaised(nextRaised);
     if (nextRaised) {
       soundEngine.playIntroChime();
-      toast.success('You raised your hand ✋');
+      toast.success('You raised your hand âœ‹');
     } else {
       toast.info('You lowered your hand');
     }
@@ -673,7 +695,7 @@ function LiveKitInnerStage({
   useEffect(() => {
     if (knocks.length > prevKnocksCount.current) {
       soundEngine.playKnockChime();
-      toast.info(`🔔 ${knocks[knocks.length - 1].displayName} is waiting to join`);
+      toast.info(`ðŸ”” ${knocks[knocks.length - 1].displayName} is waiting to join`);
     }
     prevKnocksCount.current = knocks.length;
   }, [knocks, toast]);
@@ -750,18 +772,204 @@ function LiveKitInnerStage({
   // Total participants count
   const totalCount = participants.length;
 
-  // Grid layout class based on participant count
+  const todayFormatted = useMemo(
+    () =>
+      new Date().toLocaleDateString('en-GB', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      }),
+    []
+  );
+
+  // Determine Spotlight (Featured) track vs Thumbnail strip tracks
+  const spotlightTrack = orderedTracks[0] || null;
+  const thumbnailTracks = orderedTracks.slice(1);
+
+  const remoteChatPeers = participants
+    .filter((p) => !p.isLocal)
+    .map((p) => ({ id: p.identity, name: p.name || p.identity || 'Participant' }));
+  const selectedDmPeer =
+    chatRecipientId !== 'ALL'
+      ? remoteChatPeers.find((p) => p.id === chatRecipientId) || null
+      : null;
+
+  const handleSidebarChatSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!sidebarChatInput.trim()) return;
+    handleSendChatMessage(sidebarChatInput.trim(), selectedDmPeer);
+    setSidebarChatInput('');
+  };
+
+  const handleToggleRecord = async () => {
+    if (recorder.isRecording) {
+      recorder.stopRecording();
+      toast.success('Recording saved! Download starting.');
+    } else {
+      const started = await recorder.startRecording();
+      if (started) {
+        toast.success('Recording started!');
+      } else {
+        toast.error('Recording cancelled or permission not granted.');
+      }
+    }
+  };
+
+  const handleExitClick = () => {
+    if (recorder.isRecording) {
+      recorder.stopRecording();
+    }
+    if (isHost && onEndMeeting) {
+      setShowHostExitModal(true);
+    } else {
+      onLeave();
+    }
+  };
+
   const getGridClasses = () => {
-    if (pinnedTrackKey) return 'w-full flex flex-col lg:flex-row gap-3 max-w-7xl mx-auto max-h-[75vh] items-stretch';
-    if (tracks.length <= 1) return 'max-w-4xl w-full aspect-video mx-auto max-h-[75vh]';
-    if (tracks.length === 2) return 'w-full grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 max-w-6xl mx-auto max-h-[75vh] overflow-y-auto';
-    if (tracks.length <= 4) return 'w-full grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3.5 max-w-6xl mx-auto max-h-[75vh] overflow-y-auto';
-    if (tracks.length <= 9) return 'w-full grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3 max-w-7xl mx-auto max-h-[75vh] overflow-y-auto';
-    return 'w-full grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 max-w-7xl max-h-[75vh] overflow-y-auto p-1 mx-auto';
+    if (orderedTracks.length <= 1) return 'w-full h-full max-w-4xl mx-auto';
+    if (orderedTracks.length === 2) return 'w-full h-full grid grid-cols-1 md:grid-cols-2 gap-3.5';
+    if (orderedTracks.length <= 4) return 'w-full h-full grid grid-cols-1 sm:grid-cols-2 gap-3.5';
+    if (orderedTracks.length <= 9) return 'w-full h-full grid grid-cols-2 sm:grid-cols-3 gap-3';
+    return 'w-full h-full grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5';
+  };
+
+  const renderVideoTile = (
+    trackRef: (typeof orderedTracks)[number],
+    variant: 'main' | 'thumb' | 'grid'
+  ) => {
+    const participant = trackRef.participant;
+    const isLocal = participant.isLocal;
+    const trackKey = `${participant.identity}-${trackRef.source}`;
+    const isPinned = pinnedTrackKey === trackKey;
+    const pName = participant.name || participant.identity || (isLocal ? displayName : 'Participant');
+    const hasVideo =
+      trackRef.publication && !trackRef.publication.isMuted && trackRef.publication.track;
+    const isSpeaking = participant.isSpeaking;
+    const isMicOn = participant.isMicrophoneEnabled;
+
+    return (
+      <div
+        key={trackKey}
+        onClick={variant === 'thumb' ? () => setPinnedTrackKey(trackKey) : undefined}
+        className={`relative overflow-hidden flex items-center justify-center transition-all duration-300 group ${
+          variant === 'main'
+            ? 'w-full h-full rounded-[26px] shadow-md'
+            : variant === 'thumb'
+            ? 'h-full aspect-video rounded-2xl cursor-pointer hover:scale-[1.02] shadow-sm shrink-0'
+            : 'w-full h-full min-h-[180px] rounded-2xl shadow-sm'
+        } ${
+          isDarkStudio ? 'bg-[#101828]' : 'bg-slate-900'
+        } ${
+          isSpeaking
+            ? 'ring-[3px] ring-emerald-400 shadow-lg shadow-emerald-500/20'
+            : isDarkStudio
+            ? 'ring-1 ring-white/10'
+            : 'ring-1 ring-slate-200/80'
+        }`}
+      >
+        {/* Video Feed or Clean Avatar */}
+        {hasVideo ? (
+          <VideoTrack
+            trackRef={trackRef}
+            className={`w-full h-full object-cover transition-transform duration-300 ${
+              isLocal && trackRef.source === Track.Source.Camera && isMirrored ? 'scale-x-[-1]' : ''
+            }`}
+          />
+        ) : (
+          <div
+            className={`absolute inset-0 flex flex-col items-center justify-center gap-2 ${
+              isDarkStudio
+                ? 'bg-gradient-to-br from-[#131e36] to-[#0b1220]'
+                : 'bg-gradient-to-br from-slate-200 via-slate-100 to-slate-200'
+            }`}
+          >
+            <div
+              className={`${
+                variant === 'thumb' ? 'h-12 w-12 text-base' : 'h-20 w-20 text-2xl'
+              } rounded-full bg-gradient-to-tr from-[#3B82F6] to-[#2563EB] text-white font-bold flex items-center justify-center shadow-lg ring-4 ${
+                isDarkStudio ? 'ring-white/10' : 'ring-white'
+              }`}
+            >
+              {pName.slice(0, 2).toUpperCase()}
+            </div>
+            {variant !== 'thumb' && (
+              <p
+                className={`text-xs font-semibold ${
+                  isDarkStudio ? 'text-slate-300' : 'text-slate-600'
+                }`}
+              >
+                {pName} {isLocal ? '(You)' : ''}
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Top-Left Hand Raise Badge */}
+        {raisedHands[participant.identity] && (
+          <div className="absolute top-3 left-3 z-20 flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#3B82F6] text-white font-bold text-[11px] shadow-md animate-bounce">
+            <span>âœ‹</span>
+            {variant !== 'thumb' && <span>Hand Raised</span>}
+          </div>
+        )}
+
+        {/* Top-Right Circular Action Badges (Pin + Mic Status, matching reference design) */}
+        <div className="absolute top-3 right-3 z-20 flex items-center gap-2">
+          {variant !== 'thumb' && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setPinnedTrackKey(isPinned ? null : trackKey);
+              }}
+              className={`h-9 w-9 rounded-full flex items-center justify-center shadow-md transition-all cursor-pointer active:scale-95 ${
+                isPinned
+                  ? 'bg-emerald-500 text-white'
+                  : 'bg-white/95 hover:bg-white text-emerald-600'
+              }`}
+              title={isPinned ? 'Unpin' : 'Pin to Spotlight'}
+            >
+              {isPinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
+            </button>
+          )}
+          <div
+            className={`${
+              variant === 'thumb' ? 'h-7 w-7' : 'h-9 w-9'
+            } rounded-full flex items-center justify-center shadow-md ${
+              isMicOn
+                ? 'bg-[#2563EB] text-white'
+                : 'bg-white/95 text-slate-700'
+            }`}
+            title={isMicOn ? 'Mic Active' : 'Muted'}
+          >
+            {isMicOn ? (
+              <Mic className={variant === 'thumb' ? 'h-3.5 w-3.5' : 'h-4 w-4'} />
+            ) : (
+              <MicOff className={variant === 'thumb' ? 'h-3.5 w-3.5 text-rose-500' : 'h-4 w-4 text-rose-500'} />
+            )}
+          </div>
+        </div>
+
+        {/* Bottom-Left Clean Frosted Nameplate Pill */}
+        <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between pointer-events-none z-20">
+          <BroadcastNameplate
+            name={pName}
+            isLocal={isLocal}
+            isHost={isLocal && isHost}
+            isCoHost={Boolean(coHosts[participant.identity])}
+            isMuted={!isMicOn}
+            isSpeaking={isSpeaking}
+          />
+        </div>
+      </div>
+    );
   };
 
   return (
-    <div className="h-screen w-screen bg-[#06080e] text-slate-100 flex flex-col overflow-hidden select-none relative">
+    <div
+      className={`h-screen w-screen flex overflow-hidden select-none relative transition-colors duration-300 ${
+        isDarkStudio ? 'bg-[#080d18] text-slate-100' : 'bg-[#F4F6FA] text-slate-900'
+      }`}
+    >
       {/* Floating Reaction Animation */}
       {activeReaction && (
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-8xl z-50 animate-bounce pointer-events-none drop-shadow-2xl">
@@ -771,23 +979,29 @@ function LiveKitInnerStage({
 
       {/* Waiting Room Knocks Notification for Host */}
       {knocks.length > 0 && (
-        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-50 bg-[#0d1322]/95 border border-[#0066FF]/40 rounded-2xl p-3 shadow-2xl backdrop-blur-xl flex items-center gap-4 animate-in fade-in slide-in-from-top-4">
+        <div
+          className={`absolute top-5 left-1/2 -translate-x-1/2 z-50 rounded-2xl p-3 shadow-2xl backdrop-blur-xl flex items-center gap-4 border animate-in fade-in slide-in-from-top-4 ${
+            isDarkStudio
+              ? 'bg-[#0d1526]/95 border-[#0066FF]/40 text-white'
+              : 'bg-white/95 border-slate-200 text-slate-800'
+          }`}
+        >
           <div className="flex items-center gap-2">
-            <Users className="h-4 w-4 text-[#FF7A00] animate-pulse" />
-            <span className="text-xs font-semibold text-white">
-              <strong className="text-[#388BFF]">{knocks[0].displayName}</strong> wants to join this meeting
+            <Users className="h-4 w-4 text-[#FF5B37] animate-pulse" />
+            <span className="text-xs font-semibold">
+              <strong className="text-[#2563EB]">{knocks[0].displayName}</strong> wants to join
             </span>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={() => handleAdmit(knocks[0].id)}
-              className="px-3 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-md active:scale-95 cursor-pointer"
+              className="px-3 py-1 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold transition-all shadow-sm cursor-pointer"
             >
               Admit
             </button>
             <button
               onClick={() => handleDeny(knocks[0].id)}
-              className="px-3 py-1 rounded-xl bg-rose-600/20 hover:bg-rose-600/40 text-rose-300 border border-rose-500/30 text-xs font-semibold transition-all active:scale-95 cursor-pointer"
+              className="px-3 py-1 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-500 text-xs font-semibold transition-all cursor-pointer"
             >
               Deny
             </button>
@@ -795,578 +1009,874 @@ function LiveKitInnerStage({
         </div>
       )}
 
-      {/* Top Navigation Bar */}
-      <header className="h-14 sm:h-16 px-4 bg-[#0c101c]/90 border-b border-white/[0.08] backdrop-blur-md flex items-center justify-between z-20 shrink-0">
-        <div className="flex items-center gap-3">
-          <BrandLogo size="sm" showTagline={false} />
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-sm sm:text-base font-bold text-white tracking-tight truncate max-w-[140px] sm:max-w-xs">
-                {meetingTitle}
-              </h2>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#0066FF]/20 text-[#388BFF] border border-[#0066FF]/40 flex items-center gap-1">
-                <Sparkles className="h-3 w-3 text-cyan-400" />
-                Enterprise Cloud Engine
-              </span>
-            </div>
-            <div className="flex items-center gap-2 text-[11px] text-gray-400 font-mono">
-              <span className="text-emerald-400 flex items-center gap-1 font-semibold">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-ping" />
-                HD Audio & Vedio
-              </span>
-              <span>•</span>
-              <span className="text-gray-300 font-semibold">{formatDuration(callDuration)}</span>
-            </div>
-          </div>
-        </div>
+      {/* ===================================================================== */}
+      {/* LEFT MAIN STAGE COLUMN                                                */}
+      {/* ===================================================================== */}
+      <div className="flex-1 flex flex-col min-w-0 h-full px-4 sm:px-6 py-4 gap-3.5 overflow-hidden relative">
+        {/* 1. Top Header Bar (Matching Reference Layout) */}
+        <header className="flex items-center justify-between gap-3 shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            {/* Circular Back Button */}
+            <button
+              onClick={handleExitClick}
+              className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-sm active:scale-95 ${
+                isDarkStudio
+                  ? 'bg-white/[0.07] hover:bg-white/[0.14] text-white border border-white/10'
+                  : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/80'
+              }`}
+              title="Leave / Return to Dashboard"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </button>
 
-        {/* Center: Live Call Duration Pill */}
-        <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-black/50 border border-white/10 text-xs font-mono">
-          <Radio className="h-3.5 w-3.5 text-rose-500 animate-pulse" />
-          <span className="text-rose-400 font-bold uppercase tracking-wider text-[10px]">LIVE</span>
-          <span className="text-gray-500">|</span>
-          <span className="text-white font-semibold">{formatDuration(callDuration)}</span>
-        </div>
-
-        {/* Center/Right: Active Recording Indicator */}
-        {recorder.isRecording && (
-          <div className="flex items-center gap-2 px-3 py-1 rounded-2xl bg-rose-600/20 border border-rose-500/40 text-xs font-mono animate-pulse">
-            <span className="h-2 w-2 rounded-full bg-rose-500 animate-ping" />
-            <span className="text-rose-400 font-extrabold text-[11px]">REC {recorder.recordingDuration}</span>
-          </div>
-        )}
-
-        {/* Right Controls */}
-        <div className="flex items-center gap-2">
-          {/* Snapshot Capture */}
-          <button
-            onClick={handleCaptureSnapshot}
-            className="h-8 w-8 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.08] text-gray-300 hover:text-white flex items-center justify-center transition-all cursor-pointer shadow-sm active:scale-95"
-            title="Capture Live Snapshot (PNG)"
-          >
-            <Camera className="h-3.5 w-3.5 text-cyan-300" />
-          </button>
-
-          {/* Keyboard Shortcuts */}
-          <button
-            onClick={() => setShowShortcutsModal(true)}
-            className="hidden sm:flex h-8 w-8 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.08] text-gray-300 hover:text-white items-center justify-center transition-all cursor-pointer shadow-sm active:scale-95"
-            title="Keyboard Shortcuts (?)"
-          >
-            <Keyboard className="h-3.5 w-3.5" />
-          </button>
-
-          {/* Fullscreen Toggle */}
-          <button
-            onClick={toggleFullscreen}
-            className="h-8 w-8 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.08] text-gray-300 hover:text-white flex items-center justify-center transition-all cursor-pointer shadow-sm active:scale-95"
-            title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
-          >
-            {isFullscreen ? <Minimize className="h-3.5 w-3.5" /> : <Maximize className="h-3.5 w-3.5" />}
-          </button>
-
-          <button
-            onClick={copyMeetingLink}
-            className="px-3 py-1.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.08] text-gray-300 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95"
-            title="Copy Meeting Link"
-          >
-            {isCopied ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
-            <span className="hidden sm:inline">{isCopied ? 'Copied' : 'Share Link'}</span>
-          </button>
-        </div>
-      </header>
-
-      {/* Main Video Stage */}
-      <main className="flex-1 overflow-hidden p-3 sm:p-5 flex items-center justify-center relative">
-        {/* TV Broadcast Breaking Announcement Banner */}
-        {broadcastBanner && (
-          <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 max-w-3xl w-[94%] rounded-2xl overflow-hidden shadow-2xl border border-[#FF7A00]/50 bg-[#070e1d]/95 backdrop-blur-xl flex items-stretch animate-in fade-in slide-in-from-top-3 duration-300">
-            <div className="px-3.5 py-2 bg-gradient-to-r from-[#FF7A00] to-rose-600 text-white text-[10px] sm:text-xs font-black uppercase tracking-widest flex items-center gap-1.5 shrink-0">
-              <Megaphone className="h-3.5 w-3.5 animate-pulse" />
-              <span>ON AIR</span>
-            </div>
-            <div className="flex-1 px-4 py-2 flex items-center justify-between gap-3 min-w-0">
-              <p className="text-xs sm:text-sm font-bold text-white truncate">
-                {broadcastBanner.text}
-              </p>
-              {hasHostPrivileges && (
-                <button
-                  onClick={() => handleSetBroadcastBanner(null)}
-                  className="p-1 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white cursor-pointer shrink-0"
-                  title="Clear Broadcast Banner"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Floating Live Poll Voting Card */}
-        {activePoll && (
-          <div className="absolute bottom-4 right-4 z-30 w-80 max-w-[92vw] rounded-3xl bg-[#091222]/96 border border-[#0066FF]/40 backdrop-blur-2xl shadow-2xl p-4 space-y-3 animate-in fade-in slide-in-from-bottom-4 duration-200">
-            <div className="flex items-start justify-between gap-2">
-              <div className="space-y-0.5 min-w-0">
-                <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-[#388BFF]">
-                  <BarChart2 className="h-3.5 w-3.5 text-[#FF7A00]" />
-                  <span>Live Poll • By {activePoll.createdBy}</span>
-                </div>
-                <h4 className="text-xs sm:text-sm font-black text-white leading-snug">
-                  {activePoll.question}
-                </h4>
-              </div>
-              {hasHostPrivileges && (
-                <button
-                  onClick={handleClosePoll}
-                  className="p-1 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white cursor-pointer"
-                  title="Close Poll for Everyone"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              {(() => {
-                const totalVotes = activePoll.options.reduce((s, o) => s + o.votes.length, 0);
-                const myId = localParticipant?.identity || 'local';
-                return activePoll.options.map((opt) => {
-                  const pct = totalVotes > 0 ? Math.round((opt.votes.length / totalVotes) * 100) : 0;
-                  const voted = opt.votes.includes(myId);
-                  return (
-                    <button
-                      key={opt.id}
-                      onClick={() => handleVotePoll(opt.id)}
-                      className={`w-full text-left relative overflow-hidden rounded-xl border p-2.5 transition-all cursor-pointer ${
-                        voted
-                          ? 'border-[#0066FF] bg-[#0066FF]/15'
-                          : 'border-white/[0.1] bg-white/[0.03] hover:border-[#388BFF]/50'
-                      }`}
-                    >
-                      <div
-                        className="absolute inset-y-0 left-0 bg-gradient-to-r from-[#0066FF]/30 to-[#FF7A00]/20 transition-all duration-500"
-                        style={{ width: `${pct}%` }}
-                      />
-                      <div className="relative z-10 flex items-center justify-between gap-2 text-xs">
-                        <span className="font-bold text-white truncate">{opt.text}</span>
-                        <span className="font-mono text-[11px] font-bold text-cyan-300 shrink-0">
-                          {pct}% ({opt.votes.length})
-                        </span>
-                      </div>
-                    </button>
-                  );
-                });
-              })()}
-            </div>
-          </div>
-        )}
-        <div className="w-full h-full flex items-center justify-center">
-          <div className={getGridClasses()}>
-            {orderedTracks.map((trackRef) => {
-              const participant = trackRef.participant;
-              const isLocal = participant.isLocal;
-              const trackKey = `${participant.identity}-${trackRef.source}`;
-              const isPinned = pinnedTrackKey === trackKey;
-              const pName = participant.name || participant.identity || (isLocal ? displayName : 'Participant');
-              const hasVideo = trackRef.publication && !trackRef.publication.isMuted && trackRef.publication.track;
-              const isSpeaking = participant.isSpeaking;
-
-              return (
-                <div
-                  key={trackKey}
-                  className={`relative aspect-video rounded-3xl bg-[#0c101c] overflow-hidden flex items-center justify-center transition-all duration-300 group ${
-                    pinnedTrackKey && isPinned
-                      ? 'flex-1 w-full lg:max-h-[75vh] ring-2 ring-[#0066FF] shadow-2xl'
-                      : pinnedTrackKey
-                      ? 'w-full lg:w-64 shrink-0 border border-white/10'
-                      : 'w-full'
-                  } ${
-                    isSpeaking
-                      ? 'ring-4 ring-emerald-500 shadow-2xl shadow-emerald-500/25'
-                      : 'border-2 border-white/[0.08] hover:border-indigo-500/40 shadow-xl'
+            {/* Title + Date & Live Duration */}
+            <div className="min-w-0">
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <h1
+                  className={`text-base sm:text-xl font-extrabold tracking-tight truncate max-w-[180px] sm:max-w-sm ${
+                    isDarkStudio ? 'text-white' : 'text-slate-900'
                   }`}
                 >
-                  {/* Video Track Element with Mirroring for Local Camera */}
-                  {hasVideo ? (
-                    <VideoTrack
-                      trackRef={trackRef}
-                      className={`w-full h-full object-cover transition-transform duration-300 ${
-                        isLocal && trackRef.source === Track.Source.Camera && isMirrored
-                          ? 'scale-x-[-1]'
-                          : ''
-                      }`}
-                    />
-                  ) : (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center space-y-3 bg-[#0a0d16]">
-                      <div className="h-20 w-20 rounded-full bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center text-2xl font-black text-white shadow-xl border border-white/10">
-                        {pName.slice(0, 2).toUpperCase()}
-                      </div>
-                      <p className="text-xs font-bold text-gray-200">{pName} {isLocal ? '(You)' : ''}</p>
-                      <p className="text-[10px] text-gray-400">Camera stream paused</p>
-                    </div>
-                  )}
-
-                  {/* Top Left Badges: Hand Raise, Res, Mirror, Spotlight */}
-                  <div className="absolute top-3 left-3 flex flex-wrap items-center gap-1.5 z-20 pointer-events-none">
-                    {raisedHands[participant.identity] && (
-                      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-500 text-slate-950 font-bold text-[10px] sm:text-[11px] shadow-lg animate-bounce">
-                        <span>✋</span>
-                        <span>Hand Raised</span>
-                      </div>
-                    )}
-                    <span className="px-2 py-0.5 rounded-lg bg-black/60 backdrop-blur-md border border-white/10 text-[10px] font-mono text-cyan-400 font-bold">
-                      {trackRef.source === Track.Source.ScreenShare ? 'Screen Share' : '1080p HD'}
+                  {meetingTitle}
+                </h1>
+                <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#3B82F6] text-white text-[11px] font-bold shadow-sm shadow-blue-500/25">
+                  <Users className="h-3 w-3" />
+                  <span>{isHost ? 'Host Meeting' : 'Live Meeting'}</span>
+                </span>
+              </div>
+              <div
+                className={`flex items-center gap-2 text-xs font-medium mt-0.5 ${
+                  isDarkStudio ? 'text-slate-400' : 'text-slate-500'
+                }`}
+              >
+                <span>{todayFormatted}</span>
+                <span>â€¢</span>
+                <span className="font-mono font-semibold text-emerald-500">
+                  {formatDuration(callDuration)}
+                </span>
+                {recorder.isRecording && (
+                  <>
+                    <span>â€¢</span>
+                    <span className="text-rose-500 font-bold animate-pulse font-mono">
+                      REC {recorder.recordingDuration}
                     </span>
-                    {isPinned && (
-                      <span className="px-2 py-0.5 rounded-lg bg-[#0066FF] text-white text-[10px] font-bold flex items-center gap-1">
-                        <Pin className="h-2.5 w-2.5" /> Spotlight
-                      </span>
-                    )}
-                    {isLocal && trackRef.source === Track.Source.Camera && isMirrored && (
-                      <span className="hidden sm:inline-block px-1.5 py-0.5 rounded-lg bg-black/60 backdrop-blur-md border border-white/10 text-[9px] font-mono text-gray-300">
-                        Mirrored
-                      </span>
-                    )}
-                  </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
 
-                  {/* Top Right Quick Actions (visible on hover) */}
-                  <div className="absolute top-3 right-3 flex items-center gap-1.5 z-30 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
-                      onClick={() => setPinnedTrackKey(isPinned ? null : trackKey)}
-                      className="h-8 w-8 rounded-xl bg-black/80 hover:bg-[#0066FF] border border-white/15 text-white flex items-center justify-center transition-all cursor-pointer shadow-lg active:scale-90"
-                      title={isPinned ? 'Remove Spotlight' : 'Pin to Stage'}
-                    >
-                      {isPinned ? <PinOff className="h-4 w-4 text-amber-400" /> : <Pin className="h-4 w-4" />}
-                    </button>
-                    {isLocal && trackRef.source === Track.Source.Camera && (
-                      <button
-                        onClick={() => {
-                          const next = !isMirrored;
-                          setIsMirrored(next);
-                          toast.info(next ? 'Mirror camera enabled' : 'Mirror camera disabled');
-                        }}
-                        className="h-8 w-8 rounded-xl bg-black/80 hover:bg-[#0066FF] border border-white/15 text-white flex items-center justify-center transition-all cursor-pointer shadow-lg active:scale-90"
-                        title={isMirrored ? 'Show Un-mirrored Camera' : 'Show Mirrored Camera'}
-                      >
-                        <FlipHorizontal className="h-4 w-4" />
-                      </button>
-                    )}
-                  </div>
+          {/* Right Header Studio Utilities: Snapshot, Mirror, Theme, Fullscreen, Record Dot */}
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={handleCaptureSnapshot}
+              className={`h-9 w-9 rounded-full flex items-center justify-center transition-all cursor-pointer shadow-sm active:scale-95 ${
+                isDarkStudio
+                  ? 'bg-white/[0.07] hover:bg-white/[0.14] text-cyan-300 border border-white/10'
+                  : 'bg-white hover:bg-slate-50 text-slate-600 border border-slate-200/80'
+              }`}
+              title="Capture Live Snapshot (PNG)"
+            >
+              <Camera className="h-4 w-4" />
+            </button>
 
-                  {/* Top Right Live Badge (fades on hover) */}
-                  <div className="absolute top-3 right-3 group-hover:opacity-0 transition-opacity flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-black/75 backdrop-blur-md border border-emerald-500/35 text-[11px] font-bold text-white shadow-lg pointer-events-none">
-                    <span className="flex h-2 w-2 relative">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-                    </span>
-                    <span className="tracking-wider uppercase text-emerald-400 font-extrabold text-[10px]">LIVE</span>
-                  </div>
+            <button
+              onClick={() => {
+                const next = !isMirrored;
+                setIsMirrored(next);
+                toast.info(next ? 'Mirror camera enabled' : 'Mirror camera disabled');
+              }}
+              className={`h-9 w-9 rounded-full flex items-center justify-center transition-all cursor-pointer shadow-sm active:scale-95 ${
+                isMirrored
+                  ? 'bg-[#3B82F6]/15 text-[#2563EB] border border-[#3B82F6]/35'
+                  : isDarkStudio
+                  ? 'bg-white/[0.07] text-slate-300 border border-white/10'
+                  : 'bg-white text-slate-500 border border-slate-200/80'
+              }`}
+              title={isMirrored ? 'Disable Mirror Camera' : 'Enable Mirror Camera'}
+            >
+              <FlipHorizontal className="h-4 w-4" />
+            </button>
 
-                  {/* Bottom TV Broadcast Lower-Third Nameplate */}
-                  <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between pointer-events-none z-20">
-                    <BroadcastNameplate
-                      name={pName}
-                      isLocal={isLocal}
-                      isHost={isLocal && isHost}
-                      isCoHost={Boolean(coHosts[participant.identity])}
-                      isMuted={!participant.isMicrophoneEnabled}
-                      isSpeaking={isSpeaking}
-                    />
+            <button
+              onClick={() => setIsDarkStudio((d) => !d)}
+              className={`h-9 w-9 rounded-full flex items-center justify-center transition-all cursor-pointer shadow-sm active:scale-95 ${
+                isDarkStudio
+                  ? 'bg-white/[0.07] hover:bg-white/[0.14] text-amber-300 border border-white/10'
+                  : 'bg-white hover:bg-slate-50 text-slate-600 border border-slate-200/80'
+              }`}
+              title={isDarkStudio ? 'Switch to Light Studio' : 'Switch to Dark Studio'}
+            >
+              {isDarkStudio ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            </button>
+
+            <button
+              onClick={toggleFullscreen}
+              className={`hidden sm:flex h-9 w-9 rounded-full items-center justify-center transition-all cursor-pointer shadow-sm active:scale-95 ${
+                isDarkStudio
+                  ? 'bg-white/[0.07] hover:bg-white/[0.14] text-slate-200 border border-white/10'
+                  : 'bg-white hover:bg-slate-50 text-slate-600 border border-slate-200/80'
+              }`}
+              title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
+            >
+              {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
+            </button>
+
+            {/* Iconic Circular Record Button (top-right coral dot matching reference) */}
+            <button
+              onClick={handleToggleRecord}
+              className={`h-10 w-10 rounded-full flex items-center justify-center transition-all cursor-pointer shadow-md active:scale-95 ${
+                recorder.isRecording
+                  ? 'bg-rose-500 text-white animate-pulse ring-4 ring-rose-500/25'
+                  : isDarkStudio
+                  ? 'bg-white/[0.1] hover:bg-white/[0.16] border border-white/15'
+                  : 'bg-white hover:bg-slate-50 border border-slate-200/80'
+              }`}
+              title={recorder.isRecording ? 'Stop Recording' : 'Record Vedio & Audio'}
+            >
+              <span
+                className={`h-4 w-4 rounded-full flex items-center justify-center ${
+                  recorder.isRecording ? 'bg-white' : 'bg-[#FF5B37]'
+                }`}
+              >
+                <span
+                  className={`h-1.5 w-1.5 rounded-full ${
+                    recorder.isRecording ? 'bg-rose-600' : 'bg-white'
+                  }`}
+                />
+              </span>
+            </button>
+          </div>
+        </header>
+
+        {/* 2. Sub-Toolbar Row: Attendee Count + "+ Add People" | Layout Switcher */}
+        <div className="flex items-center justify-between gap-3 shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold shadow-sm ${
+                isDarkStudio
+                  ? 'bg-white/[0.07] text-slate-200 border border-white/10'
+                  : 'bg-white text-slate-700 border border-slate-200/80'
+              }`}
+            >
+              <Users className="h-3.5 w-3.5 text-slate-400" />
+              <span>{totalCount}</span>
+            </div>
+
+            <button
+              onClick={copyMeetingLink}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#22A07B] hover:bg-[#1C8A69] text-white text-xs font-bold shadow-sm shadow-emerald-600/20 transition-all cursor-pointer active:scale-95"
+              title="Copy Invite Link to Add People"
+            >
+              {isCopied ? <Check className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
+              <span>{isCopied ? 'Link Copied' : 'Add People'}</span>
+            </button>
+          </div>
+
+          {/* Right Layout Switcher (Grid vs Spotlight + Draw Quick Trigger) */}
+          <div
+            className={`inline-flex items-center gap-1 p-1 rounded-full shadow-sm ${
+              isDarkStudio
+                ? 'bg-white/[0.06] border border-white/10'
+                : 'bg-white border border-slate-200/80'
+            }`}
+          >
+            <button
+              onClick={() => setLayoutMode('grid')}
+              className={`h-8 w-8 rounded-full flex items-center justify-center transition-all cursor-pointer ${
+                layoutMode === 'grid'
+                  ? 'bg-[#3B82F6] text-white shadow-sm'
+                  : isDarkStudio
+                  ? 'text-slate-400 hover:text-white'
+                  : 'text-slate-400 hover:text-slate-700'
+              }`}
+              title="Grid View"
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => setLayoutMode('spotlight')}
+              className={`h-8 w-8 rounded-full flex items-center justify-center transition-all cursor-pointer ${
+                layoutMode === 'spotlight'
+                  ? 'bg-[#3B82F6] text-white shadow-sm'
+                  : isDarkStudio
+                  ? 'text-slate-400 hover:text-white'
+                  : 'text-slate-400 hover:text-slate-700'
+              }`}
+              title="Speaker Spotlight View"
+            >
+              <Columns2 className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* 3. Main Video Stage (Spotlight + Thumbnails OR Grid View) */}
+        <main className="flex-1 min-h-0 flex flex-col gap-3 relative overflow-hidden">
+          {/* On-Air Announcement Banner */}
+          {broadcastBanner && (
+            <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 max-w-2xl w-[92%] rounded-2xl overflow-hidden shadow-xl border border-[#FF5B37]/40 bg-slate-900/95 backdrop-blur-xl flex items-stretch">
+              <div className="px-3 py-1.5 bg-[#FF5B37] text-white text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 shrink-0">
+                <Megaphone className="h-3.5 w-3.5 animate-pulse" />
+                <span>Announcement</span>
+              </div>
+              <div className="flex-1 px-3.5 py-1.5 flex items-center justify-between gap-2 min-w-0">
+                <p className="text-xs font-bold text-white truncate">{broadcastBanner.text}</p>
+                {hasHostPrivileges && (
+                  <button
+                    onClick={() => handleSetBroadcastBanner(null)}
+                    className="p-1 text-slate-400 hover:text-white cursor-pointer"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Floating Live Poll Card */}
+          {activePoll && (
+            <div
+              className={`absolute bottom-4 right-4 z-30 w-80 max-w-[92%] rounded-3xl border shadow-2xl p-4 space-y-3 backdrop-blur-2xl ${
+                isDarkStudio
+                  ? 'bg-[#0d1526]/95 border-[#3B82F6]/40 text-white'
+                  : 'bg-white/96 border-slate-200 text-slate-900'
+              }`}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="space-y-0.5 min-w-0">
+                  <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-[#2563EB]">
+                    <BarChart2 className="h-3.5 w-3.5 text-[#FF5B37]" />
+                    <span>Live Poll â€¢ {activePoll.createdBy}</span>
                   </div>
+                  <h4 className="text-xs sm:text-sm font-extrabold leading-snug">
+                    {activePoll.question}
+                  </h4>
                 </div>
-              );
-            })}
-          </div>
-        </div>
-      </main>
+                {hasHostPrivileges && (
+                  <button
+                    onClick={handleClosePoll}
+                    className="p-1 rounded-lg hover:bg-slate-500/10 text-slate-400 cursor-pointer"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+              <div className="space-y-1.5">
+                {(() => {
+                  const totalVotes = activePoll.options.reduce((s, o) => s + o.votes.length, 0);
+                  const myId = localParticipant?.identity || 'local';
+                  return activePoll.options.map((opt) => {
+                    const pct = totalVotes > 0 ? Math.round((opt.votes.length / totalVotes) * 100) : 0;
+                    const voted = opt.votes.includes(myId);
+                    return (
+                      <button
+                        key={opt.id}
+                        onClick={() => handleVotePoll(opt.id)}
+                        className={`w-full text-left relative overflow-hidden rounded-xl border p-2.5 transition-all cursor-pointer ${
+                          voted
+                            ? 'border-[#3B82F6] bg-[#3B82F6]/10'
+                            : isDarkStudio
+                            ? 'border-white/10 bg-white/[0.04]'
+                            : 'border-slate-200 bg-slate-50 hover:border-[#3B82F6]/50'
+                        }`}
+                      >
+                        <div
+                          className="absolute inset-y-0 left-0 bg-[#3B82F6]/20 transition-all duration-500"
+                          style={{ width: `${pct}%` }}
+                        />
+                        <div className="relative z-10 flex items-center justify-between gap-2 text-xs">
+                          <span className="font-bold truncate">{opt.text}</span>
+                          <span className="font-mono text-[11px] font-bold text-[#2563EB] shrink-0">
+                            {pct}% ({opt.votes.length})
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  });
+                })()}
+              </div>
+            </div>
+          )}
 
-      {/* Live Attendees Ticker Ribbon */}
-      <div className="h-9 px-3 sm:px-4 bg-[#050a14]/95 border-t border-b border-[#0066FF]/25 backdrop-blur-md flex items-center overflow-hidden z-20 shrink-0 select-none">
-        <div className="flex items-center gap-2 pr-3 sm:pr-4 border-r border-white/10 shrink-0 z-10 bg-[#050a14] text-xs font-bold text-[#388BFF]">
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#0066FF] opacity-75" />
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-[#0066FF]" />
-          </span>
-          <span className="uppercase tracking-wider font-mono text-[10px] sm:text-[11px]">
-            Attendees ({totalCount}/50)
-          </span>
-        </div>
-        <div className="flex-1 overflow-hidden relative ml-3">
-          <div className="animate-marquee flex items-center gap-8 text-xs text-gray-300">
-            {[0, 1].map((copyIndex) => (
-              <React.Fragment key={copyIndex}>
-                {participants.map((p) => {
-                  const pName = p.name || p.identity || 'Participant';
-                  const initials = pName.slice(0, 2).toUpperCase();
-                  const isLocal = p.isLocal;
+          {layoutMode === 'spotlight' && spotlightTrack ? (
+            <>
+              {/* Large Main Spotlight Stage */}
+              <div className="flex-1 min-h-0">
+                {renderVideoTile(spotlightTrack, 'main')}
+              </div>
 
-                  return (
-                    <React.Fragment key={`${copyIndex}-${p.identity}`}>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className="h-5 w-5 rounded-full bg-gradient-to-tr from-[#0066FF] to-[#0047AB] text-white font-bold text-[10px] flex items-center justify-center shadow-sm">
-                          {initials}
-                        </span>
-                        <span className="font-semibold text-white">
-                          {pName} {isLocal ? '(You)' : ''}
-                        </span>
-                        <span className="text-[10px] text-emerald-400 font-mono font-semibold">Active</span>
-                      </div>
-                      <span className="text-gray-600 font-black">•</span>
-                    </React.Fragment>
-                  );
-                })}
-              </React.Fragment>
-            ))}
-          </div>
-        </div>
-      </div>
+              {/* Bottom Thumbnail Filmstrip Row (when 2+ tiles exist) */}
+              {thumbnailTracks.length > 0 && (
+                <div className="h-28 sm:h-32 shrink-0 flex items-center gap-3 overflow-x-auto pb-1">
+                  {thumbnailTracks.map((t) => renderVideoTile(t, 'thumb'))}
+                </div>
+              )}
+            </>
+          ) : (
+            <div className={`${getGridClasses()} overflow-y-auto`}>
+              {orderedTracks.map((t) => renderVideoTile(t, 'grid'))}
+            </div>
+          )}
+        </main>
 
-      {/* Bottom Floating Control Bar */}
-      <footer className="h-18 px-4 bg-[#0c101c]/95 border-t border-white/[0.08] backdrop-blur-lg flex items-center justify-between z-20 shrink-0">
-        <div className="hidden md:flex items-center gap-3 text-xs text-gray-400">
-          <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="font-mono text-[11px]">Enterprise SFU • 0% Packet Loss</span>
-        </div>
-
-        {/* Center Controls */}
-        <div className="flex items-center gap-2 sm:gap-3 mx-auto">
-          {/* Mic Toggle */}
+        {/* 4. Bottom Control Bar (Exact Reference Aesthetic: Circular Buttons + Center Coral "End Meeting") */}
+        <footer className="pt-1 pb-1 flex items-center justify-center gap-2.5 sm:gap-3.5 shrink-0 relative z-30">
+          {/* Mobile Participants / Chat Sidebar Toggle */}
           <button
-            onClick={() => localParticipant.setMicrophoneEnabled(!localParticipant.isMicrophoneEnabled)}
-            className={`h-11 w-11 sm:h-12 sm:w-12 rounded-2xl flex items-center justify-center transition-all cursor-pointer shadow-lg active:scale-95 ${
-              localParticipant.isMicrophoneEnabled
-                ? 'bg-white/[0.08] hover:bg-white/[0.15] text-white border border-white/10'
-                : 'bg-rose-500 hover:bg-rose-600 text-white shadow-rose-500/30'
+            onClick={() => setShowMobileSidebar((v) => !v)}
+            className={`lg:hidden relative h-11 w-11 rounded-full flex items-center justify-center transition-all cursor-pointer shadow-sm active:scale-95 ${
+              isDarkStudio
+                ? 'bg-white/[0.09] text-white border border-white/10'
+                : 'bg-white text-slate-700 border border-slate-200/80'
             }`}
-            title={localParticipant.isMicrophoneEnabled ? 'Mute Microphone' : 'Unmute Microphone'}
+            title="Participants & Chat"
           >
-            {localParticipant.isMicrophoneEnabled ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}
-          </button>
-
-          {/* Camera Toggle */}
-          <button
-            onClick={() => localParticipant.setCameraEnabled(!localParticipant.isCameraEnabled)}
-            className={`h-11 w-11 sm:h-12 sm:w-12 rounded-2xl flex items-center justify-center transition-all cursor-pointer shadow-lg active:scale-95 ${
-              localParticipant.isCameraEnabled
-                ? 'bg-white/[0.08] hover:bg-white/[0.15] text-white border border-white/10'
-                : 'bg-rose-500 hover:bg-rose-600 text-white shadow-rose-500/30'
-            }`}
-            title={localParticipant.isCameraEnabled ? 'Turn Off Camera' : 'Turn On Camera'}
-          >
-            {localParticipant.isCameraEnabled ? <Video className="h-5 w-5" /> : <VideoOff className="h-5 w-5" />}
+            <Users className="h-5 w-5" />
+            {unreadChatCount > 0 && (
+              <span className="absolute -top-1 -right-1 h-5 min-w-5 px-1 rounded-full bg-[#3B82F6] text-white text-[10px] font-bold flex items-center justify-center">
+                {unreadChatCount}
+              </span>
+            )}
           </button>
 
           {/* Screen Share */}
           <button
             onClick={() => localParticipant.setScreenShareEnabled(!localParticipant.isScreenShareEnabled)}
-            className={`h-11 w-11 sm:h-12 sm:w-12 rounded-2xl flex items-center justify-center transition-all cursor-pointer shadow-lg active:scale-95 ${
+            className={`h-11 w-11 sm:h-12 sm:w-12 rounded-full flex items-center justify-center transition-all cursor-pointer shadow-sm active:scale-95 ${
               localParticipant.isScreenShareEnabled
-                ? 'bg-[#0066FF] text-white shadow-[#0066FF]/40 border border-[#388BFF]'
-                : 'bg-white/[0.08] hover:bg-white/[0.15] text-gray-300 hover:text-white border border-white/10'
+                ? 'bg-[#3B82F6] text-white shadow-blue-500/30'
+                : isDarkStudio
+                ? 'bg-white/[0.09] hover:bg-white/[0.15] text-slate-200 border border-white/10'
+                : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/80'
             }`}
             title={localParticipant.isScreenShareEnabled ? 'Stop Screen Share' : 'Share Screen'}
           >
             <Monitor className="h-5 w-5" />
           </button>
 
-          {/* Reactions Dropdown */}
-          <div className="relative">
-            <button
-              onClick={() => setShowReactionsBar(!showReactionsBar)}
-              className="h-11 w-11 sm:h-12 sm:w-12 rounded-2xl bg-white/[0.08] hover:bg-white/[0.15] border border-white/10 text-gray-300 hover:text-white flex items-center justify-center transition-all cursor-pointer shadow-lg active:scale-95"
-              title="Reactions"
-            >
-              <Smile className="h-5 w-5" />
-            </button>
-            {showReactionsBar && (
-              <div className="absolute bottom-16 left-1/2 -translate-x-1/2 p-2 rounded-2xl bg-[#0c101c] border border-white/15 shadow-2xl flex items-center gap-2 z-50 animate-in fade-in zoom-in-95">
-                {['👍', '❤️', '👏', '🎉', '🔥', '🚀'].map((emoji) => (
-                  <button
-                    key={emoji}
-                    onClick={() => handleSendReaction(emoji)}
-                    className="h-10 w-10 text-xl hover:scale-125 transition-transform flex items-center justify-center cursor-pointer"
-                  >
-                    {emoji}
-                  </button>
-                ))}
-              </div>
+          {/* Mic Toggle */}
+          <button
+            onClick={() => localParticipant.setMicrophoneEnabled(!localParticipant.isMicrophoneEnabled)}
+            className={`h-11 w-11 sm:h-12 sm:w-12 rounded-full flex items-center justify-center transition-all cursor-pointer shadow-sm active:scale-95 ${
+              localParticipant.isMicrophoneEnabled
+                ? isDarkStudio
+                  ? 'bg-white/[0.09] hover:bg-white/[0.15] text-white border border-white/10'
+                  : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/80'
+                : 'bg-rose-500/15 text-rose-500 border border-rose-500/30'
+            }`}
+            title={localParticipant.isMicrophoneEnabled ? 'Mute Microphone (M)' : 'Unmute Microphone (M)'}
+          >
+            {localParticipant.isMicrophoneEnabled ? (
+              <Mic className="h-5 w-5" />
+            ) : (
+              <MicOff className="h-5 w-5" />
             )}
-          </div>
+          </button>
 
-          {/* Virtual Hand Raise */}
+          {/* Prominent Center Coral-Red "End Meeting" / "Leave" Pill */}
           <button
-            onClick={toggleHandRaise}
-            className={`h-11 w-11 sm:h-12 sm:w-12 rounded-2xl flex items-center justify-center transition-all cursor-pointer shadow-lg active:scale-95 ${
-              isHandRaised
-                ? 'bg-amber-500 hover:bg-amber-600 text-slate-950 font-black shadow-amber-500/30'
-                : 'bg-white/[0.08] hover:bg-white/[0.15] text-gray-300 hover:text-white border border-white/10'
+            onClick={handleExitClick}
+            className="h-11 sm:h-12 px-6 sm:px-8 rounded-full bg-[#FF5B37] hover:bg-[#E84926] text-white font-bold text-xs sm:text-sm shadow-lg shadow-[#FF5B37]/30 transition-all cursor-pointer active:scale-95 flex items-center gap-2"
+          >
+            <PhoneOff className="h-4 w-4 sm:hidden" />
+            <span>{isHost ? 'End Meeting' : 'Leave Meeting'}</span>
+          </button>
+
+          {/* Camera (Vedio) Toggle */}
+          <button
+            onClick={() => localParticipant.setCameraEnabled(!localParticipant.isCameraEnabled)}
+            className={`h-11 w-11 sm:h-12 sm:w-12 rounded-full flex items-center justify-center transition-all cursor-pointer shadow-sm active:scale-95 ${
+              localParticipant.isCameraEnabled
+                ? isDarkStudio
+                  ? 'bg-white/[0.09] hover:bg-white/[0.15] text-white border border-white/10'
+                  : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/80'
+                : 'bg-[#FF5B37]/15 text-[#FF5B37] border border-[#FF5B37]/30'
             }`}
-            title={isHandRaised ? 'Lower Hand' : 'Raise Hand'}
+            title={localParticipant.isCameraEnabled ? 'Turn Off Vedio (V)' : 'Turn On Vedio (V)'}
           >
-            <Hand className="h-5 w-5" />
+            {localParticipant.isCameraEnabled ? (
+              <Video className="h-5 w-5" />
+            ) : (
+              <VideoOff className="h-5 w-5" />
+            )}
           </button>
 
-          {/* Flip / Mirror Camera Toggle */}
-          <button
-            onClick={() => {
-              const next = !isMirrored;
-              setIsMirrored(next);
-              toast.info(next ? 'Mirror camera enabled (Natural hand orientation)' : 'Mirror camera disabled');
-            }}
-            className={`h-11 w-11 sm:h-12 sm:w-12 rounded-2xl flex items-center justify-center transition-all cursor-pointer shadow-lg active:scale-95 ${
-              isMirrored
-                ? 'bg-[#0066FF]/20 hover:bg-[#0066FF]/30 text-[#388BFF] border border-[#0066FF]/40'
-                : 'bg-white/[0.08] hover:bg-white/[0.15] text-gray-300 hover:text-white border border-white/10'
-            }`}
-            title={isMirrored ? 'Disable Mirror Camera' : 'Enable Mirror Camera (Natural Hand View)'}
-          >
-            <FlipHorizontal className="h-5 w-5" />
-          </button>
-
-          {/* Picture in Picture */}
-          <button
-            onClick={togglePiP}
-            className="h-11 w-11 sm:h-12 sm:w-12 rounded-2xl bg-white/[0.08] hover:bg-white/[0.15] border border-white/10 text-gray-300 hover:text-white flex items-center justify-center transition-all cursor-pointer shadow-lg active:scale-95"
-            title="Picture-in-Picture Floating Window"
-          >
-            <PictureInPicture2 className="h-5 w-5" />
-          </button>
-
-          {/* Meeting Video & Audio Recorder */}
-          <button
-            onClick={async () => {
-              if (recorder.isRecording) {
-                recorder.stopRecording();
-                toast.success('Recording saved! Download starting.');
-              } else {
-                const started = await recorder.startRecording();
-                if (started) {
-                  toast.success('Recording started!');
-                } else {
-                  toast.error('Recording cancelled or permission not granted.');
-                }
-              }
-            }}
-            className={`h-11 px-3 sm:h-12 sm:px-4 rounded-2xl flex items-center gap-1.5 sm:gap-2 transition-all cursor-pointer shadow-lg active:scale-95 text-xs font-semibold ${
-              recorder.isRecording
-                ? 'bg-rose-600 hover:bg-rose-700 text-white animate-pulse border border-rose-400'
-                : 'bg-white/[0.08] hover:bg-white/[0.15] text-gray-300 hover:text-white border border-white/10'
-            }`}
-            title={recorder.isRecording ? 'Stop Recording' : 'Record Vedio & Audio'}
-          >
-            <Disc className={`h-4 w-4 ${recorder.isRecording ? 'text-white animate-spin' : 'text-rose-400'}`} />
-            <span className="hidden sm:inline">
-              {recorder.isRecording ? `REC ${recorder.recordingDuration}` : 'Record'}
-            </span>
-          </button>
-
-          {/* Live Whiteboard / Draw Studio */}
+          {/* Collaborative Whiteboard / Draw Button */}
           <button
             onClick={() => setShowWhiteboard(true)}
-            className={`h-11 px-3 sm:h-12 sm:px-4 rounded-2xl flex items-center gap-1.5 sm:gap-2 transition-all cursor-pointer shadow-lg active:scale-95 text-xs font-bold ${
+            className={`h-11 w-11 sm:h-12 sm:w-12 rounded-full flex items-center justify-center transition-all cursor-pointer shadow-sm active:scale-95 ${
               showWhiteboard
-                ? 'bg-gradient-to-r from-[#0066FF] to-[#FF7A00] text-white border border-white/25'
-                : 'bg-white/[0.08] hover:bg-white/[0.15] text-gray-200 hover:text-white border border-white/10'
+                ? 'bg-[#3B82F6] text-white shadow-blue-500/30'
+                : isDarkStudio
+                ? 'bg-white/[0.09] hover:bg-white/[0.15] text-slate-200 border border-white/10'
+                : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/80'
             }`}
-            title="Live Collaborative Whiteboard & Draw Studio (W)"
+            title="Live Whiteboard & Draw Studio (W)"
           >
-            <PenTool className="h-4 w-4 text-[#388BFF]" />
-            <span className="hidden sm:inline">Draw</span>
+            <PenTool className="h-5 w-5" />
           </button>
 
-          {/* Host / Co-Host Live Poll & TV Banner Studio Buttons */}
-          {hasHostPrivileges && (
-            <>
-              <button
-                onClick={() => setShowPollModal(true)}
-                className="h-11 w-11 sm:h-12 sm:w-12 rounded-2xl bg-white/[0.08] hover:bg-white/[0.15] border border-white/10 text-amber-300 hover:text-white flex items-center justify-center transition-all cursor-pointer shadow-lg active:scale-95"
-                title="Launch Live Poll"
-              >
-                <BarChart2 className="h-5 w-5" />
-              </button>
-              <button
-                onClick={() => {
-                  setBannerDraft(broadcastBanner?.text || '');
-                  setShowBannerModal(true);
-                }}
-                className={`h-11 w-11 sm:h-12 sm:w-12 rounded-2xl flex items-center justify-center transition-all cursor-pointer shadow-lg active:scale-95 ${
-                  broadcastBanner
-                    ? 'bg-[#FF7A00] text-white border border-amber-300'
-                    : 'bg-white/[0.08] hover:bg-white/[0.15] border border-white/10 text-gray-300 hover:text-white'
-                }`}
-                title="TV On-Air Announcement Banner"
-              >
-                <Megaphone className="h-5 w-5" />
-              </button>
-            </>
-          )}
+          {/* More Options (...) Popover: Hand Raise, Reactions, Poll, Banner, Notes, PiP, Shortcuts */}
+          <div className="relative">
+            <button
+              onClick={() => setShowMoreMenu((v) => !v)}
+              className={`h-11 w-11 sm:h-12 sm:w-12 rounded-full flex items-center justify-center transition-all cursor-pointer shadow-sm active:scale-95 ${
+                showMoreMenu
+                  ? 'bg-[#3B82F6] text-white'
+                  : isDarkStudio
+                  ? 'bg-white/[0.09] hover:bg-white/[0.15] text-slate-200 border border-white/10'
+                  : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/80'
+              }`}
+              title="More Studio Tools"
+            >
+              <MoreHorizontal className="h-5 w-5" />
+            </button>
 
-          {/* Participants & Co-Host Management Drawer */}
-          <button
-            onClick={() => setShowParticipantsDrawer(true)}
-            className={`relative h-11 w-11 sm:h-12 sm:w-12 rounded-2xl flex items-center justify-center transition-all cursor-pointer shadow-lg active:scale-95 ${
-              showParticipantsDrawer
-                ? 'bg-[#0066FF] text-white border border-[#388BFF]'
-                : 'bg-white/[0.08] hover:bg-white/[0.15] border border-white/10 text-gray-300 hover:text-white'
-            }`}
-            title="Participants & Co-Host Controls"
-          >
-            <Users className="h-5 w-5" />
-            <span className="absolute -top-1 -right-1 h-5 min-w-5 px-1 rounded-full bg-[#0066FF] text-white text-[10px] font-black flex items-center justify-center border-2 border-[#06080e]">
-              {totalCount}
-            </span>
-          </button>
+            {showMoreMenu && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowMoreMenu(false)} />
+                <div
+                  className={`absolute bottom-14 right-0 z-50 w-60 rounded-2xl p-2 shadow-2xl border space-y-1 animate-in fade-in zoom-in-95 ${
+                    isDarkStudio
+                      ? 'bg-[#0e1628] border-white/15 text-slate-100'
+                      : 'bg-white border-slate-200 text-slate-800'
+                  }`}
+                >
+                  {/* Quick Emoji Reaction Bar */}
+                  <div className="flex items-center justify-between px-2 py-1.5 border-b border-slate-500/15">
+                    {['ðŸ‘', 'â¤ï¸', 'ðŸ‘', 'ðŸŽ‰', 'ðŸ”¥', 'ðŸš€'].map((emoji) => (
+                      <button
+                        key={emoji}
+                        onClick={() => {
+                          handleSendReaction(emoji);
+                          setShowMoreMenu(false);
+                        }}
+                        className="text-lg hover:scale-125 transition-transform cursor-pointer"
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>
 
-          {/* Chat & Private Messages Drawer */}
-          <button
-            onClick={() => setShowChatAndNotes(true)}
-            className="relative h-11 w-11 sm:h-12 sm:w-12 rounded-2xl bg-white/[0.08] hover:bg-white/[0.15] border border-white/10 text-gray-300 hover:text-white flex items-center justify-center transition-all cursor-pointer shadow-lg active:scale-95"
-            title="Chat, Private Messages & Notes"
-          >
-            <MessageSquare className="h-5 w-5" />
-            {unreadChatCount > 0 && (
-              <span className="absolute -top-1 -right-1 h-5 min-w-5 px-1 rounded-full bg-violet-500 text-white text-[10px] font-black flex items-center justify-center border-2 border-[#06080e] animate-bounce">
-                {unreadChatCount}
-              </span>
+                  <button
+                    onClick={() => {
+                      toggleHandRaise();
+                      setShowMoreMenu(false);
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-[#3B82F6]/10 text-xs font-semibold cursor-pointer"
+                  >
+                    <Hand className={`h-4 w-4 ${isHandRaised ? 'text-amber-500' : 'text-[#3B82F6]'}`} />
+                    <span>{isHandRaised ? 'Lower Hand' : 'Raise Hand'}</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setShowChatAndNotes(true);
+                      setShowMoreMenu(false);
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-[#3B82F6]/10 text-xs font-semibold cursor-pointer"
+                  >
+                    <FileText className="h-4 w-4 text-emerald-500" />
+                    <span>Meeting Notepad</span>
+                  </button>
+
+                  {hasHostPrivileges && (
+                    <>
+                      <button
+                        onClick={() => {
+                          setShowPollModal(true);
+                          setShowMoreMenu(false);
+                        }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-[#3B82F6]/10 text-xs font-semibold cursor-pointer"
+                      >
+                        <BarChart2 className="h-4 w-4 text-amber-500" />
+                        <span>Launch Live Poll</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setBannerDraft(broadcastBanner?.text || '');
+                          setShowBannerModal(true);
+                          setShowMoreMenu(false);
+                        }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-[#3B82F6]/10 text-xs font-semibold cursor-pointer"
+                      >
+                        <Megaphone className="h-4 w-4 text-[#FF5B37]" />
+                        <span>Broadcast Announcement</span>
+                      </button>
+                    </>
+                  )}
+
+                  <button
+                    onClick={() => {
+                      togglePiP();
+                      setShowMoreMenu(false);
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-[#3B82F6]/10 text-xs font-semibold cursor-pointer"
+                  >
+                    <PictureInPicture2 className="h-4 w-4 text-slate-400" />
+                    <span>Picture-in-Picture</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setShowShortcutsModal(true);
+                      setShowMoreMenu(false);
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-[#3B82F6]/10 text-xs font-semibold cursor-pointer"
+                  >
+                    <Keyboard className="h-4 w-4 text-slate-400" />
+                    <span>Keyboard Shortcuts</span>
+                  </button>
+                </div>
+              </>
             )}
-          </button>
+          </div>
+        </footer>
+      </div>
 
-          {/* Leave / End Meeting Button */}
-          <button
-            onClick={() => {
-              if (recorder.isRecording) {
-                recorder.stopRecording();
-              }
-              if (isHost && onEndMeeting) {
-                setShowHostExitModal(true);
-              } else {
-                onLeave();
-              }
-            }}
-            className="h-11 px-5 sm:h-12 sm:px-6 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs sm:text-sm flex items-center gap-2 shadow-xl shadow-rose-600/30 transition-all cursor-pointer active:scale-95"
-          >
-            <PhoneOff className="h-4 w-4" />
-            <span>{isHost ? 'End / Leave' : 'Leave'}</span>
-          </button>
+      {/* ===================================================================== */}
+      {/* RIGHT PERMANENT SPLIT SIDEBAR: PARTICIPANTS (TOP) + CHAT (BOTTOM)     */}
+      {/* ===================================================================== */}
+      <aside
+        className={`${
+          showMobileSidebar
+            ? 'fixed inset-y-0 right-0 z-50 flex w-[340px] max-w-[92vw]'
+            : 'hidden lg:flex w-[340px] xl:w-[360px]'
+        } h-full flex-col border-l shrink-0 transition-colors duration-300 ${
+          isDarkStudio
+            ? 'bg-[#0c1322] border-white/[0.08] text-slate-100'
+            : 'bg-white border-slate-200/80 text-slate-900'
+        }`}
+      >
+        {/* TOP HALF: PARTICIPANTS PANEL */}
+        <div className="flex flex-col max-h-[44%] border-b border-slate-500/15">
+          <div className="px-5 pt-5 pb-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <h2 className="text-base font-extrabold tracking-tight">Participants</h2>
+              <span className="px-2 py-0.5 rounded-full bg-[#3B82F6] text-white text-[10px] font-bold">
+                {totalCount}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              {hasHostPrivileges && (
+                <button
+                  onClick={() => handleHostControlMedia('ALL', 'Everyone', 'mic', false)}
+                  className="text-[11px] font-bold text-[#3B82F6] hover:underline cursor-pointer"
+                  title="Mute all participants"
+                >
+                  Mute All
+                </button>
+              )}
+              {showMobileSidebar && (
+                <button
+                  onClick={() => setShowMobileSidebar(false)}
+                  className="lg:hidden p-1 rounded-lg hover:bg-slate-500/10 text-slate-400 cursor-pointer"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto px-4 pb-3 space-y-2">
+            {participants.map((p) => {
+              const pName = p.name || p.identity || 'Participant';
+              const isLocalP = p.isLocal;
+              const isPeerCoHost = Boolean(coHosts[p.identity]);
+              const isPeerHost = isLocalP && isHost;
+
+              return (
+                <div
+                  key={p.identity}
+                  className={`px-3 py-2.5 rounded-2xl transition-all flex items-center justify-between gap-2 ${
+                    isLocalP
+                      ? isDarkStudio
+                        ? 'bg-white/[0.07]'
+                        : 'bg-[#F4F6FA]'
+                      : isDarkStudio
+                      ? 'hover:bg-white/[0.05]'
+                      : 'hover:bg-slate-50'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-[#3B82F6] to-[#2563EB] text-white text-xs font-bold flex items-center justify-center shrink-0 shadow-sm">
+                      {pName.slice(0, 2).toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-bold truncate max-w-[110px]">
+                          {isLocalP ? 'Me' : pName}
+                        </span>
+                        {isPeerHost && (
+                          <span className="px-1.5 py-0.2 rounded-full bg-[#FF5B37]/15 text-[#FF5B37] text-[9px] font-bold">
+                            Host
+                          </span>
+                        )}
+                        {isPeerCoHost && (
+                          <span className="px-1.5 py-0.2 rounded-full bg-[#3B82F6]/15 text-[#3B82F6] text-[9px] font-bold">
+                            Co-Host
+                          </span>
+                        )}
+                      </div>
+                      {isLocalP && (
+                        <p className="text-[10px] text-slate-400 truncate max-w-[115px]">{pName}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Compact Action Icons: Host Mic On/Off, Vedio On/Off, Co-Host, Private DM */}
+                  <div className="flex items-center gap-1 shrink-0">
+                    {/* Mic Status / Host Toggle */}
+                    <button
+                      disabled={!hasHostPrivileges && !isLocalP}
+                      onClick={() =>
+                        handleHostControlMedia(p.identity, pName, 'mic', !p.isMicrophoneEnabled)
+                      }
+                      className={`h-7 w-7 rounded-lg flex items-center justify-center transition-colors ${
+                        hasHostPrivileges || isLocalP ? 'cursor-pointer hover:bg-slate-500/15' : ''
+                      } ${p.isMicrophoneEnabled ? 'text-emerald-500' : 'text-slate-400'}`}
+                      title={
+                        hasHostPrivileges || isLocalP
+                          ? p.isMicrophoneEnabled
+                            ? `Mute ${pName}`
+                            : `Unmute ${pName}`
+                          : p.isMicrophoneEnabled
+                          ? 'Mic On'
+                          : 'Muted'
+                      }
+                    >
+                      {p.isMicrophoneEnabled ? (
+                        <Mic className="h-3.5 w-3.5" />
+                      ) : (
+                        <MicOff className="h-3.5 w-3.5" />
+                      )}
+                    </button>
+
+                    {/* Vedio Status / Host Toggle */}
+                    <button
+                      disabled={!hasHostPrivileges && !isLocalP}
+                      onClick={() =>
+                        handleHostControlMedia(p.identity, pName, 'cam', !p.isCameraEnabled)
+                      }
+                      className={`h-7 w-7 rounded-lg flex items-center justify-center transition-colors ${
+                        hasHostPrivileges || isLocalP ? 'cursor-pointer hover:bg-slate-500/15' : ''
+                      } ${p.isCameraEnabled ? 'text-emerald-500' : 'text-slate-400'}`}
+                      title={
+                        hasHostPrivileges || isLocalP
+                          ? p.isCameraEnabled
+                            ? `Turn off ${pName}'s vedio`
+                            : `Turn on ${pName}'s vedio`
+                          : p.isCameraEnabled
+                          ? 'Vedio On'
+                          : 'Vedio Off'
+                      }
+                    >
+                      {p.isCameraEnabled ? (
+                        <Video className="h-3.5 w-3.5" />
+                      ) : (
+                        <VideoOff className="h-3.5 w-3.5" />
+                      )}
+                    </button>
+
+                    {/* Private DM Button */}
+                    {!isLocalP && (
+                      <button
+                        onClick={() => {
+                          setChatRecipientId(p.identity);
+                          toast.info(`Private DM selected for ${pName}`);
+                        }}
+                        className={`h-7 w-7 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${
+                          chatRecipientId === p.identity
+                            ? 'bg-violet-500 text-white'
+                            : 'text-violet-500 hover:bg-violet-500/15'
+                        }`}
+                        title={`Send Private Message to ${pName}`}
+                      >
+                        <MessageSquare className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+
+                    {/* Promote / Demote Co-Host Button (Host only) */}
+                    {isHost && !isLocalP && (
+                      <button
+                        onClick={() => handleToggleCoHost(p.identity, pName)}
+                        className={`h-7 w-7 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${
+                          isPeerCoHost
+                            ? 'bg-[#3B82F6] text-white'
+                            : 'text-[#3B82F6] hover:bg-[#3B82F6]/15'
+                        }`}
+                        title={isPeerCoHost ? 'Remove Co-Host' : 'Make Co-Host'}
+                      >
+                        {isPeerCoHost ? (
+                          <UserMinus className="h-3.5 w-3.5" />
+                        ) : (
+                          <UserCheck className="h-3.5 w-3.5" />
+                        )}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
 
-        {/* Right Info */}
-        <div className="hidden md:flex items-center gap-2 text-xs text-gray-400">
-          <span className="font-mono text-[11px] text-gray-500">MetroMeet Pro v2.6</span>
-        </div>
-      </footer>
+        {/* BOTTOM HALF: ALWAYS-VISIBLE LIVE CHAT & PRIVATE DM FEED */}
+        <div className="flex-1 min-h-0 flex flex-col">
+          <div className="px-5 pt-4 pb-2 flex items-center justify-between">
+            <h2 className="text-base font-extrabold tracking-tight">Chat</h2>
+            <button
+              onClick={() => setShowChatAndNotes(true)}
+              className="text-[11px] font-bold text-slate-400 hover:text-[#3B82F6] cursor-pointer"
+            >
+              Notepad &amp; Full
+            </button>
+          </div>
 
-      {/* Live Poll Creator Modal */}
+          {/* Live Chat Messages */}
+          <div className="flex-1 overflow-y-auto px-4 py-2 space-y-3">
+            {chatMessages.map((msg) => (
+              <div key={msg.id} className="flex items-start gap-2.5">
+                <div
+                  className={`h-8 w-8 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0 mt-0.5 ${
+                    msg.isPrivate
+                      ? 'bg-gradient-to-tr from-violet-600 to-indigo-500'
+                      : msg.isLocal
+                      ? 'bg-gradient-to-tr from-[#3B82F6] to-cyan-500'
+                      : 'bg-gradient-to-tr from-slate-500 to-slate-700'
+                  }`}
+                >
+                  {(msg.isLocal ? displayName : msg.sender).slice(0, 2).toUpperCase()}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 flex-wrap mb-1">
+                    <span
+                      className={`text-[11px] font-bold ${
+                        isDarkStudio ? 'text-slate-300' : 'text-slate-500'
+                      }`}
+                    >
+                      {msg.isLocal ? 'You' : msg.sender}
+                    </span>
+                    {msg.isPrivate && (
+                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded-full bg-violet-500/15 text-violet-500 text-[9px] font-bold">
+                        <Lock className="h-2.5 w-2.5" />
+                        {msg.isLocal ? `To ${msg.recipientName}` : 'Private'}
+                      </span>
+                    )}
+                    <span className="text-[10px] text-slate-400">{msg.timestamp}</span>
+                  </div>
+                  <div
+                    className={`px-3.5 py-2.5 rounded-2xl rounded-tl-sm text-xs leading-relaxed break-words ${
+                      msg.isPrivate
+                        ? isDarkStudio
+                          ? 'bg-violet-500/20 text-violet-100 border border-violet-500/30'
+                          : 'bg-violet-50 text-violet-950 border border-violet-200'
+                        : isDarkStudio
+                        ? 'bg-white/[0.06] text-slate-100'
+                        : 'bg-[#F3F5F9] text-slate-800'
+                    }`}
+                  >
+                    {msg.text}
+                  </div>
+                </div>
+              </div>
+            ))}
+            <div ref={sidebarChatEndRef} />
+          </div>
+
+          {/* Bottom Rounded Chat Composer (Matching Reference Pill + Recipient Switcher) */}
+          <div className="p-3.5 space-y-2 border-t border-slate-500/10">
+            {/* Public vs Private DM Recipient Selector */}
+            <div className="flex items-center gap-1.5 px-1">
+              <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
+                {selectedDmPeer ? (
+                  <Lock className="h-3 w-3 text-violet-500" />
+                ) : (
+                  <Users className="h-3 w-3 text-[#3B82F6]" />
+                )}
+                To:
+              </span>
+              <select
+                value={selectedDmPeer ? selectedDmPeer.id : 'ALL'}
+                onChange={(e) => setChatRecipientId(e.target.value)}
+                className={`flex-1 rounded-lg px-2 py-1 text-[11px] font-bold outline-none cursor-pointer ${
+                  selectedDmPeer
+                    ? 'bg-violet-500/15 text-violet-500'
+                    : isDarkStudio
+                    ? 'bg-white/[0.06] text-slate-200'
+                    : 'bg-slate-100 text-slate-700'
+                }`}
+              >
+                <option value="ALL" className="text-slate-900">
+                  Everyone (Public)
+                </option>
+                {remoteChatPeers.map((p) => (
+                  <option key={p.id} value={p.id} className="text-slate-900">
+                    Private: {p.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <form
+              onSubmit={handleSidebarChatSubmit}
+              className={`flex items-center gap-2 p-1.5 rounded-full border transition-all ${
+                selectedDmPeer
+                  ? 'border-violet-400 bg-violet-500/5'
+                  : isDarkStudio
+                  ? 'bg-white/[0.06] border-white/10'
+                  : 'bg-[#F4F6FA] border-slate-200/80'
+              }`}
+            >
+              <button
+                type="button"
+                onClick={() => setSidebarChatInput((v) => `${v}ðŸ˜Š`)}
+                className="h-8 w-8 rounded-full bg-[#FFA726] hover:bg-[#FB8C00] text-white flex items-center justify-center shrink-0 cursor-pointer shadow-sm"
+                title="Add Emoji"
+              >
+                <Smile className="h-4 w-4" />
+              </button>
+              <input
+                type="text"
+                placeholder={
+                  selectedDmPeer
+                    ? `Private to ${selectedDmPeer.name}...`
+                    : 'Type a message...'
+                }
+                value={sidebarChatInput}
+                onChange={(e) => setSidebarChatInput(e.target.value)}
+                className={`flex-1 bg-transparent text-xs outline-none px-1 ${
+                  isDarkStudio
+                    ? 'text-white placeholder:text-slate-400'
+                    : 'text-slate-800 placeholder:text-slate-400'
+                }`}
+              />
+              <button
+                type="submit"
+                disabled={!sidebarChatInput.trim()}
+                className="h-8 w-8 rounded-full bg-[#3B82F6] hover:bg-[#2563EB] disabled:opacity-40 text-white flex items-center justify-center shrink-0 cursor-pointer shadow-sm transition-all"
+                title="Send Message"
+              >
+                <Send className="h-3.5 w-3.5" />
+              </button>
+            </form>
+          </div>
+        </div>
+      </aside>
+
+      {/* ===================================================================== */}
+      {/* MODALS & COLLABORATIVE WHITEBOARD                                     */}
+      {/* ===================================================================== */}
       {showPollModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
           <form
             onSubmit={handleLaunchPoll}
-            className="w-full max-w-md p-6 rounded-3xl bg-[#091222] border border-[#0066FF]/35 shadow-2xl space-y-4 animate-in fade-in zoom-in-95"
+            className="w-full max-w-md p-6 rounded-3xl bg-[#091222] text-white border border-[#3B82F6]/35 shadow-2xl space-y-4"
           >
             <div className="flex items-center justify-between">
-              <h3 className="text-base font-black text-white flex items-center gap-2">
-                <BarChart2 className="h-5 w-5 text-[#FF7A00]" />
-                Launch Live Interactive Poll
+              <h3 className="text-base font-black flex items-center gap-2">
+                <BarChart2 className="h-5 w-5 text-[#FF5B37]" />
+                Launch Live Poll
               </h3>
               <button
                 type="button"
@@ -1376,21 +1886,15 @@ function LiveKitInnerStage({
                 <X className="h-4 w-4" />
               </button>
             </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-gray-300">Poll Question</label>
-              <input
-                type="text"
-                required
-                placeholder="e.g. Are we ready to launch v2.0?"
-                value={pollQuestion}
-                onChange={(e) => setPollQuestion(e.target.value)}
-                className="w-full rounded-xl bg-black/50 border border-white/[0.12] px-3.5 py-2.5 text-xs sm:text-sm text-white outline-none focus:border-[#0066FF]"
-              />
-            </div>
-
+            <input
+              type="text"
+              required
+              placeholder="e.g. Ready to ship this sprint?"
+              value={pollQuestion}
+              onChange={(e) => setPollQuestion(e.target.value)}
+              className="w-full rounded-xl bg-black/50 border border-white/[0.12] px-3.5 py-2.5 text-sm text-white outline-none focus:border-[#3B82F6]"
+            />
             <div className="space-y-2">
-              <label className="text-xs font-bold text-gray-300">Options</label>
               {pollOptionsInput.map((opt, idx) => (
                 <input
                   key={idx}
@@ -1402,7 +1906,7 @@ function LiveKitInnerStage({
                     next[idx] = e.target.value;
                     setPollOptionsInput(next);
                   }}
-                  className="w-full rounded-xl bg-black/50 border border-white/[0.1] px-3 py-2 text-xs text-white outline-none focus:border-[#0066FF]"
+                  className="w-full rounded-xl bg-black/50 border border-white/[0.1] px-3 py-2 text-xs text-white outline-none focus:border-[#3B82F6]"
                 />
               ))}
               {pollOptionsInput.length < 4 && (
@@ -1415,7 +1919,6 @@ function LiveKitInnerStage({
                 </button>
               )}
             </div>
-
             <div className="flex justify-end gap-2 pt-2">
               <button
                 type="button"
@@ -1426,7 +1929,7 @@ function LiveKitInnerStage({
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#0066FF] to-[#FF7A00] text-xs font-black text-white shadow-lg cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-[#3B82F6] hover:bg-[#2563EB] text-xs font-black text-white shadow-lg cursor-pointer"
               >
                 Broadcast Poll
               </button>
@@ -1435,14 +1938,13 @@ function LiveKitInnerStage({
         </div>
       )}
 
-      {/* TV On-Air Announcement Banner Modal */}
       {showBannerModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-          <div className="w-full max-w-md p-6 rounded-3xl bg-[#091222] border border-[#FF7A00]/40 shadow-2xl space-y-4 animate-in fade-in zoom-in-95">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
+          <div className="w-full max-w-md p-6 rounded-3xl bg-[#091222] text-white border border-[#FF5B37]/40 shadow-2xl space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-base font-black text-white flex items-center gap-2">
-                <Megaphone className="h-5 w-5 text-[#FF7A00]" />
-                TV On-Air Broadcast Banner
+              <h3 className="text-base font-black flex items-center gap-2">
+                <Megaphone className="h-5 w-5 text-[#FF5B37]" />
+                Live Announcement Banner
               </h3>
               <button
                 onClick={() => setShowBannerModal(false)}
@@ -1451,23 +1953,20 @@ function LiveKitInnerStage({
                 <X className="h-4 w-4" />
               </button>
             </div>
-            <p className="text-xs text-gray-400">
-              Display a live news-channel style announcement ticker across every participant&apos;s screen.
-            </p>
             <input
               type="text"
-              placeholder="e.g. Welcome! Q&A session starts in 5 minutes..."
+              placeholder="e.g. Q&A starts in 5 minutes..."
               value={bannerDraft}
               onChange={(e) => setBannerDraft(e.target.value)}
-              className="w-full rounded-xl bg-black/50 border border-white/[0.12] px-3.5 py-2.5 text-xs sm:text-sm text-white outline-none focus:border-[#FF7A00]"
+              className="w-full rounded-xl bg-black/50 border border-white/[0.12] px-3.5 py-2.5 text-sm text-white outline-none focus:border-[#FF5B37]"
             />
-            <div className="flex justify-end gap-2 pt-1">
+            <div className="flex justify-end gap-2">
               {broadcastBanner && (
                 <button
                   onClick={() => handleSetBroadcastBanner(null)}
-                  className="px-3.5 py-2 rounded-xl bg-rose-600/20 border border-rose-500/35 text-xs font-bold text-rose-300 cursor-pointer"
+                  className="px-3.5 py-2 rounded-xl bg-rose-600/20 text-xs font-bold text-rose-300 cursor-pointer"
                 >
-                  Clear Banner
+                  Clear
                 </button>
               )}
               <button
@@ -1476,23 +1975,22 @@ function LiveKitInnerStage({
                     ? handleSetBroadcastBanner({ text: bannerDraft.trim(), author: displayName })
                     : handleSetBroadcastBanner(null)
                 }
-                className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#FF7A00] to-rose-600 text-xs font-black text-white shadow-lg cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-[#FF5B37] hover:bg-[#E84926] text-xs font-black text-white cursor-pointer"
               >
-                Go On Air
+                Show Banner
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Keyboard Shortcuts Modal */}
       {showShortcutsModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-          <div className="w-full max-w-sm p-6 rounded-3xl bg-[#091222] border border-[#0066FF]/35 shadow-2xl space-y-4 animate-in fade-in zoom-in-95">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
+          <div className="w-full max-w-sm p-6 rounded-3xl bg-[#091222] text-white border border-[#3B82F6]/35 shadow-2xl space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-base font-black text-white flex items-center gap-2">
+              <h3 className="text-base font-black flex items-center gap-2">
                 <Keyboard className="h-5 w-5 text-[#388BFF]" />
-                Studio Keyboard Shortcuts
+                Keyboard Shortcuts
               </h3>
               <button
                 onClick={() => setShowShortcutsModal(false)}
@@ -1504,19 +2002,17 @@ function LiveKitInnerStage({
             <div className="space-y-2 text-xs">
               {[
                 ['M', 'Mute / Unmute Microphone'],
-                ['V', 'Turn Vedio (Camera) On / Off'],
-                ['W', 'Open / Close Whiteboard Studio'],
-                ['P', 'Toggle Participants Drawer'],
-                ['C', 'Toggle Chat & Private DMs'],
-                ['F', 'Toggle Fullscreen Mode'],
+                ['V', 'Turn Vedio On / Off'],
+                ['W', 'Open / Close Whiteboard'],
+                ['F', 'Toggle Fullscreen'],
                 ['?', 'Show / Hide Shortcuts'],
               ].map(([k, desc]) => (
                 <div
                   key={k}
-                  className="flex items-center justify-between p-2 rounded-xl bg-white/[0.03] border border-white/[0.06]"
+                  className="flex items-center justify-between p-2 rounded-xl bg-white/[0.04] border border-white/[0.06]"
                 >
                   <span className="text-gray-300">{desc}</span>
-                  <kbd className="px-2 py-0.5 rounded-lg bg-[#0066FF]/20 border border-[#0066FF]/40 text-[#388BFF] font-mono font-black">
+                  <kbd className="px-2 py-0.5 rounded-lg bg-[#3B82F6]/20 text-[#388BFF] font-mono font-black">
                     {k}
                   </kbd>
                 </div>
@@ -1526,13 +2022,12 @@ function LiveKitInnerStage({
         </div>
       )}
 
-      {/* Host Leave vs End Meeting Confirmation Modal */}
       {showHostExitModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-          <div className="w-full max-w-md p-6 rounded-3xl bg-[#091222] border border-[#0066FF]/30 shadow-2xl space-y-4 animate-in fade-in zoom-in-95">
-            <h3 className="text-lg font-black text-white">Leave or End Meeting?</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
+          <div className="w-full max-w-md p-6 rounded-3xl bg-[#091222] text-white border border-[#3B82F6]/30 shadow-2xl space-y-4">
+            <h3 className="text-lg font-black">Leave or End Meeting?</h3>
             <p className="text-xs sm:text-sm text-gray-400 leading-relaxed">
-              If you choose <strong className="text-white">Leave Only</strong>, the room stays open and you can rejoin anytime as the <strong className="text-[#388BFF]">Host</strong>.
+              Choose <strong className="text-white">Leave Only</strong> to keep the room open so you can rejoin anytime as the <strong className="text-[#388BFF]">Host</strong>.
             </p>
             <div className="flex flex-col gap-2.5 pt-2">
               <button
@@ -1540,7 +2035,7 @@ function LiveKitInnerStage({
                   setShowHostExitModal(false);
                   onLeave();
                 }}
-                className="w-full py-2.5 px-4 rounded-2xl bg-[#0066FF] hover:bg-[#1E78FF] text-white text-xs sm:text-sm font-bold transition-all cursor-pointer shadow-lg shadow-[#0066FF]/25"
+                className="w-full py-2.5 px-4 rounded-2xl bg-[#3B82F6] hover:bg-[#2563EB] text-white text-xs sm:text-sm font-bold cursor-pointer"
               >
                 Leave Only (Rejoin Later as Host)
               </button>
@@ -1549,228 +2044,19 @@ function LiveKitInnerStage({
                   setShowHostExitModal(false);
                   if (onEndMeeting) await onEndMeeting();
                 }}
-                className="w-full py-2.5 px-4 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white text-xs sm:text-sm font-bold transition-all cursor-pointer shadow-lg shadow-rose-600/25"
+                className="w-full py-2.5 px-4 rounded-2xl bg-[#FF5B37] hover:bg-[#E84926] text-white text-xs sm:text-sm font-bold cursor-pointer"
               >
                 End Meeting for Everyone
               </button>
               <button
                 onClick={() => setShowHostExitModal(false)}
-                className="w-full py-2 text-xs text-gray-400 hover:text-white transition-colors cursor-pointer"
+                className="w-full py-2 text-xs text-gray-400 hover:text-white cursor-pointer"
               >
                 Cancel
               </button>
             </div>
           </div>
         </div>
-      )}
-
-      {/* Participants & Co-Host Drawer */}
-      {showParticipantsDrawer && (
-        <aside className="fixed inset-y-0 right-0 z-50 w-full sm:w-96 bg-[#091222]/96 backdrop-blur-2xl border-l border-[#0066FF]/25 shadow-2xl flex flex-col animate-in slide-in-from-right duration-200">
-          <div className="p-4 border-b border-white/[0.08] flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="h-9 w-9 rounded-xl bg-[#0066FF]/15 border border-[#0066FF]/30 text-[#388BFF] flex items-center justify-center">
-                <Users className="h-4 w-4" />
-              </div>
-              <div>
-                <h3 className="text-sm font-black text-white flex items-center gap-2">
-                  Participants
-                  <span className="px-2 py-0.5 rounded-full bg-[#0066FF]/20 text-[#388BFF] text-[11px] font-mono">
-                    {totalCount}
-                  </span>
-                </h3>
-                <p className="text-[11px] text-gray-400">
-                  {hasHostPrivileges
-                    ? 'Control Mic/Vedio, assign Co-Hosts & send DMs'
-                    : 'View attendees & send private messages'}
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={() => setShowParticipantsDrawer(false)}
-              className="h-8 w-8 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] text-gray-400 hover:text-white flex items-center justify-center cursor-pointer"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-
-          {/* Host / Co-Host Bulk Media Controls */}
-          {hasHostPrivileges && (
-            <div className="px-4 py-3 border-b border-white/[0.08] bg-white/[0.02] flex items-center gap-2">
-              <button
-                onClick={() => handleHostControlMedia('ALL', 'Everyone', 'mic', false)}
-                className="flex-1 py-2 px-3 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-                title="Mute all participants' microphones"
-              >
-                <MicOff className="h-3.5 w-3.5" />
-                <span>Mute All</span>
-              </button>
-              <button
-                onClick={() => handleHostControlMedia('ALL', 'Everyone', 'cam', false)}
-                className="flex-1 py-2 px-3 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-                title="Turn off all participants' vedio"
-              >
-                <VideoOff className="h-3.5 w-3.5" />
-                <span>All Vedio Off</span>
-              </button>
-            </div>
-          )}
-
-          <div className="flex-1 overflow-y-auto p-4 space-y-2.5">
-            {participants.map((p) => {
-              const pName = p.name || p.identity || 'Participant';
-              const isLocalP = p.isLocal;
-              const isPeerCoHost = Boolean(coHosts[p.identity]);
-              const isPeerHost = isLocalP && isHost;
-
-              return (
-                <div
-                  key={p.identity}
-                  className="p-3.5 rounded-2xl bg-white/[0.04] border border-white/[0.08] hover:border-[#0066FF]/35 transition-all space-y-2.5"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="h-10 w-10 rounded-xl bg-gradient-to-tr from-[#0066FF] to-[#FF7A00] text-white font-black text-xs flex items-center justify-center shrink-0 shadow-md">
-                        {pName.slice(0, 2).toUpperCase()}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="text-xs sm:text-sm font-bold text-white truncate max-w-[140px]">
-                            {pName} {isLocalP ? '(You)' : ''}
-                          </span>
-                          {isPeerHost && (
-                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[#FF7A00]/20 text-[#FFA033] border border-[#FF7A00]/35 text-[9px] font-black uppercase">
-                              <Crown className="h-2.5 w-2.5" /> Host
-                            </span>
-                          )}
-                          {isPeerCoHost && (
-                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[#0066FF]/20 text-[#388BFF] border border-[#0066FF]/35 text-[9px] font-black uppercase">
-                              <Shield className="h-2.5 w-2.5" /> Co-Host
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2 text-[10px] text-gray-400 mt-0.5">
-                          <span className={p.isMicrophoneEnabled ? 'text-emerald-400' : 'text-rose-400'}>
-                            {p.isMicrophoneEnabled ? 'Mic On' : 'Muted'}
-                          </span>
-                          <span>•</span>
-                          <span className={p.isCameraEnabled ? 'text-emerald-400' : 'text-gray-500'}>
-                            {p.isCameraEnabled ? 'Vedio On' : 'Vedio Off'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Private Message (DM) Button — available for any participant to message any other */}
-                    {!isLocalP && (
-                      <button
-                        onClick={() => handleOpenPrivateChat(p.identity)}
-                        className="h-8 px-2.5 rounded-xl bg-violet-500/15 hover:bg-violet-500/30 border border-violet-500/35 text-violet-300 text-[11px] font-bold flex items-center gap-1 shrink-0 transition-all cursor-pointer"
-                        title={`Send private message to ${pName}`}
-                      >
-                        <MessageSquare className="h-3.5 w-3.5" />
-                        <span>DM</span>
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Host / Co-Host Controls Row: Mic On/Off, Vedio On/Off, Make Co-Host */}
-                  {hasHostPrivileges && (
-                    <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-white/[0.06]">
-                      {/* Toggle Participant Mic ON/OFF */}
-                      <button
-                        onClick={() =>
-                          handleHostControlMedia(
-                            p.identity,
-                            pName,
-                            'mic',
-                            !p.isMicrophoneEnabled
-                          )
-                        }
-                        className={`flex-1 py-1.5 px-2 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1 transition-all cursor-pointer ${
-                          p.isMicrophoneEnabled
-                            ? 'bg-emerald-500/15 hover:bg-rose-500/20 text-emerald-300 hover:text-rose-300 border border-emerald-500/30'
-                            : 'bg-rose-500/15 hover:bg-emerald-500/20 text-rose-300 hover:text-emerald-300 border border-rose-500/30'
-                        }`}
-                        title={
-                          p.isMicrophoneEnabled
-                            ? `Mute ${pName}'s microphone`
-                            : `Turn ON ${pName}'s microphone`
-                        }
-                      >
-                        {p.isMicrophoneEnabled ? (
-                          <>
-                            <Mic className="h-3.5 w-3.5" />
-                            <span>Mic On</span>
-                          </>
-                        ) : (
-                          <>
-                            <MicOff className="h-3.5 w-3.5" />
-                            <span>Mic Off</span>
-                          </>
-                        )}
-                      </button>
-
-                      {/* Toggle Participant Vedio (Camera) ON/OFF */}
-                      <button
-                        onClick={() =>
-                          handleHostControlMedia(p.identity, pName, 'cam', !p.isCameraEnabled)
-                        }
-                        className={`flex-1 py-1.5 px-2 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1 transition-all cursor-pointer ${
-                          p.isCameraEnabled
-                            ? 'bg-emerald-500/15 hover:bg-rose-500/20 text-emerald-300 hover:text-rose-300 border border-emerald-500/30'
-                            : 'bg-rose-500/15 hover:bg-emerald-500/20 text-rose-300 hover:text-emerald-300 border border-rose-500/30'
-                        }`}
-                        title={
-                          p.isCameraEnabled
-                            ? `Turn OFF ${pName}'s vedio`
-                            : `Turn ON ${pName}'s vedio`
-                        }
-                      >
-                        {p.isCameraEnabled ? (
-                          <>
-                            <Video className="h-3.5 w-3.5" />
-                            <span>Vedio On</span>
-                          </>
-                        ) : (
-                          <>
-                            <VideoOff className="h-3.5 w-3.5" />
-                            <span>Vedio Off</span>
-                          </>
-                        )}
-                      </button>
-
-                      {/* Host Action: Make / Remove Co-Host */}
-                      {isHost && !isLocalP && (
-                        <button
-                          onClick={() => handleToggleCoHost(p.identity, pName)}
-                          className={`py-1.5 px-2.5 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1 shrink-0 transition-all cursor-pointer ${
-                            isPeerCoHost
-                              ? 'bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30'
-                              : 'bg-[#0066FF]/20 hover:bg-[#0066FF]/35 text-[#388BFF] border border-[#0066FF]/40'
-                          }`}
-                          title={isPeerCoHost ? 'Remove Co-Host role' : 'Promote to Co-Host'}
-                        >
-                          {isPeerCoHost ? (
-                            <>
-                              <UserMinus className="h-3.5 w-3.5" />
-                              <span>Remove</span>
-                            </>
-                          ) : (
-                            <>
-                              <UserCheck className="h-3.5 w-3.5" />
-                              <span>Co-Host</span>
-                            </>
-                          )}
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </aside>
       )}
 
       {/* Live Collaborative Whiteboard */}
@@ -1788,7 +2074,7 @@ function LiveKitInnerStage({
         onClear={handleWhiteboardClear}
       />
 
-      {/* Drawers */}
+      {/* Full Notepad & Expanded Chat Drawer */}
       <ChatAndNotesDrawer
         isOpen={showChatAndNotes}
         onClose={() => setShowChatAndNotes(false)}
