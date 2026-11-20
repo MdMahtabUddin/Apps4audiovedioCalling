@@ -160,9 +160,9 @@ function LiveKitInnerStage({
   // Keyboard Shortcuts Modal
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
 
-  // Studio UI Preferences (Spotlight vs Grid, Light vs Dark Studio, More menu, inline sidebar chat)
+  // Studio UI Preferences (Spotlight vs Grid, MetroMeet Dark Studio default + Light toggle)
   const [layoutMode, setLayoutMode] = useState<'spotlight' | 'grid'>('spotlight');
-  const [isDarkStudio, setIsDarkStudio] = useState<boolean>(false);
+  const [isDarkStudio, setIsDarkStudio] = useState<boolean>(true);
   const [showMoreMenu, setShowMoreMenu] = useState<boolean>(false);
   const [sidebarChatInput, setSidebarChatInput] = useState<string>('');
   const [showMobileSidebar, setShowMobileSidebar] = useState<boolean>(false);
@@ -967,9 +967,33 @@ function LiveKitInnerStage({
   return (
     <div
       className={`h-screen w-screen flex overflow-hidden select-none relative transition-colors duration-300 ${
-        isDarkStudio ? 'bg-[#080d18] text-slate-100' : 'bg-[#F4F6FA] text-slate-900'
+        isDarkStudio ? 'bg-[#050a14] text-slate-100' : 'bg-[#F0F4FA] text-slate-900'
       }`}
     >
+      {/* Animated International Studio Background (Optical Aurora + Floating Orbs + Subtle Grid) */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+        <div
+          className={`absolute inset-0 bg-grid-pattern ${
+            isDarkStudio ? 'opacity-45' : 'opacity-20'
+          }`}
+        />
+        <div
+          className={`absolute -top-32 -left-24 w-[520px] h-[520px] rounded-full blur-[120px] animate-float ${
+            isDarkStudio ? 'bg-[#0066FF]/22' : 'bg-[#0066FF]/12'
+          }`}
+        />
+        <div
+          className={`absolute -bottom-32 right-1/4 w-[480px] h-[480px] rounded-full blur-[130px] animate-float-slow ${
+            isDarkStudio ? 'bg-[#FF7A00]/16' : 'bg-[#FF7A00]/10'
+          }`}
+        />
+        <div
+          className={`absolute top-1/3 left-1/3 w-[600px] h-[260px] rounded-full blur-[140px] animate-aurora ${
+            isDarkStudio ? 'opacity-65' : 'opacity-25'
+          }`}
+        />
+      </div>
+
       {/* Floating Reaction Animation */}
       {activeReaction && (
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-8xl z-50 animate-bounce pointer-events-none drop-shadow-2xl">
@@ -1012,8 +1036,8 @@ function LiveKitInnerStage({
       {/* ===================================================================== */}
       {/* LEFT MAIN STAGE COLUMN                                                */}
       {/* ===================================================================== */}
-      <div className="flex-1 flex flex-col min-w-0 h-full px-4 sm:px-6 py-4 gap-3.5 overflow-hidden relative">
-        {/* 1. Top Header Bar (Matching Reference Layout) */}
+      <div className="flex-1 flex flex-col min-w-0 h-full px-4 sm:px-6 py-4 gap-3.5 overflow-hidden relative z-10">
+        {/* 1. Top Header Bar with MetroMeet Brand Logo */}
         <header className="flex items-center justify-between gap-3 shrink-0">
           <div className="flex items-center gap-3 min-w-0">
             {/* Circular Back Button */}
@@ -1021,7 +1045,7 @@ function LiveKitInnerStage({
               onClick={handleExitClick}
               className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-sm active:scale-95 ${
                 isDarkStudio
-                  ? 'bg-white/[0.07] hover:bg-white/[0.14] text-white border border-white/10'
+                  ? 'bg-[#0b1528]/90 hover:bg-[#0066FF]/20 text-white border border-[#0066FF]/30'
                   : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/80'
               }`}
               title="Leave / Return to Dashboard"
@@ -1029,17 +1053,30 @@ function LiveKitInnerStage({
               <ArrowLeft className="h-4 w-4" />
             </button>
 
+            {/* MetroMeet PRO Brand Logo */}
+            <div
+              className={`hidden sm:flex items-center px-3 py-1.5 rounded-2xl shrink-0 ${
+                isDarkStudio
+                  ? 'bg-[#091224]/80 border border-[#0066FF]/25 shadow-lg shadow-[#0066FF]/10'
+                  : 'bg-[#071022] border border-[#0066FF]/30 shadow-md'
+              }`}
+            >
+              <BrandLogo size="sm" showTagline={false} href="" />
+            </div>
+
+            <div className="h-6 w-px bg-white/10 hidden sm:block" />
+
             {/* Title + Date & Live Duration */}
             <div className="min-w-0">
               <div className="flex items-center gap-2.5 flex-wrap">
                 <h1
-                  className={`text-base sm:text-xl font-extrabold tracking-tight truncate max-w-[180px] sm:max-w-sm ${
+                  className={`text-base sm:text-xl font-extrabold tracking-tight truncate max-w-[160px] sm:max-w-xs ${
                     isDarkStudio ? 'text-white' : 'text-slate-900'
                   }`}
                 >
                   {meetingTitle}
                 </h1>
-                <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#3B82F6] text-white text-[11px] font-bold shadow-sm shadow-blue-500/25">
+                <span className="hidden md:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-[#0066FF] to-[#00A3FF] text-white text-[11px] font-bold shadow-md shadow-[#0066FF]/30">
                   <Users className="h-3 w-3" />
                   <span>{isHost ? 'Host Meeting' : 'Live Meeting'}</span>
                 </span>
@@ -1165,7 +1202,7 @@ function LiveKitInnerStage({
 
             <button
               onClick={copyMeetingLink}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#22A07B] hover:bg-[#1C8A69] text-white text-xs font-bold shadow-sm shadow-emerald-600/20 transition-all cursor-pointer active:scale-95"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-[#FF7A00] to-[#FF5500] hover:from-[#FF8C1A] hover:to-[#E64D00] text-white text-xs font-bold shadow-md shadow-[#FF7A00]/25 transition-all cursor-pointer active:scale-95"
               title="Copy Invite Link to Add People"
             >
               {isCopied ? <Check className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
@@ -1528,10 +1565,10 @@ function LiveKitInnerStage({
           showMobileSidebar
             ? 'fixed inset-y-0 right-0 z-50 flex w-[340px] max-w-[92vw]'
             : 'hidden lg:flex w-[340px] xl:w-[360px]'
-        } h-full flex-col border-l shrink-0 transition-colors duration-300 ${
+        } h-full flex-col border-l shrink-0 relative z-10 backdrop-blur-2xl transition-colors duration-300 ${
           isDarkStudio
-            ? 'bg-[#0c1322] border-white/[0.08] text-slate-100'
-            : 'bg-white border-slate-200/80 text-slate-900'
+            ? 'bg-[#081020]/90 border-[#0066FF]/20 text-slate-100 shadow-2xl shadow-black/50'
+            : 'bg-white/92 border-slate-200/80 text-slate-900'
         }`}
       >
         {/* TOP HALF: PARTICIPANTS PANEL */}
