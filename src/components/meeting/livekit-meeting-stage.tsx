@@ -959,48 +959,47 @@ function LiveKitInnerStage({
                 {formatDuration(callDuration)}
               </span>
             </div>
-
-            {raisedHands[participant.identity] && (
-              <div className="flex items-center gap-1 px-2 py-[2px] rounded bg-[#0066FF]/90 backdrop-blur-md text-white font-bold text-[8.5px] shadow-md animate-bounce">
-                <span>✋</span>
-                {variant !== 'thumb' && <span>Hand Raised</span>}
-              </div>
-            )}
           </div>
         </div>
 
-        {/* Top-Right Circular Action Badges (Pin + Mic Status, matching reference design) */}
-        <div className="absolute top-3 right-3 z-20 flex items-center gap-2">
+        {/* Top-Right Glassmorphic Action Badges (Hand Raised + Pin + Mic Status) */}
+        <div className="absolute top-3 right-3 z-20 flex items-center gap-1.5">
+          {raisedHands[participant.identity] && (
+            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-gradient-to-r from-[#0066FF]/90 to-[#00A3FF]/90 backdrop-blur-md border border-white/25 text-white font-bold text-[11px] shadow-[0_4px_16px_rgba(0,102,255,0.45)] animate-pulse">
+              <span>✋</span>
+              {variant !== 'thumb' && <span>Hand Raised</span>}
+            </div>
+          )}
           {variant !== 'thumb' && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 setPinnedTrackKey(isPinned ? null : trackKey);
               }}
-              className={`h-9 w-9 rounded-full flex items-center justify-center shadow-md transition-all cursor-pointer active:scale-95 ${
+              className={`h-8 w-8 rounded-full flex items-center justify-center backdrop-blur-md border shadow-md transition-all cursor-pointer active:scale-95 ${
                 isPinned
-                  ? 'bg-emerald-500 text-white'
-                  : 'bg-white/95 hover:bg-white text-emerald-600'
+                  ? 'bg-emerald-500/90 border-emerald-300/40 text-white shadow-emerald-500/30'
+                  : 'bg-black/45 hover:bg-black/65 border-white/15 text-white/90 hover:text-white'
               }`}
               title={isPinned ? 'Unpin' : 'Pin to Spotlight'}
             >
-              {isPinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
+              {isPinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
             </button>
           )}
           <div
             className={`${
-              variant === 'thumb' ? 'h-7 w-7' : 'h-9 w-9'
-            } rounded-full flex items-center justify-center shadow-md ${
+              variant === 'thumb' ? 'h-7 w-7' : 'h-8 w-8'
+            } rounded-full flex items-center justify-center backdrop-blur-md border shadow-md transition-colors ${
               isMicOn
-                ? 'bg-[#2563EB] text-white'
-                : 'bg-white/95 text-slate-700'
+                ? 'bg-[#0066FF]/85 border-white/20 text-white shadow-[0_4px_14px_rgba(0,102,255,0.4)]'
+                : 'bg-black/55 border-rose-500/40 text-rose-400'
             }`}
             title={isMicOn ? 'Mic Active' : 'Muted'}
           >
             {isMicOn ? (
-              <Mic className={variant === 'thumb' ? 'h-3.5 w-3.5' : 'h-4 w-4'} />
+              <Mic className={variant === 'thumb' ? 'h-3.5 w-3.5' : 'h-3.5 w-3.5'} />
             ) : (
-              <MicOff className={variant === 'thumb' ? 'h-3.5 w-3.5 text-rose-500' : 'h-4 w-4 text-rose-500'} />
+              <MicOff className={variant === 'thumb' ? 'h-3.5 w-3.5' : 'h-3.5 w-3.5'} />
             )}
           </div>
         </div>
@@ -1294,20 +1293,37 @@ function LiveKitInnerStage({
         </div>
 
         {/* 3. Main Video Stage (Spotlight + Thumbnails OR Grid View) */}
-        <main className="flex-1 min-h-0 flex flex-col gap-3 relative overflow-hidden">
-          {/* On-Air Announcement Banner */}
+        <main className="flex-1 min-h-0 flex flex-col gap-2.5 relative overflow-hidden">
+          {/* On-Air Announcement Banner (Clean non-overlapping studio broadcast bar above video) */}
           {broadcastBanner && (
-            <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 max-w-2xl w-[92%] rounded-2xl overflow-hidden shadow-xl border border-[#FF5B37]/40 bg-slate-900/95 backdrop-blur-xl flex items-stretch">
-              <div className="px-3 py-1.5 bg-[#FF5B37] text-white text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 shrink-0">
+            <div
+              className={`shrink-0 rounded-2xl overflow-hidden flex items-center backdrop-blur-xl transition-all ${
+                isDarkStudio
+                  ? 'bg-[#081124]/90 border border-white/12 shadow-[0_8px_24px_rgba(0,0,0,0.4)]'
+                  : 'bg-white/95 border border-slate-200/90 shadow-md'
+              }`}
+            >
+              <div className="px-3.5 py-2 bg-gradient-to-r from-[#FF7A00] to-[#FF4D2E] text-white text-[10px] font-black uppercase tracking-[0.14em] flex items-center gap-1.5 shrink-0 self-stretch">
                 <Megaphone className="h-3.5 w-3.5 animate-pulse" />
                 <span>Announcement</span>
               </div>
-              <div className="flex-1 px-3.5 py-1.5 flex items-center justify-between gap-2 min-w-0">
-                <p className="text-xs font-bold text-white truncate">{broadcastBanner.text}</p>
+              <div className="flex-1 px-3.5 py-2 flex items-center justify-between gap-3 min-w-0">
+                <p
+                  className={`text-xs sm:text-[13px] font-semibold truncate ${
+                    isDarkStudio ? 'text-white/95' : 'text-slate-800'
+                  }`}
+                >
+                  {broadcastBanner.text}
+                </p>
                 {hasHostPrivileges && (
                   <button
                     onClick={() => handleSetBroadcastBanner(null)}
-                    className="p-1 text-slate-400 hover:text-white cursor-pointer"
+                    className={`h-6 w-6 rounded-full flex items-center justify-center shrink-0 transition-colors cursor-pointer ${
+                      isDarkStudio
+                        ? 'text-slate-400 hover:text-white hover:bg-white/10'
+                        : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100'
+                    }`}
+                    title="Dismiss Announcement"
                   >
                     <X className="h-3.5 w-3.5" />
                   </button>
@@ -1316,66 +1332,132 @@ function LiveKitInnerStage({
             </div>
           )}
 
-          {/* Floating Live Poll Card */}
+          {/* Floating Live Poll Card (Glassmorphic Broadcast Overlay) */}
           {activePoll && (
             <div
-              className={`absolute bottom-4 right-4 z-30 w-80 max-w-[92%] rounded-3xl border shadow-2xl p-4 space-y-3 backdrop-blur-2xl ${
+              className={`absolute bottom-4 right-4 z-30 w-[290px] sm:w-[315px] max-w-[92%] rounded-2xl overflow-hidden border shadow-[0_20px_50px_rgba(0,0,0,0.55)] backdrop-blur-2xl ${
                 isDarkStudio
-                  ? 'bg-[#0d1526]/95 border-[#3B82F6]/40 text-white'
-                  : 'bg-white/96 border-slate-200 text-slate-900'
+                  ? 'bg-[#070f20]/82 border-white/15 text-white'
+                  : 'bg-white/92 border-slate-200/90 text-slate-900'
               }`}
             >
-              <div className="flex items-start justify-between gap-2">
-                <div className="space-y-0.5 min-w-0">
-                  <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-[#2563EB]">
-                    <BarChart2 className="h-3.5 w-3.5 text-[#FF5B37]" />
-                    <span>Live Poll • {activePoll.createdBy}</span>
+              {/* Top MetroMeet Brand Gradient Accent Line */}
+              <div className="h-[2.5px] w-full bg-gradient-to-r from-[#0066FF] via-[#00A3FF] to-[#FF7A00]" />
+              <div className="p-4 space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="space-y-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#0066FF]/20 border border-[#0066FF]/35 text-[9.5px] font-extrabold uppercase tracking-[0.12em] text-cyan-300">
+                        <span className="relative flex h-1.5 w-1.5">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#FF7A00] opacity-80" />
+                          <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#FF7A00]" />
+                        </span>
+                        Live Poll
+                      </span>
+                      <span
+                        className={`text-[10.5px] font-medium truncate ${
+                          isDarkStudio ? 'text-slate-400' : 'text-slate-500'
+                        }`}
+                      >
+                        by {activePoll.createdBy}
+                      </span>
+                    </div>
+                    <h4 className="text-sm font-bold leading-snug tracking-tight pt-0.5">
+                      {activePoll.question}
+                    </h4>
                   </div>
-                  <h4 className="text-xs sm:text-sm font-extrabold leading-snug">
-                    {activePoll.question}
-                  </h4>
+                  {hasHostPrivileges && (
+                    <button
+                      onClick={handleClosePoll}
+                      className={`h-7 w-7 rounded-full flex items-center justify-center shrink-0 transition-colors cursor-pointer ${
+                        isDarkStudio
+                          ? 'text-slate-400 hover:text-white hover:bg-white/10'
+                          : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100'
+                      }`}
+                      title="Close Poll"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
                 </div>
-                {hasHostPrivileges && (
-                  <button
-                    onClick={handleClosePoll}
-                    className="p-1 rounded-lg hover:bg-slate-500/10 text-slate-400 cursor-pointer"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                )}
-              </div>
-              <div className="space-y-1.5">
+
                 {(() => {
                   const totalVotes = activePoll.options.reduce((s, o) => s + o.votes.length, 0);
                   const myId = localParticipant?.identity || 'local';
-                  return activePoll.options.map((opt) => {
-                    const pct = totalVotes > 0 ? Math.round((opt.votes.length / totalVotes) * 100) : 0;
-                    const voted = opt.votes.includes(myId);
-                    return (
-                      <button
-                        key={opt.id}
-                        onClick={() => handleVotePoll(opt.id)}
-                        className={`w-full text-left relative overflow-hidden rounded-xl border p-2.5 transition-all cursor-pointer ${
-                          voted
-                            ? 'border-[#3B82F6] bg-[#3B82F6]/10'
-                            : isDarkStudio
-                            ? 'border-white/10 bg-white/[0.04]'
-                            : 'border-slate-200 bg-slate-50 hover:border-[#3B82F6]/50'
+                  return (
+                    <>
+                      <div className="space-y-2">
+                        {activePoll.options.map((opt) => {
+                          const pct = totalVotes > 0 ? Math.round((opt.votes.length / totalVotes) * 100) : 0;
+                          const voted = opt.votes.includes(myId);
+                          return (
+                            <button
+                              key={opt.id}
+                              onClick={() => handleVotePoll(opt.id)}
+                              className={`w-full text-left relative overflow-hidden rounded-xl border px-3 py-2.5 transition-all cursor-pointer group ${
+                                voted
+                                  ? 'border-[#00A3FF]/70 bg-[#0066FF]/15 shadow-[0_0_16px_rgba(0,102,255,0.2)]'
+                                  : isDarkStudio
+                                  ? 'border-white/10 bg-white/[0.04] hover:bg-white/[0.08] hover:border-white/20'
+                                  : 'border-slate-200 bg-slate-50/80 hover:border-[#0066FF]/40'
+                              }`}
+                            >
+                              <div
+                                className="absolute inset-y-0 left-0 bg-gradient-to-r from-[#0066FF]/35 to-[#00A3FF]/20 transition-all duration-500"
+                                style={{ width: `${pct}%` }}
+                              />
+                              <div className="relative z-10 flex items-center justify-between gap-2.5 text-xs">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <span
+                                    className={`h-4 w-4 rounded-full flex items-center justify-center shrink-0 border transition-colors ${
+                                      voted
+                                        ? 'bg-[#0066FF] border-[#00A3FF] text-white'
+                                        : isDarkStudio
+                                        ? 'border-white/25 group-hover:border-cyan-400/60'
+                                        : 'border-slate-300 group-hover:border-[#0066FF]'
+                                    }`}
+                                  >
+                                    {voted && <Check className="h-2.5 w-2.5 stroke-[3]" />}
+                                  </span>
+                                  <span className="font-semibold truncate">{opt.text}</span>
+                                </div>
+                                <span
+                                  className={`font-mono text-[11px] font-bold tabular-nums shrink-0 ${
+                                    voted
+                                      ? isDarkStudio
+                                        ? 'text-cyan-300'
+                                        : 'text-[#0066FF]'
+                                      : isDarkStudio
+                                      ? 'text-slate-300'
+                                      : 'text-slate-600'
+                                  }`}
+                                >
+                                  {pct}%{' '}
+                                  <span className="opacity-65 font-normal">({opt.votes.length})</span>
+                                </span>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      <div
+                        className={`pt-1.5 border-t flex items-center justify-between text-[10.5px] font-medium ${
+                          isDarkStudio
+                            ? 'border-white/10 text-slate-400'
+                            : 'border-slate-200/80 text-slate-500'
                         }`}
                       >
-                        <div
-                          className="absolute inset-y-0 left-0 bg-[#3B82F6]/20 transition-all duration-500"
-                          style={{ width: `${pct}%` }}
-                        />
-                        <div className="relative z-10 flex items-center justify-between gap-2 text-xs">
-                          <span className="font-bold truncate">{opt.text}</span>
-                          <span className="font-mono text-[11px] font-bold text-[#2563EB] shrink-0">
-                            {pct}% ({opt.votes.length})
-                          </span>
-                        </div>
-                      </button>
-                    );
-                  });
+                        <span>
+                          {totalVotes} {totalVotes === 1 ? 'vote' : 'votes'}
+                        </span>
+                        <span className="inline-flex items-center gap-1">
+                          <BarChart2 className="h-3 w-3 text-[#FF7A00]" />
+                          Live results
+                        </span>
+                      </div>
+                    </>
+                  );
                 })()}
               </div>
             </div>
