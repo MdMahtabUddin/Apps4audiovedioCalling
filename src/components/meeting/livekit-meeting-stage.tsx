@@ -1126,13 +1126,6 @@ function LiveKitInnerStage({
                 >
                   {meetingTitle}
                 </h1>
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-rose-600/90 text-white text-[10px] font-black uppercase tracking-[0.14em] shadow-md shadow-rose-600/30 border border-rose-400/40">
-                  <span className="relative flex h-1.5 w-1.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-80" />
-                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white" />
-                  </span>
-                  <span>LIVE</span>
-                </span>
                 <span className="hidden md:inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-gradient-to-r from-[#0066FF] to-[#00A3FF] text-white text-[11px] font-bold shadow-md shadow-[#0066FF]/30">
                   <Users className="h-3 w-3" />
                   <span>{isHost ? 'Host Meeting' : 'Live Meeting'}</span>
@@ -1144,10 +1137,6 @@ function LiveKitInnerStage({
                 }`}
               >
                 <span>{todayFormatted}</span>
-                <span>•</span>
-                <span className="font-mono font-semibold text-emerald-500">
-                  {formatDuration(callDuration)}
-                </span>
                 {recorder.isRecording && (
                   <>
                     <span>•</span>
