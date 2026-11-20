@@ -905,51 +905,41 @@ function LiveKitInnerStage({
           </div>
         )}
 
-        {/* Top-Left International Broadcast Corner Bug: Refined MetroMeet Watermark + Sleek LIVE Strip */}
-        <div className="absolute top-3.5 left-3.5 z-20 flex flex-col items-start gap-1 pointer-events-none select-none">
-          {/* Ultra-Clean Native-Sized Watermark Wordmark (No bulky PRO pill or CSS scaling distortion) */}
+        {/* Top-Left MetroMeet Shadow Watermark Logo + Smaller LIVE & Time underneath */}
+        <div className="absolute top-3.5 left-3.5 z-20 flex flex-col items-start pointer-events-none select-none">
+          {/* Actual MetroMeet Logo in Subtle Shadow / Watermark Style */}
           <div
-            className={`inline-flex flex-col items-start ${
-              variant === 'thumb' ? 'opacity-50' : 'opacity-65'
-            } drop-shadow-[0_1px_6px_rgba(0,0,0,0.85)]`}
+            className={`leading-none ${
+              variant === 'thumb'
+                ? 'opacity-45 scale-[0.52] origin-top-left -mb-3'
+                : 'opacity-60 scale-[0.78] origin-top-left -mb-1 drop-shadow-[0_3px_12px_rgba(0,0,0,0.95)]'
+            }`}
           >
-            <span className="w-full h-[1.5px] rounded-full bg-gradient-to-r from-[#FF7A00] via-[#FFA336] to-transparent mb-0.5 opacity-90" />
-            <div
-              className={`flex items-baseline italic tracking-tight leading-none ${
-                variant === 'thumb' ? 'text-[10px]' : 'text-[13px]'
-              }`}
-            >
-              <span className="font-black text-[#388BFF]">Metro</span>
-              <span className="font-extrabold text-white/95 ml-[1px]">Meet</span>
-            </div>
+            <BrandLogo size="sm" showTagline={false} withSound={false} href="" />
           </div>
 
-          {/* Sleek Frosted-Glass LIVE Indicator Bar directly underneath */}
-          <div className="flex items-center gap-1.5">
+          {/* Smaller LIVE + Time strip directly below the logo */}
+          <div className="flex items-center gap-1.5 pl-0.5">
             <div
-              className={`inline-flex items-center gap-1.5 rounded-md bg-black/45 backdrop-blur-md border border-white/15 shadow-sm ${
-                variant === 'thumb' ? 'px-1.5 py-[2px] text-[8px]' : 'px-2 py-[3px] text-[9.5px]'
+              className={`inline-flex items-center gap-1 rounded bg-black/40 backdrop-blur-sm border border-white/10 shadow-[0_2px_8px_rgba(0,0,0,0.6)] ${
+                variant === 'thumb' ? 'px-1 py-[1px] text-[7px]' : 'px-1.5 py-[2px] text-[8.5px]'
               }`}
             >
               <span className="relative flex h-1.5 w-1.5 shrink-0">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-500 opacity-80" />
                 <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-rose-500" />
               </span>
-              <span className="font-extrabold tracking-[0.2em] uppercase text-white/95 leading-none">
+              <span className="font-bold tracking-[0.16em] uppercase text-white/90 leading-none">
                 LIVE
               </span>
-              {variant === 'main' && (
-                <>
-                  <span className="h-2.5 w-px bg-white/20" />
-                  <span className="font-mono font-semibold text-white/80 tabular-nums leading-none">
-                    {formatDuration(callDuration)}
-                  </span>
-                </>
-              )}
+              <span className="h-2 w-px bg-white/25" />
+              <span className="font-mono font-medium text-white/80 tabular-nums leading-none">
+                {formatDuration(callDuration)}
+              </span>
             </div>
 
             {raisedHands[participant.identity] && (
-              <div className="flex items-center gap-1 px-2 py-[3px] rounded-md bg-[#0066FF]/90 backdrop-blur-md text-white font-bold text-[9.5px] shadow-md animate-bounce">
+              <div className="flex items-center gap-1 px-2 py-[2px] rounded bg-[#0066FF]/90 backdrop-blur-md text-white font-bold text-[8.5px] shadow-md animate-bounce">
                 <span>✋</span>
                 {variant !== 'thumb' && <span>Hand Raised</span>}
               </div>
