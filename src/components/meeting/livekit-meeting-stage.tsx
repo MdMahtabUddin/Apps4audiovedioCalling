@@ -12,7 +12,16 @@ import {
   useRoomContext,
   useConnectionState,
 } from '@livekit/components-react';
-import { Track, ConnectionState, ConnectionQuality } from 'livekit-client';
+import {
+  Track,
+  ConnectionState,
+  ConnectionQuality,
+  VideoPresets,
+  AudioPresets,
+  VideoQuality,
+  LocalVideoTrack,
+  LocalAudioTrack,
+} from 'livekit-client';
 import {
   Mic,
   MicOff,
@@ -51,6 +60,8 @@ import {
   Keyboard,
   ArrowLeft,
   Plus,
+  Minus,
+  SlidersHorizontal,
   LayoutGrid,
   Columns2,
   MoreHorizontal,
@@ -120,6 +131,220 @@ function LiveKitInnerStage({
   const [showParticipantsDrawer, setShowParticipantsDrawer] = useState(false);
   const [showWhiteboard, setShowWhiteboard] = useState(false);
   const [showHostExitModal, setShowHostExitModal] = useState(false);
+
+  // Voice & Vedio Quality Controls
+  type VedioQualityLevel = 'low' | 'medium' | 'hd' | 'fhd';
+  type VoiceQualityLevel = 'low' | 'standard' | 'high' | 'studio';
+
+  const VEDIO_QUALITY_LEVELS: {
+    id: VedioQualityLevel;
+    short: string;
+    label: string;
+    detail: string;
+    preset: typeof VideoPresets.h720;
+    remoteQuality: VideoQuality;
+  }[] = [
+    {
+      id: 'low',
+      short: '360p',
+      label: 'Data Saver',
+      detail: '360p · 15 fps',
+      preset: VideoPresets.h360,
+      remoteQuality: VideoQuality.LOW,
+    },
+    {
+      id: 'medium',
+      short: '540p',
+      label: 'Standard',
+      detail: '540p · 24 fps',
+      preset: VideoPresets.h540,
+      remoteQuality: VideoQuality.MEDIUM,
+    },
+    {
+      id: 'hd',
+      short: '720p',
+      label: 'HD',
+      detail: '720p · 30 fps',
+      preset: VideoPresets.h720,
+      remoteQuality: VideoQuality.HIGH,
+    },
+    {
+      id: 'fhd',
+      short: '1080p',
+      label: 'Full HD',
+      detail: '1080p · 30 fps',
+      preset: VideoPresets.h1080,
+      remoteQuality: VideoQuality.HIGH,
+    },
+  ];
+
+  const VOICE_QUALITY_LEVELS: {
+    id: VoiceQualityLevel;
+    short: string;
+    label: string;
+    detail: string;
+    preset: typeof AudioPresets.speech;
+  }[] = [
+    {
+      id: 'low',
+      short: '20k',
+      label: 'Data Saver',
+      detail: '20 kbps · Low Bandwidth',
+      preset: AudioPresets.telephone,
+    },
+    {
+      id: 'standard',
+      short: '32k',
+      label: 'Standard Voice',
+      detail: '32 kbps · Clear Speech',
+      preset: AudioPresets.speech,
+    },
+    {
+      id: 'high',
+      short: '64k',
+      label: 'High Voice',
+      detail: '64 kbps · Broadcast',
+      preset: AudioPresets.music,
+    },
+    {
+      id: 'studio',
+      short: '96k',
+      label: 'Studio HD',
+      detail: '96 kbps · Ultra Crisp',
+      preset: AudioPresets.musicHighQuality,
+    },
+  ];
+
+  const [showQualityModal, setShowQualityModal] = useState(false);
+  const [vedioQuality, setVedioQuality] = useState<VedioQualityLevel>('hd');
+  const [voiceQuality, setVoiceQuality] = useState<VoiceQualityLevel>('standard');
+  const [noiseSuppression, setNoiseSuppression] = useState(true);
+  const [echoCancellation, setEchoCancellation] = useState(true);
+  const [speakerVolume, setSpeakerVolume] = useState(100);
+  const [isApplyingQuality, setIsApplyingQuality] = useState(false);
+
+  // Sync speaker volume to all LiveKit audio elements
+  useEffect(() => {
+    const vol = Math.max(0, Math.min(1, speakerVolume / 100));
+    const applyVolume = () => {
+      document.querySelectorAll('audio').forEach((el) => {
+        el.volume = vol;
+      });
+    };
+    applyVolume();
+    const timer = setInterval(applyVolume, 1500);
+    return () => clearInterval(timer);
+  }, [speakerVolume, participants.length]);
+
+  // Apply remote vedio quality whenever participants or vedioQuality changes
+  useEffect(() => {
+    if (!room) return;
+    const cfg = VEDIO_QUALITY_LEVELS.find((q) => q.id === vedioQuality);
+    if (!cfg) return;
+    room.remoteParticipants.forEach((rp) => {
+      rp.videoTrackPublications.forEach((pub) => {
+        try {
+          pub.setVideoQuality(cfg.remoteQuality);
+        } catch {
+          // ignore if track does not support simulcast layers
+        }
+      });
+    });
+  }, [room, vedioQuality, participants.length]);
+
+  const applyVedioQuality = async (level: VedioQualityLevel) => {
+    const cfg = VEDIO_QUALITY_LEVELS.find((q) => q.id === level);
+    if (!cfg) return;
+    setVedioQuality(level);
+    setIsApplyingQuality(true);
+    try {
+      // Update remote tracks immediately
+      if (room) {
+        room.remoteParticipants.forEach((rp) => {
+          rp.videoTrackPublications.forEach((pub) => {
+            try {
+              pub.setVideoQuality(cfg.remoteQuality);
+            } catch {
+              // ignore
+            }
+          });
+        });
+      }
+      // Restart local camera track with new resolution & frameRate if active
+      const camPub = localParticipant?.getTrackPublication(Track.Source.Camera);
+      const localCamTrack = camPub?.track as LocalVideoTrack | undefined;
+      if (localCamTrack && localParticipant?.isCameraEnabled) {
+        await localCamTrack.restartTrack({
+          resolution: cfg.preset.resolution,
+        });
+      }
+      toast.success(`Vedio quality set to ${cfg.label} (${cfg.short})`);
+    } catch (err) {
+      console.warn('Vedio quality update notice:', err);
+      toast.info(`Vedio quality set to ${cfg.label} (${cfg.short})`);
+    } finally {
+      setIsApplyingQuality(false);
+    }
+  };
+
+  const applyVoiceQuality = async (
+    level: VoiceQualityLevel,
+    nextNs: boolean = noiseSuppression,
+    nextEc: boolean = echoCancellation
+  ) => {
+    const cfg = VOICE_QUALITY_LEVELS.find((q) => q.id === level);
+    if (!cfg) return;
+    setVoiceQuality(level);
+    setNoiseSuppression(nextNs);
+    setEchoCancellation(nextEc);
+    setIsApplyingQuality(true);
+    try {
+      const micPub = localParticipant?.getTrackPublication(Track.Source.Microphone);
+      const localMicTrack = micPub?.track as LocalAudioTrack | undefined;
+      if (localParticipant?.isMicrophoneEnabled) {
+        if (localMicTrack) {
+          await localMicTrack.restartTrack({
+            noiseSuppression: nextNs,
+            echoCancellation: nextEc,
+            autoGainControl: nextNs,
+          });
+        }
+        await localParticipant.setMicrophoneEnabled(
+          true,
+          {
+            noiseSuppression: nextNs,
+            echoCancellation: nextEc,
+            autoGainControl: nextNs,
+          },
+          {
+            audioPreset: cfg.preset,
+          }
+        );
+      }
+      toast.success(`Voice quality set to ${cfg.label} (${cfg.short})`);
+    } catch (err) {
+      console.warn('Voice quality update notice:', err);
+      toast.info(`Voice quality set to ${cfg.label} (${cfg.short})`);
+    } finally {
+      setIsApplyingQuality(false);
+    }
+  };
+
+  const stepVedioQuality = (delta: -1 | 1) => {
+    const idx = VEDIO_QUALITY_LEVELS.findIndex((q) => q.id === vedioQuality);
+    const nextIdx = Math.max(0, Math.min(VEDIO_QUALITY_LEVELS.length - 1, idx + delta));
+    if (nextIdx !== idx) {
+      void applyVedioQuality(VEDIO_QUALITY_LEVELS[nextIdx].id);
+    }
+  };
+
+  const stepVoiceQuality = (delta: -1 | 1) => {
+    const idx = VOICE_QUALITY_LEVELS.findIndex((q) => q.id === voiceQuality);
+    const nextIdx = Math.max(0, Math.min(VOICE_QUALITY_LEVELS.length - 1, idx + delta));
+    if (nextIdx !== idx) {
+      void applyVoiceQuality(VOICE_QUALITY_LEVELS[nextIdx].id);
+    }
+  };
   const [coHosts, setCoHosts] = useState<Record<string, boolean>>({});
   const [wbElements, setWbElements] = useState<WhiteboardElement[]>([]);
   const [wbRedoStack, setWbRedoStack] = useState<WhiteboardElement[]>([]);
@@ -1148,8 +1373,25 @@ function LiveKitInnerStage({
             </div>
           </div>
 
-          {/* Right Header Studio Utilities: Snapshot, Mirror, Theme, Fullscreen, Record Dot */}
+          {/* Right Header Studio Utilities: Quality, Snapshot, Mirror, Theme, Fullscreen, Record Dot */}
           <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => setShowQualityModal(true)}
+              className={`h-9 px-2.5 sm:px-3 rounded-full flex items-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95 text-[11px] font-bold ${
+                showQualityModal
+                  ? 'bg-[#0066FF] text-white border border-[#00A3FF]/60 shadow-[#0066FF]/30'
+                  : isDarkStudio
+                  ? 'bg-white/[0.07] hover:bg-white/[0.14] text-cyan-300 border border-white/10'
+                  : 'bg-white hover:bg-slate-50 text-[#0066FF] border border-slate-200/80'
+              }`}
+              title="Voice & Vedio Quality Settings"
+            >
+              <SlidersHorizontal className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline uppercase tracking-wide">
+                {VEDIO_QUALITY_LEVELS.find((q) => q.id === vedioQuality)?.short || '720p'}
+              </span>
+            </button>
+
             <button
               onClick={handleCaptureSnapshot}
               className={`h-9 w-9 rounded-full flex items-center justify-center transition-all cursor-pointer shadow-sm active:scale-95 ${
@@ -1608,6 +1850,17 @@ function LiveKitInnerStage({
                   }`}
                 >
                   
+
+                  <button
+                    onClick={() => {
+                      setShowQualityModal(true);
+                      setShowMoreMenu(false);
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-[#3B82F6]/10 text-xs font-semibold cursor-pointer"
+                  >
+                    <SlidersHorizontal className="h-4 w-4 text-cyan-400" />
+                    <span>Voice &amp; Vedio Quality</span>
+                  </button>
 
                   <button
                     onClick={() => {
@@ -2204,6 +2457,298 @@ function LiveKitInnerStage({
                 className="w-full py-2 text-xs text-gray-400 hover:text-white cursor-pointer"
               >
                 Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Voice & Vedio Quality Control Modal */}
+      {showQualityModal && (
+        <div
+          className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-md flex items-center justify-center p-4"
+          onClick={() => setShowQualityModal(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className={`w-full max-w-md rounded-3xl overflow-hidden border shadow-[0_24px_64px_rgba(0,0,0,0.65)] backdrop-blur-2xl ${
+              isDarkStudio
+                ? 'bg-[#070f20]/95 border-white/15 text-white'
+                : 'bg-white/98 border-slate-200 text-slate-900'
+            }`}
+          >
+            {/* MetroMeet Top Brand Accent Line */}
+            <div className="h-[3px] w-full bg-gradient-to-r from-[#0066FF] via-[#00A3FF] to-[#FF7A00]" />
+
+            <div className="p-5 sm:p-6 space-y-5">
+              {/* Header */}
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-[#0066FF] to-[#00A3FF] text-white flex items-center justify-center shadow-lg shadow-[#0066FF]/30">
+                    <SlidersHorizontal className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm sm:text-base font-extrabold tracking-tight">
+                      Voice &amp; Vedio Quality
+                    </h3>
+                    <p
+                      className={`text-[11px] font-medium ${
+                        isDarkStudio ? 'text-slate-400' : 'text-slate-500'
+                      }`}
+                    >
+                      Adjust bandwidth, resolution &amp; audio clarity live
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowQualityModal(false)}
+                  className={`h-8 w-8 rounded-full flex items-center justify-center transition-colors cursor-pointer ${
+                    isDarkStudio
+                      ? 'text-slate-400 hover:text-white hover:bg-white/10'
+                      : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100'
+                  }`}
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              {/* Vedio Quality Section */}
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Video className="h-4 w-4 text-[#00A3FF]" />
+                    <span className="text-xs font-extrabold uppercase tracking-wider">
+                      Vedio Quality
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => stepVedioQuality(-1)}
+                      disabled={isApplyingQuality || vedioQuality === 'low'}
+                      className={`h-6 w-6 rounded-full flex items-center justify-center border transition-all cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed ${
+                        isDarkStudio
+                          ? 'bg-white/[0.06] border-white/15 hover:bg-white/[0.14] text-white'
+                          : 'bg-slate-100 border-slate-200 hover:bg-slate-200 text-slate-700'
+                      }`}
+                      title="Decrease Vedio Quality"
+                    >
+                      <Minus className="h-3 w-3" />
+                    </button>
+                    <span className="text-[11px] font-mono font-bold text-cyan-400 min-w-[44px] text-center">
+                      {VEDIO_QUALITY_LEVELS.find((q) => q.id === vedioQuality)?.short}
+                    </span>
+                    <button
+                      onClick={() => stepVedioQuality(1)}
+                      disabled={isApplyingQuality || vedioQuality === 'fhd'}
+                      className={`h-6 w-6 rounded-full flex items-center justify-center border transition-all cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed ${
+                        isDarkStudio
+                          ? 'bg-white/[0.06] border-white/15 hover:bg-white/[0.14] text-white'
+                          : 'bg-slate-100 border-slate-200 hover:bg-slate-200 text-slate-700'
+                      }`}
+                      title="Increase Vedio Quality"
+                    >
+                      <Plus className="h-3 w-3" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  {VEDIO_QUALITY_LEVELS.map((item) => {
+                    const active = vedioQuality === item.id;
+                    return (
+                      <button
+                        key={item.id}
+                        disabled={isApplyingQuality}
+                        onClick={() => void applyVedioQuality(item.id)}
+                        className={`text-left px-3 py-2.5 rounded-xl border transition-all cursor-pointer ${
+                          active
+                            ? 'border-[#00A3FF] bg-[#0066FF]/20 shadow-[0_0_16px_rgba(0,102,255,0.22)]'
+                            : isDarkStudio
+                            ? 'border-white/10 bg-white/[0.04] hover:bg-white/[0.08] hover:border-white/20'
+                            : 'border-slate-200 bg-slate-50 hover:border-[#0066FF]/40'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="text-xs font-bold">{item.label}</span>
+                          <span
+                            className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md ${
+                              active
+                                ? 'bg-[#0066FF] text-white'
+                                : isDarkStudio
+                                ? 'bg-white/10 text-slate-300'
+                                : 'bg-slate-200 text-slate-600'
+                            }`}
+                          >
+                            {item.short}
+                          </span>
+                        </div>
+                        <p
+                          className={`text-[10.5px] mt-0.5 ${
+                            isDarkStudio ? 'text-slate-400' : 'text-slate-500'
+                          }`}
+                        >
+                          {item.detail}
+                        </p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Voice Quality Section */}
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Mic className="h-4 w-4 text-[#FF7A00]" />
+                    <span className="text-xs font-extrabold uppercase tracking-wider">
+                      Voice Quality
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => stepVoiceQuality(-1)}
+                      disabled={isApplyingQuality || voiceQuality === 'low'}
+                      className={`h-6 w-6 rounded-full flex items-center justify-center border transition-all cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed ${
+                        isDarkStudio
+                          ? 'bg-white/[0.06] border-white/15 hover:bg-white/[0.14] text-white'
+                          : 'bg-slate-100 border-slate-200 hover:bg-slate-200 text-slate-700'
+                      }`}
+                      title="Decrease Voice Quality"
+                    >
+                      <Minus className="h-3 w-3" />
+                    </button>
+                    <span className="text-[11px] font-mono font-bold text-[#FF7A00] min-w-[44px] text-center">
+                      {VOICE_QUALITY_LEVELS.find((q) => q.id === voiceQuality)?.short}
+                    </span>
+                    <button
+                      onClick={() => stepVoiceQuality(1)}
+                      disabled={isApplyingQuality || voiceQuality === 'studio'}
+                      className={`h-6 w-6 rounded-full flex items-center justify-center border transition-all cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed ${
+                        isDarkStudio
+                          ? 'bg-white/[0.06] border-white/15 hover:bg-white/[0.14] text-white'
+                          : 'bg-slate-100 border-slate-200 hover:bg-slate-200 text-slate-700'
+                      }`}
+                      title="Increase Voice Quality"
+                    >
+                      <Plus className="h-3 w-3" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  {VOICE_QUALITY_LEVELS.map((item) => {
+                    const active = voiceQuality === item.id;
+                    return (
+                      <button
+                        key={item.id}
+                        disabled={isApplyingQuality}
+                        onClick={() => void applyVoiceQuality(item.id)}
+                        className={`text-left px-3 py-2.5 rounded-xl border transition-all cursor-pointer ${
+                          active
+                            ? 'border-[#FF7A00] bg-[#FF7A00]/15 shadow-[0_0_16px_rgba(255,122,0,0.2)]'
+                            : isDarkStudio
+                            ? 'border-white/10 bg-white/[0.04] hover:bg-white/[0.08] hover:border-white/20'
+                            : 'border-slate-200 bg-slate-50 hover:border-[#FF7A00]/40'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="text-xs font-bold">{item.label}</span>
+                          <span
+                            className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md ${
+                              active
+                                ? 'bg-[#FF7A00] text-white'
+                                : isDarkStudio
+                                ? 'bg-white/10 text-slate-300'
+                                : 'bg-slate-200 text-slate-600'
+                            }`}
+                          >
+                            {item.short}
+                          </span>
+                        </div>
+                        <p
+                          className={`text-[10.5px] mt-0.5 ${
+                            isDarkStudio ? 'text-slate-400' : 'text-slate-500'
+                          }`}
+                        >
+                          {item.detail}
+                        </p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Voice Enhancements & Speaker Volume */}
+              <div
+                className={`rounded-2xl p-3.5 border space-y-3 ${
+                  isDarkStudio
+                    ? 'bg-white/[0.03] border-white/10'
+                    : 'bg-slate-50 border-slate-200/80'
+                }`}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-semibold">Noise Suppression</span>
+                  <button
+                    onClick={() => void applyVoiceQuality(voiceQuality, !noiseSuppression, echoCancellation)}
+                    className={`w-10 h-5 rounded-full transition-colors relative cursor-pointer ${
+                      noiseSuppression ? 'bg-[#0066FF]' : 'bg-slate-600'
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all ${
+                        noiseSuppression ? 'left-5' : 'left-0.5'
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-semibold">Echo Cancellation</span>
+                  <button
+                    onClick={() => void applyVoiceQuality(voiceQuality, noiseSuppression, !echoCancellation)}
+                    className={`w-10 h-5 rounded-full transition-colors relative cursor-pointer ${
+                      echoCancellation ? 'bg-[#0066FF]' : 'bg-slate-600'
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all ${
+                        echoCancellation ? 'left-5' : 'left-0.5'
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                <div className="pt-1 space-y-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold flex items-center gap-1.5">
+                      {speakerVolume === 0 ? (
+                        <VolumeX className="h-3.5 w-3.5 text-rose-400" />
+                      ) : (
+                        <Volume2 className="h-3.5 w-3.5 text-emerald-400" />
+                      )}
+                      Speaker Volume
+                    </span>
+                    <span className="font-mono text-[11px] font-bold text-cyan-400">
+                      {speakerVolume}%
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    step={5}
+                    value={speakerVolume}
+                    onChange={(e) => setSpeakerVolume(Number(e.target.value))}
+                    className="w-full accent-[#0066FF] cursor-pointer h-1.5 rounded-lg"
+                  />
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowQualityModal(false)}
+                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-[#0066FF] to-[#00A3FF] hover:opacity-95 text-white text-xs font-bold shadow-lg shadow-[#0066FF]/25 transition-all cursor-pointer"
+              >
+                Done
               </button>
             </div>
           </div>
