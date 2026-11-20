@@ -905,34 +905,48 @@ function LiveKitInnerStage({
           </div>
         )}
 
-        {/* Top-Left LIVE Badge & Hand Raise Indicator */}
-        <div className="absolute top-3 left-3 z-20 flex items-center gap-2 pointer-events-none">
+        {/* Top-Left Compact Broadcast Watermark Logo + LIVE Badge directly underneath */}
+        <div className="absolute top-3 left-3 z-20 flex flex-col items-start gap-1 pointer-events-none select-none">
+          {/* Small Translucent MetroMeet Watermark */}
           <div
-            className={`inline-flex items-center gap-1.5 rounded-full bg-black/60 backdrop-blur-md border border-rose-500/40 shadow-lg ${
-              variant === 'thumb' ? 'px-2 py-0.5 text-[9px]' : 'px-3 py-1 text-[11px]'
+            className={`leading-none ${
+              variant === 'thumb'
+                ? 'opacity-35 scale-[0.45] origin-top-left -mb-3'
+                : 'opacity-45 scale-[0.65] origin-top-left -mb-2 drop-shadow-[0_2px_8px_rgba(0,0,0,0.75)]'
             }`}
           >
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-500 opacity-80" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500" />
-            </span>
-            <span className="font-black tracking-[0.14em] uppercase text-white">LIVE</span>
-            {variant === 'main' && (
-              <>
-                <span className="text-white/30">|</span>
-                <span className="font-mono font-bold text-rose-200">
-                  {formatDuration(callDuration)}
-                </span>
-              </>
-            )}
+            <BrandLogo size="sm" showTagline={false} withSound={false} href="" />
           </div>
 
-          {raisedHands[participant.identity] && (
-            <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#3B82F6] text-white font-bold text-[11px] shadow-md animate-bounce">
-              <span>✋</span>
-              {variant !== 'thumb' && <span>Hand Raised</span>}
+          {/* LIVE Pill + Hand Raise directly below the watermark */}
+          <div className="flex items-center gap-1.5">
+            <div
+              className={`inline-flex items-center gap-1.5 rounded-full bg-rose-600/85 backdrop-blur-md border border-rose-400/45 shadow-md shadow-rose-900/40 ${
+                variant === 'thumb' ? 'px-2 py-0.5 text-[8px]' : 'px-2.5 py-0.5 text-[10px]'
+              }`}
+            >
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-85" />
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white" />
+              </span>
+              <span className="font-black tracking-[0.16em] uppercase text-white">LIVE</span>
+              {variant === 'main' && (
+                <>
+                  <span className="text-white/40">|</span>
+                  <span className="font-mono font-bold text-rose-100">
+                    {formatDuration(callDuration)}
+                  </span>
+                </>
+              )}
             </div>
-          )}
+
+            {raisedHands[participant.identity] && (
+              <div className="flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#3B82F6] text-white font-bold text-[10px] shadow-md animate-bounce">
+                <span>✋</span>
+                {variant !== 'thumb' && <span>Hand Raised</span>}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Top-Right Circular Action Badges (Pin + Mic Status, matching reference design) */}
@@ -971,8 +985,8 @@ function LiveKitInnerStage({
           </div>
         </div>
 
-        {/* Bottom-Left Nameplate Pill + Bottom-Right MetroMeet Logo Watermark (Jolchap) */}
-        <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between gap-2 pointer-events-none z-20">
+        {/* Bottom-Left Clean Frosted Nameplate Pill */}
+        <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between pointer-events-none z-20">
           <BroadcastNameplate
             name={pName}
             isLocal={isLocal}
@@ -981,17 +995,6 @@ function LiveKitInnerStage({
             isMuted={!isMicOn}
             isSpeaking={isSpeaking}
           />
-
-          {/* Subtle MetroMeet Brand Watermark on Right Side of Every Screen */}
-          <div
-            className={`pointer-events-none select-none shrink-0 transition-opacity ${
-              variant === 'thumb'
-                ? 'opacity-30 scale-[0.55] origin-bottom-right'
-                : 'opacity-40 scale-90 origin-bottom-right drop-shadow-[0_2px_10px_rgba(0,0,0,0.65)]'
-            }`}
-          >
-            <BrandLogo size="sm" showTagline={false} withSound={false} href="" />
-          </div>
         </div>
       </div>
     );
