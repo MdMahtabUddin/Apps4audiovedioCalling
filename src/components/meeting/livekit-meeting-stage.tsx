@@ -62,8 +62,8 @@ import {
   Plus,
   Minus,
   SlidersHorizontal,
-  LayoutGrid,
-  Columns2,
+  ChevronLeft,
+  ChevronRight,
   MoreHorizontal,
   Send,
   Sun,
@@ -1164,9 +1164,45 @@ function LiveKitInnerStage({
     []
   );
 
-  // Determine Spotlight (Featured) track vs Thumbnail strip tracks
-  const spotlightTrack = orderedTracks[0] || null;
-  const thumbnailTracks = orderedTracks.slice(1);
+  // Google Meet & Zoom Style Responsive Gallery Pagination (6 Mobile / 9 Tablet / 16 Desktop)
+  const [galleryPage, setGalleryPage] = useState(0);
+  const [pageSize, setPageSize] = useState(16);
+
+  useEffect(() => {
+    const updatePageSize = () => {
+      if (window.innerWidth < 640) setPageSize(6);
+      else if (window.innerWidth < 1024) setPageSize(9);
+      else setPageSize(16);
+    };
+    updatePageSize();
+    window.addEventListener('resize', updatePageSize);
+    return () => window.removeEventListener('resize', updatePageSize);
+  }, []);
+
+  // Auto-enter Presentation Mode ONLY when someone is Screen Sharing or explicitly Pinned (Google Meet / Zoom behavior)
+  const activeScreenShareTrack = orderedTracks.find(
+    (t) => t.source === Track.Source.ScreenShare
+  );
+  const pinnedTrack = pinnedTrackKey
+    ? orderedTracks.find((t) => `${t.participant.identity}-${t.source}` === pinnedTrackKey)
+    : null;
+  const presentationTrack = activeScreenShareTrack || pinnedTrack || null;
+  const presentationStripTracks = presentationTrack
+    ? orderedTracks.filter((t) => t !== presentationTrack)
+    : [];
+
+  const totalPages = Math.max(1, Math.ceil(orderedTracks.length / pageSize));
+  const safeGalleryPage = Math.min(galleryPage, totalPages - 1);
+  const pagedTracks = orderedTracks.slice(
+    safeGalleryPage * pageSize,
+    safeGalleryPage * pageSize + pageSize
+  );
+
+  useEffect(() => {
+    if (galleryPage >= totalPages) {
+      setGalleryPage(Math.max(0, totalPages - 1));
+    }
+  }, [galleryPage, totalPages]);
 
   const remoteChatPeers = participants
     .filter((p) => !p.isLocal)
@@ -1208,12 +1244,15 @@ function LiveKitInnerStage({
     }
   };
 
-  const getGridClasses = () => {
-    if (orderedTracks.length <= 1) return 'w-full h-full max-w-4xl mx-auto';
-    if (orderedTracks.length === 2) return 'w-full h-full grid grid-cols-1 md:grid-cols-2 gap-3.5';
-    if (orderedTracks.length <= 4) return 'w-full h-full grid grid-cols-1 sm:grid-cols-2 gap-3.5';
-    if (orderedTracks.length <= 9) return 'w-full h-full grid grid-cols-2 sm:grid-cols-3 gap-3';
-    return 'w-full h-full grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5';
+  // Exact Google Meet & Zoom Auto-Adaptive Gallery Grid Proportions
+  const getGridClasses = (count: number) => {
+    if (count <= 1) return 'w-full h-full grid grid-cols-1 grid-rows-1';
+    if (count === 2) return 'w-full h-full grid grid-cols-1 sm:grid-cols-2 grid-rows-2 sm:grid-rows-1 gap-2.5 sm:gap-3';
+    if (count <= 4) return 'w-full h-full grid grid-cols-2 grid-rows-2 gap-2.5 sm:gap-3';
+    if (count <= 6) return 'w-full h-full grid grid-cols-2 sm:grid-cols-3 grid-rows-3 sm:grid-rows-2 gap-2 sm:gap-2.5';
+    if (count <= 9) return 'w-full h-full grid grid-cols-2 sm:grid-cols-3 grid-rows-3 gap-2 sm:gap-2.5';
+    if (count <= 12) return 'w-full h-full grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 grid-rows-3 gap-2';
+    return 'w-full h-full grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 grid-rows-4 gap-2';
   };
 
   const renderVideoTile = (
@@ -1559,22 +1598,6 @@ function LiveKitInnerStage({
             </button>
 
             <button
-              onClick={() => setLayoutMode((m) => (m === 'grid' ? 'spotlight' : 'grid'))}
-              className={`h-9 w-9 rounded-full flex items-center justify-center transition-all cursor-pointer shadow-sm active:scale-95 ${
-                isDarkStudio
-                  ? 'bg-white/[0.07] hover:bg-white/[0.14] text-slate-200 border border-white/10'
-                  : 'bg-white hover:bg-slate-50 text-slate-600 border border-slate-200/80'
-              }`}
-              title={layoutMode === 'grid' ? 'Switch to Spotlight View' : 'Switch to Grid View'}
-            >
-              {layoutMode === 'grid' ? (
-                <Columns2 className="h-4 w-4" />
-              ) : (
-                <LayoutGrid className="h-4 w-4" />
-              )}
-            </button>
-
-            <button
               onClick={() => {
                 const next = !isMirrored;
                 setIsMirrored(next);
@@ -1815,23 +1838,62 @@ function LiveKitInnerStage({
             </div>
           )}
 
-          {layoutMode === 'spotlight' && spotlightTrack ? (
-            <>
-              {/* Large Main Spotlight Stage */}
+          {presentationTrack ? (
+            /* Google Meet & Zoom Presentation Mode (Auto when Screen Sharing or Pinned) */
+            <div className="flex-1 min-h-0 flex flex-col lg:flex-row gap-2.5">
+              {/* Primary Presentation / Pinned Stage */}
               <div className="flex-1 min-h-0">
-                {renderVideoTile(spotlightTrack, 'main')}
+                {renderVideoTile(presentationTrack, 'main')}
               </div>
 
-              {/* Bottom Thumbnail Filmstrip Row (when 2+ tiles exist) */}
-              {thumbnailTracks.length > 0 && (
-                <div className="h-28 sm:h-32 shrink-0 flex items-center gap-3 overflow-x-auto pb-1">
-                  {thumbnailTracks.map((t) => renderVideoTile(t, 'thumb'))}
+              {/* Compact Side Filmstrip on Desktop, Bottom Strip on Mobile */}
+              {presentationStripTracks.length > 0 && (
+                <div className="h-28 lg:h-full lg:w-56 xl:w-64 shrink-0 flex lg:flex-col items-stretch gap-2 overflow-x-auto lg:overflow-x-hidden lg:overflow-y-auto pb-1 lg:pb-0">
+                  {presentationStripTracks.map((t) => (
+                    <div key={`${t.participant.identity}-${t.source}`} className="w-40 lg:w-full h-full lg:h-36 shrink-0">
+                      {renderVideoTile(t, 'thumb')}
+                    </div>
+                  ))}
                 </div>
               )}
-            </>
+            </div>
           ) : (
-            <div className={`${getGridClasses()} overflow-y-auto`}>
-              {orderedTracks.map((t) => renderVideoTile(t, 'grid'))}
+            /* Google Meet & Zoom Adaptive Gallery Grid with Smart Pagination (up to 50+ participants) */
+            <div className="flex-1 min-h-0 relative">
+              <div className={getGridClasses(pagedTracks.length)}>
+                {pagedTracks.map((t) => renderVideoTile(t, 'grid'))}
+              </div>
+
+              {/* Zoom-Style Floating Gallery Pagination Controls (visible when 2+ pages) */}
+              {totalPages > 1 && (
+                <>
+                  <button
+                    onClick={() => setGalleryPage((p) => Math.max(0, p - 1))}
+                    disabled={safeGalleryPage === 0}
+                    className="absolute left-2.5 top-1/2 -translate-y-1/2 z-30 h-10 w-10 rounded-full bg-[#060c1a]/80 hover:bg-[#0066FF] text-white border border-white/15 backdrop-blur-xl shadow-xl flex items-center justify-center transition-all cursor-pointer disabled:opacity-25 disabled:cursor-not-allowed active:scale-95"
+                    title="Previous Page"
+                  >
+                    <ChevronLeft className="h-5 w-5" />
+                  </button>
+
+                  <button
+                    onClick={() => setGalleryPage((p) => Math.min(totalPages - 1, p + 1))}
+                    disabled={safeGalleryPage >= totalPages - 1}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 z-30 h-10 w-10 rounded-full bg-[#060c1a]/80 hover:bg-[#0066FF] text-white border border-white/15 backdrop-blur-xl shadow-xl flex items-center justify-center transition-all cursor-pointer disabled:opacity-25 disabled:cursor-not-allowed active:scale-95"
+                    title="Next Page"
+                  >
+                    <ChevronRight className="h-5 w-5" />
+                  </button>
+
+                  <div className="absolute top-2.5 left-1/2 -translate-x-1/2 z-30 px-3 py-1 rounded-full bg-[#060c1a]/80 backdrop-blur-xl border border-white/15 text-[11px] font-bold text-white shadow-lg flex items-center gap-2">
+                    <span>
+                      Page {safeGalleryPage + 1} / {totalPages}
+                    </span>
+                    <span className="h-3 w-px bg-white/20" />
+                    <span className="text-cyan-300">{orderedTracks.length} online</span>
+                  </div>
+                </>
+              )}
             </div>
           )}
         </main>
