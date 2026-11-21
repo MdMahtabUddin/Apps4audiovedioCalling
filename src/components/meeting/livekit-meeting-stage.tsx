@@ -1711,34 +1711,40 @@ function LiveKitInnerStage({
       {/* LEFT MAIN STAGE COLUMN                                                */}
       {/* ===================================================================== */}
       <div className="flex-1 flex flex-col min-w-0 h-full px-4 sm:px-6 py-4 gap-3.5 overflow-hidden relative z-10">
-        {/* 1. Top Header Bar with MetroMeet Brand Logo */}
-        <header className="flex items-center justify-between gap-3 shrink-0">
-          <div className="flex items-center gap-3 min-w-0">
-            {/* Circular Back Button */}
+        {/* 1. International-Standard Frosted-Glass Studio Header Bar */}
+        <header
+          className={`flex items-center justify-between gap-3 shrink-0 px-3 sm:px-4 py-2 rounded-2xl backdrop-blur-2xl border transition-all ${
+            isDarkStudio
+              ? 'bg-[#071022]/78 border-white/[0.09] shadow-[0_8px_32px_rgba(0,0,0,0.38),inset_0_1px_0_rgba(255,255,255,0.07)]'
+              : 'bg-white/88 border-slate-200/80 shadow-[0_6px_24px_rgba(15,23,42,0.08)]'
+          }`}
+        >
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+            {/* Refined Back Button */}
             <button
               onClick={handleExitClick}
-              className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-sm active:scale-95 ${
+              className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 transition-all cursor-pointer active:scale-95 ${
                 isDarkStudio
-                  ? 'bg-[#0b1528]/90 hover:bg-[#0066FF]/20 text-white border border-[#0066FF]/30'
-                  : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/80'
+                  ? 'bg-white/[0.06] hover:bg-white/[0.14] text-slate-300 hover:text-white border border-white/10'
+                  : 'bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 border border-slate-200/80'
               }`}
               title="Leave / Return to Dashboard"
             >
-              <ArrowLeft className="h-4 w-4" />
+              <ArrowLeft className="h-3.5 w-3.5" strokeWidth={2.2} />
             </button>
 
-            {/* MetroMeet PRO Brand Logo (Transparent — no black box behind) */}
+            {/* MetroMeet PRO Brand Logo */}
             <div className="hidden sm:flex items-center shrink-0">
               <BrandLogo size="sm" showTagline={false} href="" />
             </div>
 
-            <div className="h-6 w-px bg-white/10 hidden sm:block" />
+            <div className={`h-6 w-px shrink-0 hidden sm:block ${isDarkStudio ? 'bg-white/10' : 'bg-slate-200'}`} />
 
-            {/* Title (Line 1 — Clean 150-word executive title) + Date, Host Meeting & Share Link (Line 2) */}
+            {/* Title + Sleek Glass Status & Share Pills */}
             <div className="min-w-0 flex-1">
               <h1
                 title={meetingTitle}
-                className={`text-sm sm:text-base lg:text-[17px] font-extrabold tracking-tight leading-snug line-clamp-2 ${
+                className={`text-xs sm:text-[15px] font-bold tracking-tight leading-snug line-clamp-2 ${
                   isDarkStudio ? 'text-white' : 'text-slate-900'
                 }`}
               >
@@ -1747,105 +1753,119 @@ function LiveKitInnerStage({
                   return words.length > 150 ? `${words.slice(0, 150).join(' ')}…` : meetingTitle;
                 })()}
               </h1>
-              <div
-                className={`flex items-center flex-wrap gap-2 text-[11px] sm:text-xs font-medium mt-1 ${
-                  isDarkStudio ? 'text-slate-400' : 'text-slate-500'
-                }`}
-              >
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-[#0066FF] to-[#00A3FF] text-white text-[10px] sm:text-[10.5px] font-bold shadow-sm shadow-[#0066FF]/30">
-                  <Users className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+              <div className="flex items-center flex-wrap gap-1.5 mt-1">
+                <span
+                  className={`inline-flex items-center gap-1.5 px-2 py-[2px] rounded-full text-[10px] font-semibold border ${
+                    isDarkStudio
+                      ? 'bg-[#0066FF]/15 text-[#60A5FA] border-[#0066FF]/30'
+                      : 'bg-blue-50 text-[#0066FF] border-blue-200'
+                  }`}
+                >
+                  <span className="h-1.5 w-1.5 rounded-full bg-[#00A3FF]" />
                   <span>{isHost ? 'Host Meeting' : 'Live Meeting'}</span>
                 </span>
+
                 <button
                   onClick={copyMeetingLink}
-                  className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-[#FF7A00] to-[#FF5500] hover:from-[#FF8C1A] hover:to-[#E64D00] text-white text-[10px] sm:text-[10.5px] font-bold shadow-sm shadow-[#FF7A00]/25 transition-all cursor-pointer active:scale-95"
+                  className={`inline-flex items-center gap-1 px-2 py-[2px] rounded-full text-[10px] font-semibold border transition-all cursor-pointer active:scale-95 ${
+                    isCopied
+                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/35'
+                      : isDarkStudio
+                      ? 'bg-[#FF7A00]/15 hover:bg-[#FF7A00]/25 text-[#FFB366] hover:text-white border-[#FF7A00]/35'
+                      : 'bg-orange-50 hover:bg-orange-100 text-[#EA580C] border-orange-200'
+                  }`}
                   title="Copy Meeting Invite Link"
                 >
                   {isCopied ? (
-                    <Check className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                    <Check className="h-2.5 w-2.5" strokeWidth={2.5} />
                   ) : (
-                    <Copy className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                    <Copy className="h-2.5 w-2.5" strokeWidth={2.2} />
                   )}
                   <span>{isCopied ? 'Link Copied' : 'Share Link'}</span>
                 </button>
-                {recorder.isRecording && (
-                  <>
-                    <span className="opacity-40">•</span>
-                    <span className="text-rose-500 font-bold animate-pulse font-mono">
-                      REC {recorder.recordingDuration}
-                    </span>
-                  </>
-                )}
               </div>
             </div>
           </div>
 
-          {/* Right Header Studio Utilities: Mirror, Theme, Fullscreen, Record Dot */}
+          {/* Right Header Unified Glass Utility Cluster + Broadcast Record Pill */}
           <div className="flex items-center gap-2 shrink-0">
-            <button
-              onClick={() => {
-                const next = !isMirrored;
-                setIsMirrored(next);
-                toast.info(next ? 'Mirror camera enabled' : 'Mirror camera disabled');
-              }}
-              className={`h-9 w-9 rounded-full flex items-center justify-center transition-all cursor-pointer shadow-sm active:scale-95 ${
-                isMirrored
-                  ? 'bg-[#3B82F6]/15 text-[#2563EB] border border-[#3B82F6]/35'
-                  : isDarkStudio
-                  ? 'bg-white/[0.07] text-slate-300 border border-white/10'
-                  : 'bg-white text-slate-500 border border-slate-200/80'
-              }`}
-              title={isMirrored ? 'Disable Mirror Camera' : 'Enable Mirror Camera'}
-            >
-              <FlipHorizontal className="h-4 w-4" />
-            </button>
-
-            <button
-              onClick={() => setIsDarkStudio((d) => !d)}
-              className={`h-9 w-9 rounded-full flex items-center justify-center transition-all cursor-pointer shadow-sm active:scale-95 ${
+            <div
+              className={`flex items-center gap-0.5 p-1 rounded-full border ${
                 isDarkStudio
-                  ? 'bg-white/[0.07] hover:bg-white/[0.14] text-amber-300 border border-white/10'
-                  : 'bg-white hover:bg-slate-50 text-slate-600 border border-slate-200/80'
+                  ? 'bg-white/[0.04] border-white/[0.09]'
+                  : 'bg-slate-100/90 border-slate-200/80'
               }`}
-              title={isDarkStudio ? 'Switch to Light Studio' : 'Switch to Dark Studio'}
             >
-              {isDarkStudio ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-            </button>
+              <button
+                onClick={() => {
+                  const next = !isMirrored;
+                  setIsMirrored(next);
+                  toast.info(next ? 'Mirror camera enabled' : 'Mirror camera disabled');
+                }}
+                className={`h-7 w-7 sm:h-8 sm:w-8 rounded-full flex items-center justify-center transition-all cursor-pointer active:scale-95 ${
+                  isMirrored
+                    ? 'bg-[#0066FF]/25 text-[#60A5FA]'
+                    : isDarkStudio
+                    ? 'text-slate-300 hover:text-white hover:bg-white/10'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white'
+                }`}
+                title={isMirrored ? 'Disable Mirror Camera' : 'Enable Mirror Camera'}
+              >
+                <FlipHorizontal className="h-3.5 w-3.5" strokeWidth={2} />
+              </button>
 
-            <button
-              onClick={toggleFullscreen}
-              className={`hidden sm:flex h-9 w-9 rounded-full items-center justify-center transition-all cursor-pointer shadow-sm active:scale-95 ${
-                isDarkStudio
-                  ? 'bg-white/[0.07] hover:bg-white/[0.14] text-slate-200 border border-white/10'
-                  : 'bg-white hover:bg-slate-50 text-slate-600 border border-slate-200/80'
-              }`}
-              title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
-            >
-              {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
-            </button>
+              <button
+                onClick={() => setIsDarkStudio((d) => !d)}
+                className={`h-7 w-7 sm:h-8 sm:w-8 rounded-full flex items-center justify-center transition-all cursor-pointer active:scale-95 ${
+                  isDarkStudio
+                    ? 'text-amber-300 hover:bg-white/10'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white'
+                }`}
+                title={isDarkStudio ? 'Switch to Light Studio' : 'Switch to Dark Studio'}
+              >
+                {isDarkStudio ? (
+                  <Sun className="h-3.5 w-3.5" strokeWidth={2} />
+                ) : (
+                  <Moon className="h-3.5 w-3.5" strokeWidth={2} />
+                )}
+              </button>
 
-            {/* Iconic Circular Record Button (top-right coral dot matching reference) */}
+              <button
+                onClick={toggleFullscreen}
+                className={`hidden sm:flex h-8 w-8 rounded-full items-center justify-center transition-all cursor-pointer active:scale-95 ${
+                  isDarkStudio
+                    ? 'text-slate-300 hover:text-white hover:bg-white/10'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white'
+                }`}
+                title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
+              >
+                {isFullscreen ? (
+                  <Minimize className="h-3.5 w-3.5" strokeWidth={2} />
+                ) : (
+                  <Maximize className="h-3.5 w-3.5" strokeWidth={2} />
+                )}
+              </button>
+            </div>
+
+            {/* Studio Broadcast Record Pill */}
             <button
               onClick={handleToggleRecord}
-              className={`h-10 w-10 rounded-full flex items-center justify-center transition-all cursor-pointer shadow-md active:scale-95 ${
+              className={`h-8 sm:h-9 px-2.5 sm:px-3 rounded-full flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 border text-[10.5px] font-extrabold tracking-wider uppercase ${
                 recorder.isRecording
-                  ? 'bg-rose-500 text-white animate-pulse ring-4 ring-rose-500/25'
+                  ? 'bg-rose-600 border-rose-400/50 text-white shadow-[0_0_20px_rgba(225,29,72,0.45)] animate-pulse'
                   : isDarkStudio
-                  ? 'bg-white/[0.1] hover:bg-white/[0.16] border border-white/15'
-                  : 'bg-white hover:bg-slate-50 border border-slate-200/80'
+                  ? 'bg-white/[0.06] hover:bg-rose-500/20 border-white/12 hover:border-rose-500/40 text-slate-200 hover:text-white'
+                  : 'bg-white hover:bg-rose-50 border-slate-200 hover:border-rose-300 text-slate-700'
               }`}
               title={recorder.isRecording ? 'Stop Recording' : 'Record Vedio & Audio'}
             >
               <span
-                className={`h-4 w-4 rounded-full flex items-center justify-center ${
-                  recorder.isRecording ? 'bg-white' : 'bg-[#FF5B37]'
+                className={`h-2.5 w-2.5 rounded-full flex items-center justify-center shrink-0 ${
+                  recorder.isRecording ? 'bg-white' : 'bg-[#FF4D3A] shadow-[0_0_8px_rgba(255,77,58,0.8)]'
                 }`}
-              >
-                <span
-                  className={`h-1.5 w-1.5 rounded-full ${
-                    recorder.isRecording ? 'bg-rose-600' : 'bg-white'
-                  }`}
-                />
+              />
+              <span className="hidden sm:inline font-mono">
+                {recorder.isRecording ? recorder.recordingDuration : 'REC'}
               </span>
             </button>
           </div>
