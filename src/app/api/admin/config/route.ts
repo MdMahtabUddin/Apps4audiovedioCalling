@@ -1,24 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getCurrentUser } from '@/lib/auth/session';
+import { getAdminSession } from '@/lib/admin/admin-auth';
 import { getSystemConfig, updateSystemConfig, RtcRoutingMode } from '@/lib/admin/system-config';
 
-function isAuthorizedAdmin(email: string): boolean {
-  const allowList = process.env.ADMIN_EMAILS?.trim();
-  if (!allowList) return true;
-  const allowed = allowList
-    .split(',')
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean);
-  return allowed.includes(email.toLowerCase());
-}
-
 export async function GET() {
-  const session = await getCurrentUser();
-  if (!session) {
-    return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
-  }
-  if (!isAuthorizedAdmin(session.email)) {
-    return NextResponse.json({ error: 'Admin access denied' }, { status: 403 });
+  const adminSession = await getAdminSession();
+  if (!adminSession) {
+    return NextResponse.json({ error: 'Admin login required' }, { status: 401 });
   }
   const config = await getSystemConfig();
   return NextResponse.json({ config });
@@ -26,12 +13,9 @@ export async function GET() {
 
 export async function PATCH(request: NextRequest) {
   try {
-    const session = await getCurrentUser();
-    if (!session) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
-    }
-    if (!isAuthorizedAdmin(session.email)) {
-      return NextResponse.json({ error: 'Admin access denied' }, { status: 403 });
+    const adminSession = await getAdminSession();
+    if (!adminSession) {
+      return NextResponse.json({ error: 'Admin login required' }, { status: 401 });
     }
 
     const body = await request.json();

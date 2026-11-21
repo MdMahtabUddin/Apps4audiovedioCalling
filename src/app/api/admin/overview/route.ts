@@ -1,28 +1,15 @@
 import { NextResponse } from 'next/server';
-import { getCurrentUser } from '@/lib/auth/session';
+import { getAdminSession } from '@/lib/admin/admin-auth';
 import { prisma, checkPrisma } from '@/lib/db';
 import { getSystemConfig } from '@/lib/admin/system-config';
 import fs from 'fs';
 import path from 'path';
 
-function isAuthorizedAdmin(email: string): boolean {
-  const allowList = process.env.ADMIN_EMAILS?.trim();
-  if (!allowList) return true; // Any signed-in workspace host can access unless ADMIN_EMAILS is restricted
-  const allowed = allowList
-    .split(',')
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean);
-  return allowed.includes(email.toLowerCase());
-}
-
 export async function GET() {
   try {
-    const session = await getCurrentUser();
-    if (!session) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
-    }
-    if (!isAuthorizedAdmin(session.email)) {
-      return NextResponse.json({ error: 'Admin access denied' }, { status: 403 });
+    const adminSession = await getAdminSession();
+    if (!adminSession) {
+      return NextResponse.json({ error: 'Admin login required' }, { status: 401 });
     }
 
     const config = await getSystemConfig();
@@ -157,8 +144,8 @@ export async function GET() {
 
     return NextResponse.json({
       admin: {
-        name: session.name,
-        email: session.email,
+        name: adminSession.username,
+        email: `${adminSession.username}@metromeet.admin`,
       },
       config,
       infrastructure: {

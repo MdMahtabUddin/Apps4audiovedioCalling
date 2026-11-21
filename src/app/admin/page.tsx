@@ -14,7 +14,10 @@ import {
   Database,
   Download,
   ExternalLink,
+  Eye,
+  EyeOff,
   Lock,
+  LogOut,
   Radio,
   RefreshCw,
   Search,
@@ -91,6 +94,12 @@ export default function AdminPanelPage() {
 
   const [data, setData] = useState<AdminOverviewData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [needsAdminLogin, setNeedsAdminLogin] = useState(false);
+  const [adminUsername, setAdminUsername] = useState('');
+  const [adminPassword, setAdminPassword] = useState('');
+  const [showAdminPassword, setShowAdminPassword] = useState(false);
+  const [loginError, setLoginError] = useState('');
+  const [loggingIn, setLoggingIn] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [savingKey, setSavingKey] = useState<string | null>(null);
   const [roomActionLoading, setRoomActionLoading] = useState<string | null>(null);
@@ -104,17 +113,14 @@ export default function AdminPanelPage() {
       else setRefreshing(true);
       try {
         const res = await fetch('/api/admin/overview', { cache: 'no-store' });
-        if (res.status === 401) {
-          router.push('/login');
-          return;
-        }
-        if (res.status === 403) {
-          toast.error('Admin access denied for this account.');
-          router.push('/dashboard');
+        if (res.status === 401 || res.status === 403) {
+          setNeedsAdminLogin(true);
+          setData(null);
           return;
         }
         if (!res.ok) throw new Error('Failed to load admin overview');
         const json: AdminOverviewData = await res.json();
+        setNeedsAdminLogin(false);
         setData(json);
         setAnnouncementDraft(json.config.globalAnnouncement || '');
       } catch (err) {
@@ -125,8 +131,40 @@ export default function AdminPanelPage() {
         setRefreshing(false);
       }
     },
-    [router, toast]
+    [toast]
   );
+
+  const handleAdminLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginError('');
+    setLoggingIn(true);
+    try {
+      const res = await fetch('/api/admin/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: adminUsername, password: adminPassword }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setLoginError(json.error || 'Invalid admin credentials');
+        return;
+      }
+      toast.success('Admin Panel unlocked!');
+      setAdminPassword('');
+      await fetchOverview(false);
+    } catch {
+      setLoginError('Unable to sign in right now');
+    } finally {
+      setLoggingIn(false);
+    }
+  };
+
+  const handleAdminLogout = async () => {
+    await fetch('/api/admin/auth/logout', { method: 'POST' });
+    setData(null);
+    setNeedsAdminLogin(true);
+    toast.info('Admin Panel locked');
+  };
 
   useEffect(() => {
     void fetchOverview(false);
@@ -240,6 +278,97 @@ export default function AdminPanelPage() {
     toast.success('Admin report exported as CSV');
   };
 
+  if (needsAdminLogin) {
+    return (
+      <div className="min-h-screen bg-[#050a14] text-white flex items-center justify-center p-4 relative overflow-hidden">
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[300px] bg-[#0066FF]/15 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-1/4 right-1/4 w-[360px] h-[240px] bg-[#FF7A00]/10 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="w-full max-w-md space-y-6 relative z-10">
+          <div className="flex flex-col items-center text-center space-y-2.5">
+            <BrandLogo size="lg" showTagline={true} href="/dashboard" />
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#0066FF]/15 border border-[#0066FF]/35 text-[#60A5FA] text-[11px] font-extrabold uppercase tracking-wider">
+              <Shield className="h-3.5 w-3.5" />
+              Restricted Admin Portal
+            </span>
+          </div>
+
+          <div className="rounded-3xl bg-[#091224]/92 border border-white/12 shadow-2xl backdrop-blur-2xl overflow-hidden">
+            <div className="h-[3px] w-full bg-gradient-to-r from-[#0066FF] via-[#00A3FF] to-[#FF7A00]" />
+            <form onSubmit={handleAdminLogin} className="p-6 space-y-4">
+              <div>
+                <h1 className="text-lg font-extrabold text-white">Admin Sign In</h1>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Enter your administrator credentials to manage Primary &amp; Backup servers
+                </p>
+              </div>
+
+              {loginError && (
+                <div className="p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-xs text-rose-300 font-semibold">
+                  {loginError}
+                </div>
+              )}
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-300 block">
+                  Admin Username
+                </label>
+                <input
+                  type="text"
+                  value={adminUsername}
+                  onChange={(e) => setAdminUsername(e.target.value)}
+                  placeholder="Enter admin username"
+                  required
+                  autoComplete="username"
+                  className="w-full rounded-xl bg-black/45 border border-white/12 px-3.5 py-2.5 text-sm text-white placeholder:text-slate-500 outline-none focus:border-[#00A3FF]"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-300 block">
+                  Admin Password
+                </label>
+                <div className="relative">
+                  <input
+                    type={showAdminPassword ? 'text' : 'password'}
+                    value={adminPassword}
+                    onChange={(e) => setAdminPassword(e.target.value)}
+                    placeholder="••••••••••••"
+                    required
+                    autoComplete="current-password"
+                    className="w-full rounded-xl bg-black/45 border border-white/12 px-3.5 py-2.5 pr-10 text-sm text-white placeholder:text-slate-500 outline-none focus:border-[#00A3FF]"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowAdminPassword((v) => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white cursor-pointer"
+                  >
+                    {showAdminPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loggingIn}
+                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-[#0066FF] to-[#00A3FF] hover:opacity-95 text-white text-sm font-extrabold shadow-lg shadow-[#0066FF]/30 transition-all cursor-pointer disabled:opacity-50"
+              >
+                {loggingIn ? 'Verifying...' : 'Unlock Admin Panel'}
+              </button>
+
+              <Link
+                href="/dashboard"
+                className="block text-center text-xs text-slate-400 hover:text-white pt-1"
+              >
+                ← Back to Dashboard
+              </Link>
+            </form>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (loading || !data) {
     return (
       <div className="min-h-screen bg-[#050a14] text-white flex items-center justify-center">
@@ -301,6 +430,15 @@ export default function AdminPanelPage() {
             >
               <Download className="h-3.5 w-3.5 text-[#FF7A00]" />
               <span className="hidden sm:inline">Export CSV</span>
+            </button>
+
+            <button
+              onClick={handleAdminLogout}
+              className="h-9 px-3 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-xs font-bold text-rose-300 flex items-center gap-1.5 transition-all cursor-pointer"
+              title="Lock & Sign Out Admin Panel"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Lock</span>
             </button>
           </div>
         </div>
