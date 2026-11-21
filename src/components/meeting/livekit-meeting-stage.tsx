@@ -1729,30 +1729,45 @@ function LiveKitInnerStage({
 
             <div className="h-6 w-px bg-white/10 hidden sm:block" />
 
-            {/* Title + LIVE Pill + Date & Live Duration */}
-            <div className="min-w-0">
-              <div className="flex items-center gap-2.5 flex-wrap">
-                <h1
-                  className={`text-base sm:text-xl font-extrabold tracking-tight truncate max-w-[160px] sm:max-w-xs ${
-                    isDarkStudio ? 'text-white' : 'text-slate-900'
-                  }`}
-                >
-                  {meetingTitle}
-                </h1>
-                <span className="hidden md:inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-gradient-to-r from-[#0066FF] to-[#00A3FF] text-white text-[11px] font-bold shadow-md shadow-[#0066FF]/30">
-                  <Users className="h-3 w-3" />
-                  <span>{isHost ? 'Host Meeting' : 'Live Meeting'}</span>
-                </span>
-              </div>
+            {/* Title (Line 1 — Clean 150-word executive title) + Date, Host Meeting & Share Link (Line 2) */}
+            <div className="min-w-0 flex-1">
+              <h1
+                title={meetingTitle}
+                className={`text-sm sm:text-base lg:text-[17px] font-extrabold tracking-tight leading-snug line-clamp-2 ${
+                  isDarkStudio ? 'text-white' : 'text-slate-900'
+                }`}
+              >
+                {(() => {
+                  const words = (meetingTitle || '').trim().split(/\s+/).filter(Boolean);
+                  return words.length > 150 ? `${words.slice(0, 150).join(' ')}…` : meetingTitle;
+                })()}
+              </h1>
               <div
-                className={`flex items-center gap-2 text-xs font-medium mt-0.5 ${
+                className={`flex items-center flex-wrap gap-2 text-[11px] sm:text-xs font-medium mt-1 ${
                   isDarkStudio ? 'text-slate-400' : 'text-slate-500'
                 }`}
               >
-                <span>{todayFormatted}</span>
+                <span className="whitespace-nowrap">{todayFormatted}</span>
+                <span className="opacity-40">•</span>
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-[#0066FF] to-[#00A3FF] text-white text-[10px] sm:text-[10.5px] font-bold shadow-sm shadow-[#0066FF]/30">
+                  <Users className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                  <span>{isHost ? 'Host Meeting' : 'Live Meeting'}</span>
+                </span>
+                <button
+                  onClick={copyMeetingLink}
+                  className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-[#FF7A00] to-[#FF5500] hover:from-[#FF8C1A] hover:to-[#E64D00] text-white text-[10px] sm:text-[10.5px] font-bold shadow-sm shadow-[#FF7A00]/25 transition-all cursor-pointer active:scale-95"
+                  title="Copy Meeting Invite Link"
+                >
+                  {isCopied ? (
+                    <Check className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                  ) : (
+                    <Copy className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                  )}
+                  <span>{isCopied ? 'Link Copied' : 'Share Link'}</span>
+                </button>
                 {recorder.isRecording && (
                   <>
-                    <span>•</span>
+                    <span className="opacity-40">•</span>
                     <span className="text-rose-500 font-bold animate-pulse font-mono">
                       REC {recorder.recordingDuration}
                     </span>
@@ -1762,34 +1777,8 @@ function LiveKitInnerStage({
             </div>
           </div>
 
-          {/* Right Header Studio Utilities: Share Link, Quality, Layout, Mirror, Theme, Fullscreen, Record Dot */}
+          {/* Right Header Studio Utilities: Mirror, Theme, Fullscreen, Record Dot */}
           <div className="flex items-center gap-2 shrink-0">
-            <button
-              onClick={copyMeetingLink}
-              className="h-9 px-3 sm:px-3.5 rounded-full bg-gradient-to-r from-[#FF7A00] to-[#FF5500] hover:from-[#FF8C1A] hover:to-[#E64D00] text-white text-[11px] font-bold shadow-md shadow-[#FF7A00]/25 transition-all cursor-pointer active:scale-95 flex items-center gap-1.5"
-              title="Copy Meeting Invite Link"
-            >
-              {isCopied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-              <span className="hidden sm:inline">{isCopied ? 'Link Copied' : 'Share Link'}</span>
-            </button>
-
-            <button
-              onClick={() => setShowQualityModal(true)}
-              className={`h-9 px-2.5 sm:px-3 rounded-full flex items-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95 text-[11px] font-bold ${
-                showQualityModal
-                  ? 'bg-[#0066FF] text-white border border-[#00A3FF]/60 shadow-[#0066FF]/30'
-                  : isDarkStudio
-                  ? 'bg-white/[0.07] hover:bg-white/[0.14] text-cyan-300 border border-white/10'
-                  : 'bg-white hover:bg-slate-50 text-[#0066FF] border border-slate-200/80'
-              }`}
-              title="Voice & Vedio Quality Settings"
-            >
-              <SlidersHorizontal className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline uppercase tracking-wide">
-                {VEDIO_QUALITY_LEVELS.find((q) => q.id === vedioQuality)?.short || '720p'}
-              </span>
-            </button>
-
             <button
               onClick={() => {
                 const next = !isMirrored;

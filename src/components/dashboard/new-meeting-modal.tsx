@@ -154,13 +154,32 @@ export function NewMeetingModal({ isOpen, onClose, onMeetingCreated }: NewMeetin
         </div>
       ) : (
         <div className="space-y-4">
-          <Input
-            id="meeting-title"
-            label="Meeting Title (optional)"
-            placeholder="e.g. Weekly Product Sync"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-          />
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label htmlFor="meeting-title" className="text-xs font-semibold text-gray-300">
+                Meeting Title (optional)
+              </label>
+              <span className="text-[10.5px] font-mono text-gray-400">
+                {title.trim() ? title.trim().split(/\s+/).filter(Boolean).length : 0} / 150 words
+              </span>
+            </div>
+            <textarea
+              id="meeting-title"
+              rows={2}
+              placeholder="e.g. Q4 Enterprise Strategy & Product Roadmap Review"
+              value={title}
+              onChange={(e) => {
+                const raw = e.target.value;
+                const words = raw.trim().split(/\s+/).filter(Boolean);
+                if (words.length <= 150) {
+                  setTitle(raw);
+                } else {
+                  setTitle(words.slice(0, 150).join(' '));
+                }
+              }}
+              className="w-full rounded-xl bg-gray-900/90 border border-gray-800 px-3.5 py-2.5 text-sm text-gray-100 placeholder:text-gray-500 outline-none focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/20 transition-all resize-none"
+            />
+          </div>
 
           <Input
             id="meeting-password"
