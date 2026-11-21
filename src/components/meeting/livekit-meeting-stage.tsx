@@ -1357,6 +1357,15 @@ function LiveKitInnerStage({
     []
   );
 
+  // Smooth broadcast ticker: alternates LIVE | Time -> scrolls to LIVE | Date every 4s
+  const [showDateInLiveBadge, setShowDateInLiveBadge] = useState(false);
+  useEffect(() => {
+    const id = setInterval(() => {
+      setShowDateInLiveBadge((v) => !v);
+    }, 4000);
+    return () => clearInterval(id);
+  }, []);
+
   // Google Meet & Zoom Style Responsive Gallery Pagination (6 Mobile / 9 Tablet / 16 Desktop)
   const [galleryPage, setGalleryPage] = useState(0);
   const [pageSize, setPageSize] = useState(16);
@@ -1554,30 +1563,51 @@ function LiveKitInnerStage({
             </div>
           </div>
 
-          {/* Smaller LIVE + Time strip + tiny Date directly below the logo */}
-          <div className="flex flex-col items-start gap-0.5 pl-0.5">
+          {/* Broadcast Ticker Pill: Shows LIVE | Time first, then smoothly scrolls to LIVE | Date */}
+          <div className="flex items-center pl-0.5">
             <div
-              className={`inline-flex items-center gap-1 rounded bg-black/40 backdrop-blur-sm border border-white/10 shadow-[0_2px_8px_rgba(0,0,0,0.6)] ${
-                variant === 'thumb' ? 'px-1 py-[1px] text-[7px]' : 'px-1.5 py-[2px] text-[8.5px]'
+              className={`inline-flex items-center gap-1.5 rounded bg-black/45 backdrop-blur-sm border border-white/10 shadow-[0_2px_8px_rgba(0,0,0,0.6)] ${
+                variant === 'thumb' ? 'px-1 py-[1px] text-[7px]' : 'px-1.5 py-[2.5px] text-[8.5px]'
               }`}
             >
               <span className="relative flex h-1.5 w-1.5 shrink-0">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-500 opacity-80" />
                 <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-rose-500" />
               </span>
-              <span className="font-bold tracking-[0.16em] uppercase text-white/90 leading-none">
+              <span className="font-bold tracking-[0.16em] uppercase text-white/95 leading-none shrink-0">
                 LIVE
               </span>
-              <span className="h-2 w-px bg-white/25" />
-              <span className="font-mono font-medium text-white/80 tabular-nums leading-none">
-                {formatDuration(callDuration)}
-              </span>
-            </div>
-            {variant !== 'thumb' && (
-              <div className="inline-flex items-center rounded bg-black/40 backdrop-blur-sm border border-white/10 shadow-[0_2px_8px_rgba(0,0,0,0.6)] px-1.5 py-[2px] text-[8px] font-mono font-medium tracking-wider text-white/80 tabular-nums leading-none">
-                {todayFormatted}
+              <span className="h-2 w-px bg-white/25 shrink-0" />
+              {/* Vertical Smooth-Scroll Ticker Slot (Time <-> Date) */}
+              <div
+                className={`overflow-hidden relative ${
+                  variant === 'thumb' ? 'h-[10px]' : 'h-[12px]'
+                }`}
+              >
+                <div
+                  className={`flex flex-col transition-transform duration-500 ease-in-out ${
+                    showDateInLiveBadge && variant !== 'thumb'
+                      ? '-translate-y-1/2'
+                      : 'translate-y-0'
+                  }`}
+                >
+                  <span
+                    className={`font-mono font-medium text-white/85 tabular-nums flex items-center whitespace-nowrap ${
+                      variant === 'thumb' ? 'h-[10px]' : 'h-[12px]'
+                    }`}
+                  >
+                    {formatDuration(callDuration)}
+                  </span>
+                  <span
+                    className={`font-mono font-medium text-white/85 tabular-nums flex items-center whitespace-nowrap ${
+                      variant === 'thumb' ? 'h-[10px]' : 'h-[12px]'
+                    }`}
+                  >
+                    {todayFormatted}
+                  </span>
+                </div>
               </div>
-            )}
+            </div>
           </div>
         </div>
 
