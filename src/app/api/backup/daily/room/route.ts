@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getSystemConfig } from '@/lib/admin/system-config';
 
 const DAILY_API_BASE = 'https://api.daily.co/v1';
 
@@ -9,6 +10,16 @@ function sanitizeRoomName(raw: string): string {
 
 export async function GET(request: NextRequest) {
   try {
+    const sysConfig = await getSystemConfig();
+    if (!sysConfig.backupEnabled || sysConfig.routingMode === 'webrtc' || sysConfig.routingMode === 'livekit') {
+      return NextResponse.json({
+        isConfigured: false,
+        provider: 'daily',
+        disabledByAdmin: true,
+        message: 'Backup Daily.co provider disabled by Admin Panel.',
+      });
+    }
+
     const apiKey = process.env.DAILY_API_KEY?.trim();
     if (!apiKey) {
       return NextResponse.json({

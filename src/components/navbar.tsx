@@ -8,6 +8,7 @@ import {
   LogOut,
   Settings,
   ChevronDown,
+  Shield,
 } from 'lucide-react';
 import { UserProfile } from '@/types';
 import { BrandLogo } from '@/components/ui/brand-logo';
@@ -149,6 +150,15 @@ export function Navbar({ user, onOpenSettings, onQuickNewMeeting }: NavbarProps)
                           Audio/Vedio Studio & Settings
                         </button>
                       )}
+
+                      <Link
+                        href="/admin"
+                        onClick={() => setDropdownOpen(false)}
+                        className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs text-cyan-300 hover:text-white hover:bg-[#0066FF]/15 rounded-xl transition-colors mt-1 cursor-pointer font-semibold"
+                      >
+                        <Shield className="h-4 w-4 text-[#00A3FF]" />
+                        Admin Panel (Primary / Backup)
+                      </Link>
 
                       <button
                         onClick={handleLogout}

@@ -1,8 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AccessToken } from 'livekit-server-sdk';
+import { getSystemConfig } from '@/lib/admin/system-config';
 
 export async function GET(req: NextRequest) {
   try {
+    const sysConfig = await getSystemConfig();
+    if (!sysConfig.primaryEnabled || sysConfig.routingMode === 'daily' || sysConfig.routingMode === 'webrtc') {
+      return NextResponse.json({
+        isConfigured: false,
+        disabledByAdmin: true,
+        message: 'Primary LiveKit provider paused by Admin Panel. Routing to backup.',
+      });
+    }
+
     const room = req.nextUrl.searchParams.get('room');
     const username = req.nextUrl.searchParams.get('username') || 'Guest';
     const identity =
