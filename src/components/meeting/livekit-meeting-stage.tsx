@@ -3710,6 +3710,19 @@ export function LiveKitMeetingStage({
       data-lk-theme="default"
       onError={(err) => {
         console.warn('LiveKit cloud connection notice:', err);
+        const msg = (err?.message || '').toLowerCase();
+        if (
+          onFallback &&
+          (msg.includes('quota') ||
+            msg.includes('limit') ||
+            msg.includes('exceeded') ||
+            msg.includes('401') ||
+            msg.includes('402') ||
+            msg.includes('403') ||
+            msg.includes('could not establish'))
+        ) {
+          onFallback();
+        }
       }}
       className="h-screen w-screen overflow-hidden bg-[#06080e]"
     >

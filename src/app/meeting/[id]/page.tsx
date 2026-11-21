@@ -11,6 +11,7 @@ import { PreJoinScreen } from '@/components/meeting/pre-join-screen';
 import { WaitingRoomScreen } from '@/components/meeting/waiting-room-screen';
 import { MeetingRoomView } from '@/components/meeting/meeting-room-view';
 import { LiveKitMeetingStage } from '@/components/meeting/livekit-meeting-stage';
+import { DailyBackupStage } from '@/components/meeting/daily-backup-stage';
 import { MeetingValidationResponse, UserProfile } from '@/types';
 import { generateMeetingId } from '@/lib/utils';
 
@@ -22,10 +23,15 @@ function MeetingContainer({ meetingId }: { meetingId: string }) {
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [livekitData, setLivekitData] = useState<{ token: string; wsUrl: string } | null>(null);
   const [livekitFailed, setLivekitFailed] = useState(false);
+  const [dailyBackupData, setDailyBackupData] = useState<{
+    roomUrl: string;
+    token?: string | null;
+  } | null>(null);
+  const [dailyBackupChecked, setDailyBackupChecked] = useState(false);
 
   const { isJoined, isWaitingApproval, leaveRoom, endRoom, myDisplayName } = useMeeting();
 
-  // Check if LiveKit Cloud credentials are configured
+  // Primary Provider: LiveKit Cloud (100% untouched default flow)
   useEffect(() => {
     if (!isJoined) return;
     const nameToUse = myDisplayName || currentUser?.name || 'Participant';
@@ -43,6 +49,33 @@ function MeetingContainer({ meetingId }: { meetingId: string }) {
         setLivekitFailed(true);
       });
   }, [isJoined, meetingId, myDisplayName, currentUser?.name]);
+
+  // Backup Provider Failover: Daily.co (ONLY runs if LiveKit fails / quota exhausted)
+  useEffect(() => {
+    if (!isJoined || !livekitFailed) return;
+    const nameToUse = myDisplayName || currentUser?.name || 'Participant';
+    const isHostFlag =
+      (currentUser?.id && meetingInfo?.hostId && currentUser.id === meetingInfo.hostId) ||
+      (typeof window !== 'undefined' && localStorage.getItem(`metromeet_host_${meetingId}`) === 'true');
+
+    fetch(
+      `/api/backup/daily/room?room=${encodeURIComponent(meetingId)}&username=${encodeURIComponent(
+        nameToUse
+      )}&host=${isHostFlag ? 'true' : 'false'}`
+    )
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.isConfigured && data?.roomUrl) {
+          setDailyBackupData({ roomUrl: data.roomUrl, token: data.token || null });
+        }
+      })
+      .catch((e) => {
+        console.warn('Daily backup check note:', e);
+      })
+      .finally(() => {
+        setDailyBackupChecked(true);
+      });
+  }, [isJoined, livekitFailed, meetingId, myDisplayName, currentUser?.name, currentUser?.id, meetingInfo?.hostId]);
 
   useEffect(() => {
     // 1. Fetch current user if logged in
@@ -174,6 +207,40 @@ function MeetingContainer({ meetingId }: { meetingId: string }) {
         />
       );
     }
+
+    if (livekitFailed && !dailyBackupChecked) {
+      return (
+        <div className="h-screen w-screen bg-[#06080e] flex items-center justify-center">
+          <div className="flex flex-col items-center gap-4">
+            <div className="relative">
+              <div className="h-12 w-12 rounded-2xl bg-[#FF7A00]/30 border border-[#FF7A00]/40 animate-ping absolute inset-0" />
+              <div className="h-12 w-12 rounded-2xl bg-[#FF7A00] flex items-center justify-center relative z-10 shadow-xl shadow-[#FF7A00]/40">
+                <Video className="h-6 w-6 text-white animate-pulse" />
+              </div>
+            </div>
+            <p className="text-xs text-gray-400 font-semibold tracking-wider uppercase">
+              Switching to Backup Cloud Infrastructure...
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    if (dailyBackupData?.roomUrl) {
+      return (
+        <DailyBackupStage
+          meetingId={meetingId}
+          meetingTitle={meetingInfo.title}
+          isHost={isMeetingHost}
+          roomUrl={dailyBackupData.roomUrl}
+          token={dailyBackupData.token}
+          displayName={myDisplayName || currentUser?.name || 'Participant'}
+          onLeave={leaveRoom}
+          onEndMeeting={endRoom}
+        />
+      );
+    }
+
     return <MeetingRoomView />;
   }
 
