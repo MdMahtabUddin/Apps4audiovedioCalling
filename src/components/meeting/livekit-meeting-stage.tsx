@@ -1357,13 +1357,20 @@ function LiveKitInnerStage({
     []
   );
 
-  // Smooth broadcast ticker: alternates LIVE | Time -> scrolls to LIVE | Date every 4s
+  // Smooth broadcast ticker: shows LIVE | Time for 15s, then scrolls to LIVE | Date for 4s
   const [showDateInLiveBadge, setShowDateInLiveBadge] = useState(false);
   useEffect(() => {
-    const id = setInterval(() => {
-      setShowDateInLiveBadge((v) => !v);
-    }, 4000);
-    return () => clearInterval(id);
+    let hideTimeout: ReturnType<typeof setTimeout> | null = null;
+    const interval = setInterval(() => {
+      setShowDateInLiveBadge(true);
+      hideTimeout = setTimeout(() => {
+        setShowDateInLiveBadge(false);
+      }, 4000);
+    }, 15000);
+    return () => {
+      clearInterval(interval);
+      if (hideTimeout) clearTimeout(hideTimeout);
+    };
   }, []);
 
   // Google Meet & Zoom Style Responsive Gallery Pagination (6 Mobile / 9 Tablet / 16 Desktop)
