@@ -2519,297 +2519,368 @@ function LiveKitInnerStage({
         </div>
       )}
 
-      {/* Voice & Vedio Quality Control Modal */}
-      {showQualityModal && (
-        <div
-          className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-md flex items-center justify-center p-4"
-          onClick={() => setShowQualityModal(false)}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className={`w-full max-w-md rounded-3xl overflow-hidden border shadow-[0_24px_64px_rgba(0,0,0,0.65)] backdrop-blur-2xl ${
-              isDarkStudio
-                ? 'bg-[#070f20]/95 border-white/15 text-white'
-                : 'bg-white/98 border-slate-200 text-slate-900'
-            }`}
-          >
-            {/* MetroMeet Top Brand Accent Line */}
-            <div className="h-[3px] w-full bg-gradient-to-r from-[#0066FF] via-[#00A3FF] to-[#FF7A00]" />
+      {/* Voice & Vedio Quality Control Studio (Native Bottom Sheet on Mobile, Glass Modal on Desktop) */}
+      {showQualityModal && (() => {
+        const activeVedioIdx = VEDIO_QUALITY_LEVELS.findIndex((q) => q.id === vedioQuality);
+        const activeVedioCfg = VEDIO_QUALITY_LEVELS[activeVedioIdx] || VEDIO_QUALITY_LEVELS[2];
+        const activeVoiceIdx = VOICE_QUALITY_LEVELS.findIndex((q) => q.id === voiceQuality);
+        const activeVoiceCfg = VOICE_QUALITY_LEVELS[activeVoiceIdx] || VOICE_QUALITY_LEVELS[1];
 
-            <div className="p-5 sm:p-6 space-y-5">
-              {/* Header */}
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2.5">
-                  <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-[#0066FF] to-[#00A3FF] text-white flex items-center justify-center shadow-lg shadow-[#0066FF]/30">
-                    <SlidersHorizontal className="h-4 w-4" />
+        return (
+          <div
+            className="fixed inset-0 z-[100] bg-black/65 backdrop-blur-md flex items-end sm:items-center justify-center sm:p-4"
+            onClick={() => setShowQualityModal(false)}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className={`w-full sm:max-w-[430px] rounded-t-3xl sm:rounded-3xl overflow-hidden border-t sm:border shadow-[0_24px_72px_rgba(0,0,0,0.75)] backdrop-blur-2xl animate-in fade-in slide-in-from-bottom-6 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-200 ${
+                isDarkStudio
+                  ? 'bg-[#070f20]/96 border-white/15 text-white'
+                  : 'bg-white/98 border-slate-200 text-slate-900'
+              }`}
+            >
+              {/* MetroMeet Top Brand Gradient Accent */}
+              <div className="h-[3px] w-full bg-gradient-to-r from-[#0066FF] via-[#00A3FF] to-[#FF7A00]" />
+
+              {/* Native Mobile Drag Handle */}
+              <div className="sm:hidden flex justify-center pt-2.5">
+                <div className="w-10 h-1 rounded-full bg-white/25" />
+              </div>
+
+              <div className="p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:p-6 space-y-4">
+                {/* Header */}
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-[#0066FF] via-[#0088FF] to-[#00A3FF] text-white flex items-center justify-center shadow-lg shadow-[#0066FF]/35">
+                      <SlidersHorizontal className="h-4.5 w-4.5" />
+                    </div>
+                    <div>
+                      <h3 className="text-[15px] font-extrabold tracking-tight leading-tight">
+                        Audio &amp; Vedio Quality
+                      </h3>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                        <span className={`text-[11px] font-medium ${isDarkStudio ? 'text-slate-400' : 'text-slate-500'}`}>
+                          {activeVedioCfg.short} {activeVedioCfg.label} · {activeVoiceCfg.short} Audio
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="text-sm sm:text-base font-extrabold tracking-tight">
-                      Voice &amp; Vedio Quality
-                    </h3>
-                    <p
-                      className={`text-[11px] font-medium ${
-                        isDarkStudio ? 'text-slate-400' : 'text-slate-500'
-                      }`}
-                    >
-                      Adjust bandwidth, resolution &amp; audio clarity live
-                    </p>
-                  </div>
+                  <button
+                    onClick={() => setShowQualityModal(false)}
+                    className={`h-8 w-8 rounded-full flex items-center justify-center transition-colors cursor-pointer ${
+                      isDarkStudio
+                        ? 'bg-white/[0.06] text-slate-300 hover:text-white hover:bg-white/15'
+                        : 'bg-slate-100 text-slate-500 hover:text-slate-800 hover:bg-slate-200'
+                    }`}
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
                 </div>
-                <button
-                  onClick={() => setShowQualityModal(false)}
-                  className={`h-8 w-8 rounded-full flex items-center justify-center transition-colors cursor-pointer ${
+
+                {/* 1. VEDIO QUALITY CARD */}
+                <div
+                  className={`rounded-2xl p-3.5 border space-y-3 ${
                     isDarkStudio
-                      ? 'text-slate-400 hover:text-white hover:bg-white/10'
-                      : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100'
+                      ? 'bg-white/[0.03] border-white/10'
+                      : 'bg-slate-50/90 border-slate-200/80'
                   }`}
                 >
-                  <X className="h-4 w-4" />
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="h-7 w-7 rounded-xl bg-[#0066FF]/15 border border-[#00A3FF]/25 flex items-center justify-center text-[#00A3FF]">
+                        <Video className="h-3.5 w-3.5" />
+                      </span>
+                      <div>
+                        <p className="text-xs font-extrabold tracking-tight">Vedio Resolution</p>
+                        <p className={`text-[10.5px] ${isDarkStudio ? 'text-slate-400' : 'text-slate-500'}`}>
+                          {activeVedioCfg.label} · {activeVedioCfg.detail}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Signal Strength Bars + Stepper */}
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-end gap-[2.5px] h-3.5 pr-1">
+                        {[0, 1, 2, 3].map((bar) => (
+                          <span
+                            key={bar}
+                            style={{ height: `${6 + bar * 3}px` }}
+                            className={`w-[3px] rounded-full transition-all duration-300 ${
+                              bar <= activeVedioIdx
+                                ? 'bg-gradient-to-t from-[#0066FF] to-[#00D2FF]'
+                                : isDarkStudio
+                                ? 'bg-white/15'
+                                : 'bg-slate-300'
+                            }`}
+                          />
+                        ))}
+                      </div>
+                      <button
+                        onClick={() => stepVedioQuality(-1)}
+                        disabled={isApplyingQuality || vedioQuality === 'low'}
+                        className={`h-7 w-7 rounded-full flex items-center justify-center border transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed active:scale-90 ${
+                          isDarkStudio
+                            ? 'bg-white/[0.07] border-white/12 hover:bg-white/[0.16] text-white'
+                            : 'bg-white border-slate-200 hover:bg-slate-100 text-slate-700'
+                        }`}
+                        title="Decrease Vedio Quality"
+                      >
+                        <Minus className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        onClick={() => stepVedioQuality(1)}
+                        disabled={isApplyingQuality || vedioQuality === 'fhd'}
+                        className={`h-7 w-7 rounded-full flex items-center justify-center border transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed active:scale-90 ${
+                          isDarkStudio
+                            ? 'bg-white/[0.07] border-white/12 hover:bg-white/[0.16] text-white'
+                            : 'bg-white border-slate-200 hover:bg-slate-100 text-slate-700'
+                        }`}
+                        title="Increase Vedio Quality"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* 4-Step Segmented Pill Selector */}
+                  <div
+                    className={`grid grid-cols-4 gap-1 p-1 rounded-xl border ${
+                      isDarkStudio
+                        ? 'bg-black/35 border-white/[0.07]'
+                        : 'bg-slate-200/60 border-slate-200'
+                    }`}
+                  >
+                    {VEDIO_QUALITY_LEVELS.map((item) => {
+                      const active = vedioQuality === item.id;
+                      return (
+                        <button
+                          key={item.id}
+                          disabled={isApplyingQuality}
+                          onClick={() => void applyVedioQuality(item.id)}
+                          className={`py-2 px-1 rounded-lg text-center transition-all cursor-pointer ${
+                            active
+                              ? 'bg-gradient-to-br from-[#0066FF] to-[#0099FF] text-white shadow-md shadow-[#0066FF]/35'
+                              : isDarkStudio
+                              ? 'text-slate-400 hover:text-white hover:bg-white/[0.06]'
+                              : 'text-slate-600 hover:text-slate-900 hover:bg-white/70'
+                          }`}
+                        >
+                          <div className="text-[11px] font-extrabold font-mono leading-none">
+                            {item.short}
+                          </div>
+                          <div className={`text-[9px] font-semibold mt-1 truncate ${active ? 'text-white/90' : 'opacity-70'}`}>
+                            {item.label}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 2. AUDIO / VOICE QUALITY CARD */}
+                <div
+                  className={`rounded-2xl p-3.5 border space-y-3 ${
+                    isDarkStudio
+                      ? 'bg-white/[0.03] border-white/10'
+                      : 'bg-slate-50/90 border-slate-200/80'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="h-7 w-7 rounded-xl bg-[#FF7A00]/15 border border-[#FF7A00]/30 flex items-center justify-center text-[#FF7A00]">
+                        <Mic className="h-3.5 w-3.5" />
+                      </span>
+                      <div>
+                        <p className="text-xs font-extrabold tracking-tight">Audio Bitrate</p>
+                        <p className={`text-[10.5px] ${isDarkStudio ? 'text-slate-400' : 'text-slate-500'}`}>
+                          {activeVoiceCfg.label} · {activeVoiceCfg.detail}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Audio Level Bars + Stepper */}
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-end gap-[2.5px] h-3.5 pr-1">
+                        {[0, 1, 2, 3].map((bar) => (
+                          <span
+                            key={bar}
+                            style={{ height: `${6 + bar * 3}px` }}
+                            className={`w-[3px] rounded-full transition-all duration-300 ${
+                              bar <= activeVoiceIdx
+                                ? 'bg-gradient-to-t from-[#FF5500] to-[#FFB347]'
+                                : isDarkStudio
+                                ? 'bg-white/15'
+                                : 'bg-slate-300'
+                            }`}
+                          />
+                        ))}
+                      </div>
+                      <button
+                        onClick={() => stepVoiceQuality(-1)}
+                        disabled={isApplyingQuality || voiceQuality === 'low'}
+                        className={`h-7 w-7 rounded-full flex items-center justify-center border transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed active:scale-90 ${
+                          isDarkStudio
+                            ? 'bg-white/[0.07] border-white/12 hover:bg-white/[0.16] text-white'
+                            : 'bg-white border-slate-200 hover:bg-slate-100 text-slate-700'
+                        }`}
+                        title="Decrease Audio Quality"
+                      >
+                        <Minus className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        onClick={() => stepVoiceQuality(1)}
+                        disabled={isApplyingQuality || voiceQuality === 'studio'}
+                        className={`h-7 w-7 rounded-full flex items-center justify-center border transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed active:scale-90 ${
+                          isDarkStudio
+                            ? 'bg-white/[0.07] border-white/12 hover:bg-white/[0.16] text-white'
+                            : 'bg-white border-slate-200 hover:bg-slate-100 text-slate-700'
+                        }`}
+                        title="Increase Audio Quality"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* 4-Step Segmented Pill Selector */}
+                  <div
+                    className={`grid grid-cols-4 gap-1 p-1 rounded-xl border ${
+                      isDarkStudio
+                        ? 'bg-black/35 border-white/[0.07]'
+                        : 'bg-slate-200/60 border-slate-200'
+                    }`}
+                  >
+                    {VOICE_QUALITY_LEVELS.map((item) => {
+                      const active = voiceQuality === item.id;
+                      return (
+                        <button
+                          key={item.id}
+                          disabled={isApplyingQuality}
+                          onClick={() => void applyVoiceQuality(item.id)}
+                          className={`py-2 px-1 rounded-lg text-center transition-all cursor-pointer ${
+                            active
+                              ? 'bg-gradient-to-br from-[#FF7A00] to-[#FF4D2E] text-white shadow-md shadow-[#FF7A00]/35'
+                              : isDarkStudio
+                              ? 'text-slate-400 hover:text-white hover:bg-white/[0.06]'
+                              : 'text-slate-600 hover:text-slate-900 hover:bg-white/70'
+                          }`}
+                        >
+                          <div className="text-[11px] font-extrabold font-mono leading-none">
+                            {item.short}
+                          </div>
+                          <div className={`text-[9px] font-semibold mt-1 truncate ${active ? 'text-white/90' : 'opacity-70'}`}>
+                            {item.label.split(' ')[0]}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 3. SMART AUDIO ENHANCEMENTS & SPEAKER VOLUME */}
+                <div
+                  className={`rounded-2xl p-3.5 border space-y-3 ${
+                    isDarkStudio
+                      ? 'bg-white/[0.03] border-white/10'
+                      : 'bg-slate-50/90 border-slate-200/80'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-bold">Noise Suppression</p>
+                      <p className={`text-[10px] ${isDarkStudio ? 'text-slate-400' : 'text-slate-500'}`}>
+                        Reduce fan &amp; background noise
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => void applyVoiceQuality(voiceQuality, !noiseSuppression, echoCancellation)}
+                      className={`w-11 h-6 rounded-full transition-all duration-200 relative cursor-pointer shrink-0 ${
+                        noiseSuppression
+                          ? 'bg-gradient-to-r from-[#0066FF] to-[#00A3FF] shadow-inner'
+                          : isDarkStudio
+                          ? 'bg-white/15'
+                          : 'bg-slate-300'
+                      }`}
+                    >
+                      <span
+                        className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-md transition-all duration-200 ${
+                          noiseSuppression ? 'left-[22px]' : 'left-0.5'
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  <div className={`h-px ${isDarkStudio ? 'bg-white/[0.07]' : 'bg-slate-200/80'}`} />
+
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-bold">Echo Cancellation</p>
+                      <p className={`text-[10px] ${isDarkStudio ? 'text-slate-400' : 'text-slate-500'}`}>
+                        Prevent speaker echo feedback
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => void applyVoiceQuality(voiceQuality, noiseSuppression, !echoCancellation)}
+                      className={`w-11 h-6 rounded-full transition-all duration-200 relative cursor-pointer shrink-0 ${
+                        echoCancellation
+                          ? 'bg-gradient-to-r from-[#0066FF] to-[#00A3FF] shadow-inner'
+                          : isDarkStudio
+                          ? 'bg-white/15'
+                          : 'bg-slate-300'
+                      }`}
+                    >
+                      <span
+                        className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-md transition-all duration-200 ${
+                          echoCancellation ? 'left-[22px]' : 'left-0.5'
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  <div className={`h-px ${isDarkStudio ? 'bg-white/[0.07]' : 'bg-slate-200/80'}`} />
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <button
+                        onClick={() => setSpeakerVolume((v) => (v === 0 ? 100 : 0))}
+                        className="font-bold flex items-center gap-2 cursor-pointer hover:opacity-80"
+                        title={speakerVolume === 0 ? 'Unmute Speaker' : 'Mute Speaker'}
+                      >
+                        {speakerVolume === 0 ? (
+                          <VolumeX className="h-4 w-4 text-rose-400" />
+                        ) : (
+                          <Volume2 className="h-4 w-4 text-emerald-400" />
+                        )}
+                        <span>Speaker Volume</span>
+                      </button>
+                      <span className="px-2 py-0.5 rounded-full bg-[#0066FF]/15 text-cyan-300 font-mono text-[10.5px] font-extrabold">
+                        {speakerVolume}%
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      step={5}
+                      value={speakerVolume}
+                      onChange={(e) => setSpeakerVolume(Number(e.target.value))}
+                      className="w-full accent-[#00A3FF] cursor-pointer h-1.5 rounded-full"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setShowQualityModal(false)}
+                  className="w-full py-2.5 rounded-2xl bg-gradient-to-r from-[#0066FF] via-[#0088FF] to-[#00A3FF] hover:opacity-95 text-white text-xs font-extrabold tracking-wide shadow-lg shadow-[#0066FF]/30 active:scale-[0.99] transition-all cursor-pointer"
+                >
+                  Apply &amp; Close
                 </button>
               </div>
-
-              {/* Vedio Quality Section */}
-              <div className="space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Video className="h-4 w-4 text-[#00A3FF]" />
-                    <span className="text-xs font-extrabold uppercase tracking-wider">
-                      Vedio Quality
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      onClick={() => stepVedioQuality(-1)}
-                      disabled={isApplyingQuality || vedioQuality === 'low'}
-                      className={`h-6 w-6 rounded-full flex items-center justify-center border transition-all cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed ${
-                        isDarkStudio
-                          ? 'bg-white/[0.06] border-white/15 hover:bg-white/[0.14] text-white'
-                          : 'bg-slate-100 border-slate-200 hover:bg-slate-200 text-slate-700'
-                      }`}
-                      title="Decrease Vedio Quality"
-                    >
-                      <Minus className="h-3 w-3" />
-                    </button>
-                    <span className="text-[11px] font-mono font-bold text-cyan-400 min-w-[44px] text-center">
-                      {VEDIO_QUALITY_LEVELS.find((q) => q.id === vedioQuality)?.short}
-                    </span>
-                    <button
-                      onClick={() => stepVedioQuality(1)}
-                      disabled={isApplyingQuality || vedioQuality === 'fhd'}
-                      className={`h-6 w-6 rounded-full flex items-center justify-center border transition-all cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed ${
-                        isDarkStudio
-                          ? 'bg-white/[0.06] border-white/15 hover:bg-white/[0.14] text-white'
-                          : 'bg-slate-100 border-slate-200 hover:bg-slate-200 text-slate-700'
-                      }`}
-                      title="Increase Vedio Quality"
-                    >
-                      <Plus className="h-3 w-3" />
-                    </button>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  {VEDIO_QUALITY_LEVELS.map((item) => {
-                    const active = vedioQuality === item.id;
-                    return (
-                      <button
-                        key={item.id}
-                        disabled={isApplyingQuality}
-                        onClick={() => void applyVedioQuality(item.id)}
-                        className={`text-left px-3 py-2.5 rounded-xl border transition-all cursor-pointer ${
-                          active
-                            ? 'border-[#00A3FF] bg-[#0066FF]/20 shadow-[0_0_16px_rgba(0,102,255,0.22)]'
-                            : isDarkStudio
-                            ? 'border-white/10 bg-white/[0.04] hover:bg-white/[0.08] hover:border-white/20'
-                            : 'border-slate-200 bg-slate-50 hover:border-[#0066FF]/40'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between gap-1">
-                          <span className="text-xs font-bold">{item.label}</span>
-                          <span
-                            className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md ${
-                              active
-                                ? 'bg-[#0066FF] text-white'
-                                : isDarkStudio
-                                ? 'bg-white/10 text-slate-300'
-                                : 'bg-slate-200 text-slate-600'
-                            }`}
-                          >
-                            {item.short}
-                          </span>
-                        </div>
-                        <p
-                          className={`text-[10.5px] mt-0.5 ${
-                            isDarkStudio ? 'text-slate-400' : 'text-slate-500'
-                          }`}
-                        >
-                          {item.detail}
-                        </p>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Voice Quality Section */}
-              <div className="space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Mic className="h-4 w-4 text-[#FF7A00]" />
-                    <span className="text-xs font-extrabold uppercase tracking-wider">
-                      Voice Quality
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      onClick={() => stepVoiceQuality(-1)}
-                      disabled={isApplyingQuality || voiceQuality === 'low'}
-                      className={`h-6 w-6 rounded-full flex items-center justify-center border transition-all cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed ${
-                        isDarkStudio
-                          ? 'bg-white/[0.06] border-white/15 hover:bg-white/[0.14] text-white'
-                          : 'bg-slate-100 border-slate-200 hover:bg-slate-200 text-slate-700'
-                      }`}
-                      title="Decrease Voice Quality"
-                    >
-                      <Minus className="h-3 w-3" />
-                    </button>
-                    <span className="text-[11px] font-mono font-bold text-[#FF7A00] min-w-[44px] text-center">
-                      {VOICE_QUALITY_LEVELS.find((q) => q.id === voiceQuality)?.short}
-                    </span>
-                    <button
-                      onClick={() => stepVoiceQuality(1)}
-                      disabled={isApplyingQuality || voiceQuality === 'studio'}
-                      className={`h-6 w-6 rounded-full flex items-center justify-center border transition-all cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed ${
-                        isDarkStudio
-                          ? 'bg-white/[0.06] border-white/15 hover:bg-white/[0.14] text-white'
-                          : 'bg-slate-100 border-slate-200 hover:bg-slate-200 text-slate-700'
-                      }`}
-                      title="Increase Voice Quality"
-                    >
-                      <Plus className="h-3 w-3" />
-                    </button>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  {VOICE_QUALITY_LEVELS.map((item) => {
-                    const active = voiceQuality === item.id;
-                    return (
-                      <button
-                        key={item.id}
-                        disabled={isApplyingQuality}
-                        onClick={() => void applyVoiceQuality(item.id)}
-                        className={`text-left px-3 py-2.5 rounded-xl border transition-all cursor-pointer ${
-                          active
-                            ? 'border-[#FF7A00] bg-[#FF7A00]/15 shadow-[0_0_16px_rgba(255,122,0,0.2)]'
-                            : isDarkStudio
-                            ? 'border-white/10 bg-white/[0.04] hover:bg-white/[0.08] hover:border-white/20'
-                            : 'border-slate-200 bg-slate-50 hover:border-[#FF7A00]/40'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between gap-1">
-                          <span className="text-xs font-bold">{item.label}</span>
-                          <span
-                            className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md ${
-                              active
-                                ? 'bg-[#FF7A00] text-white'
-                                : isDarkStudio
-                                ? 'bg-white/10 text-slate-300'
-                                : 'bg-slate-200 text-slate-600'
-                            }`}
-                          >
-                            {item.short}
-                          </span>
-                        </div>
-                        <p
-                          className={`text-[10.5px] mt-0.5 ${
-                            isDarkStudio ? 'text-slate-400' : 'text-slate-500'
-                          }`}
-                        >
-                          {item.detail}
-                        </p>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Voice Enhancements & Speaker Volume */}
-              <div
-                className={`rounded-2xl p-3.5 border space-y-3 ${
-                  isDarkStudio
-                    ? 'bg-white/[0.03] border-white/10'
-                    : 'bg-slate-50 border-slate-200/80'
-                }`}
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs font-semibold">Noise Suppression</span>
-                  <button
-                    onClick={() => void applyVoiceQuality(voiceQuality, !noiseSuppression, echoCancellation)}
-                    className={`w-10 h-5 rounded-full transition-colors relative cursor-pointer ${
-                      noiseSuppression ? 'bg-[#0066FF]' : 'bg-slate-600'
-                    }`}
-                  >
-                    <span
-                      className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all ${
-                        noiseSuppression ? 'left-5' : 'left-0.5'
-                      }`}
-                    />
-                  </button>
-                </div>
-
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs font-semibold">Echo Cancellation</span>
-                  <button
-                    onClick={() => void applyVoiceQuality(voiceQuality, noiseSuppression, !echoCancellation)}
-                    className={`w-10 h-5 rounded-full transition-colors relative cursor-pointer ${
-                      echoCancellation ? 'bg-[#0066FF]' : 'bg-slate-600'
-                    }`}
-                  >
-                    <span
-                      className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all ${
-                        echoCancellation ? 'left-5' : 'left-0.5'
-                      }`}
-                    />
-                  </button>
-                </div>
-
-                <div className="pt-1 space-y-1.5">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-semibold flex items-center gap-1.5">
-                      {speakerVolume === 0 ? (
-                        <VolumeX className="h-3.5 w-3.5 text-rose-400" />
-                      ) : (
-                        <Volume2 className="h-3.5 w-3.5 text-emerald-400" />
-                      )}
-                      Speaker Volume
-                    </span>
-                    <span className="font-mono text-[11px] font-bold text-cyan-400">
-                      {speakerVolume}%
-                    </span>
-                  </div>
-                  <input
-                    type="range"
-                    min={0}
-                    max={100}
-                    step={5}
-                    value={speakerVolume}
-                    onChange={(e) => setSpeakerVolume(Number(e.target.value))}
-                    className="w-full accent-[#0066FF] cursor-pointer h-1.5 rounded-lg"
-                  />
-                </div>
-              </div>
-
-              <button
-                onClick={() => setShowQualityModal(false)}
-                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-[#0066FF] to-[#00A3FF] hover:opacity-95 text-white text-xs font-bold shadow-lg shadow-[#0066FF]/25 transition-all cursor-pointer"
-              >
-                Done
-              </button>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Live Collaborative Whiteboard */}
       <WhiteboardCanvas
