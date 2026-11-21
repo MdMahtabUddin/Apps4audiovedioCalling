@@ -217,24 +217,177 @@ function LiveKitInnerStage({
 
   const [showQualityModal, setShowQualityModal] = useState(false);
   const [vedioQuality, setVedioQuality] = useState<VedioQualityLevel>('hd');
-  const [voiceQuality, setVoiceQuality] = useState<VoiceQualityLevel>('standard');
+  const [voiceQuality, setVoiceQuality] = useState<VoiceQualityLevel>('high');
   const [noiseSuppression, setNoiseSuppression] = useState(true);
   const [echoCancellation, setEchoCancellation] = useState(true);
-  const [speakerVolume, setSpeakerVolume] = useState(100);
+  const [speakerVolume, setSpeakerVolume] = useState(180); // 0–300% (Default 180% crystal-clear voice boost)
   const [isApplyingQuality, setIsApplyingQuality] = useState(false);
 
-  // Sync speaker volume to all LiveKit audio elements
+  // Web Audio API Studio Voice Boost & Clarity Engine (up to 300% loud, crystal-clear voice)
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const masterGainRef = useRef<GainNode | null>(null);
+  const clarityInputRef = useRef<AudioNode | null>(null);
+  const connectedAudioTracksRef = useRef<Map<string, MediaStreamAudioSourceNode>>(new Map());
+
   useEffect(() => {
-    const vol = Math.max(0, Math.min(1, speakerVolume / 100));
-    const applyVolume = () => {
+    if (!room || typeof window === 'undefined') return;
+
+    const AudioCtx =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!AudioCtx) return;
+
+    const ensureAudioGraph = () => {
+      if (!audioCtxRef.current) {
+        const ctx = new AudioCtx();
+        // 1. Speech Clarity EQ (gentle +3.5dB presence lift at 2.8kHz so voices sound crisp, never muffled)
+        const clarityEq = ctx.createBiquadFilter();
+        clarityEq.type = 'peaking';
+        clarityEq.frequency.value = 2800;
+        clarityEq.Q.value = 1.0;
+        clarityEq.gain.value = 3.5;
+
+        // 2. Voice Leveler Compressor (lifts quiet/distant voices automatically)
+        const leveler = ctx.createDynamicsCompressor();
+        leveler.threshold.value = -24;
+        leveler.knee.value = 18;
+        leveler.ratio.value = 4;
+        leveler.attack.value = 0.005;
+        leveler.release.value = 0.15;
+
+        // 3. Master Boost Gain (0.0 to 3.0 = 0% to 300%)
+        const masterGain = ctx.createGain();
+        masterGain.gain.value = Math.max(0, Math.min(3, speakerVolume / 100));
+
+        // 4. Safety Brickwall Limiter (prevents distortion/clipping at high boost)
+        const limiter = ctx.createDynamicsCompressor();
+        limiter.threshold.value = -2;
+        limiter.knee.value = 4;
+        limiter.ratio.value = 12;
+        limiter.attack.value = 0.002;
+        limiter.release.value = 0.08;
+
+        clarityEq.connect(leveler);
+        leveler.connect(masterGain);
+        masterGain.connect(limiter);
+        limiter.connect(ctx.destination);
+
+        audioCtxRef.current = ctx;
+        clarityInputRef.current = clarityEq;
+        masterGainRef.current = masterGain;
+      }
+      return audioCtxRef.current;
+    };
+
+    const syncRemoteAudioTracks = () => {
+      const ctx = ensureAudioGraph();
+      const inputNode = clarityInputRef.current;
+      if (!ctx || !inputNode) return;
+
+      const activeTrackIds = new Set<string>();
+      room.remoteParticipants.forEach((rp) => {
+        rp.audioTrackPublications.forEach((pub) => {
+          const mediaTrack = pub.track?.mediaStreamTrack;
+          if (!mediaTrack || mediaTrack.readyState !== 'live') return;
+          const key = `${rp.identity}:${mediaTrack.id}`;
+          activeTrackIds.add(key);
+
+          if (!connectedAudioTracksRef.current.has(key)) {
+            try {
+              const stream = new MediaStream([mediaTrack]);
+              const source = ctx.createMediaStreamSource(stream);
+              source.connect(inputNode);
+              connectedAudioTracksRef.current.set(key, source);
+            } catch {
+              // ignore unsupported track
+            }
+          }
+        });
+      });
+
+      // Disconnect stale tracks
+      connectedAudioTracksRef.current.forEach((source, key) => {
+        if (!activeTrackIds.has(key)) {
+          try {
+            source.disconnect();
+          } catch {
+            // ignore
+          }
+          connectedAudioTracksRef.current.delete(key);
+        }
+      });
+
+      // Prevent double-audio: when Web Audio boost graph is running, mute raw <audio> tags;
+      // otherwise keep raw <audio> tags unmuted at max 1.0 as seamless fallback.
+      const usingWebAudio = ctx.state === 'running' && connectedAudioTracksRef.current.size > 0;
+      const fallbackVol = Math.max(0, Math.min(1, speakerVolume / 100));
       document.querySelectorAll('audio').forEach((el) => {
-        el.volume = vol;
+        if (usingWebAudio) {
+          el.muted = true;
+        } else {
+          el.muted = false;
+          el.volume = fallbackVol;
+        }
       });
     };
-    applyVolume();
-    const timer = setInterval(applyVolume, 1500);
-    return () => clearInterval(timer);
-  }, [speakerVolume, participants.length]);
+
+    const unlockAudio = () => {
+      const ctx = ensureAudioGraph();
+      if (ctx && ctx.state === 'suspended') {
+        ctx.resume().then(syncRemoteAudioTracks).catch(() => {});
+      }
+    };
+
+    syncRemoteAudioTracks();
+    const timer = setInterval(syncRemoteAudioTracks, 1200);
+    window.addEventListener('pointerdown', unlockAudio, { passive: true });
+    window.addEventListener('keydown', unlockAudio, { passive: true });
+
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener('pointerdown', unlockAudio);
+      window.removeEventListener('keydown', unlockAudio);
+    };
+  }, [room, participants.length, speakerVolume]);
+
+  // Smooth real-time GainNode volume updates when user moves the slider
+  useEffect(() => {
+    const gainVal = Math.max(0, Math.min(3, speakerVolume / 100));
+    if (masterGainRef.current && audioCtxRef.current) {
+      masterGainRef.current.gain.setTargetAtTime(
+        gainVal,
+        audioCtxRef.current.currentTime,
+        0.04
+      );
+    }
+    const usingWebAudio =
+      audioCtxRef.current?.state === 'running' && connectedAudioTracksRef.current.size > 0;
+    if (!usingWebAudio) {
+      const fallbackVol = Math.max(0, Math.min(1, gainVal));
+      document.querySelectorAll('audio').forEach((el) => {
+        el.muted = false;
+        el.volume = fallbackVol;
+      });
+    }
+  }, [speakerVolume]);
+
+  // Cleanup Web Audio context on unmount
+  useEffect(() => {
+    return () => {
+      connectedAudioTracksRef.current.forEach((src) => {
+        try {
+          src.disconnect();
+        } catch {
+          // ignore
+        }
+      });
+      connectedAudioTracksRef.current.clear();
+      if (audioCtxRef.current) {
+        audioCtxRef.current.close().catch(() => {});
+        audioCtxRef.current = null;
+      }
+    };
+  }, []);
 
   // Apply remote vedio quality whenever participants or vedioQuality changes
   useEffect(() => {
@@ -306,7 +459,8 @@ function LiveKitInnerStage({
           await localMicTrack.restartTrack({
             noiseSuppression: nextNs,
             echoCancellation: nextEc,
-            autoGainControl: nextNs,
+            autoGainControl: true,
+            sampleRate: 48000,
           });
         }
         await localParticipant.setMicrophoneEnabled(
@@ -314,10 +468,13 @@ function LiveKitInnerStage({
           {
             noiseSuppression: nextNs,
             echoCancellation: nextEc,
-            autoGainControl: nextNs,
+            autoGainControl: true,
+            sampleRate: 48000,
           },
           {
             audioPreset: cfg.preset,
+            dtx: false,
+            red: true,
           }
         );
       }
@@ -2843,7 +3000,7 @@ function LiveKitInnerStage({
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-xs">
                       <button
-                        onClick={() => setSpeakerVolume((v) => (v === 0 ? 100 : 0))}
+                        onClick={() => setSpeakerVolume((v) => (v === 0 ? 180 : 0))}
                         className="font-bold flex items-center gap-2 cursor-pointer hover:opacity-80"
                         title={speakerVolume === 0 ? 'Unmute Speaker' : 'Mute Speaker'}
                       >
@@ -2852,21 +3009,44 @@ function LiveKitInnerStage({
                         ) : (
                           <Volume2 className="h-4 w-4 text-emerald-400" />
                         )}
-                        <span>Speaker Volume</span>
+                        <span>Speaker Volume &amp; Boost</span>
                       </button>
-                      <span className="px-2 py-0.5 rounded-full bg-[#0066FF]/15 text-cyan-300 font-mono text-[10.5px] font-extrabold">
-                        {speakerVolume}%
+                      <span
+                        className={`px-2 py-0.5 rounded-full font-mono text-[10.5px] font-extrabold ${
+                          speakerVolume > 100
+                            ? 'bg-[#FF7A00]/20 text-[#FFA033]'
+                            : 'bg-[#0066FF]/15 text-cyan-300'
+                        }`}
+                      >
+                        {speakerVolume}%{speakerVolume > 100 ? ' Boost' : ''}
                       </span>
                     </div>
                     <input
                       type="range"
                       min={0}
-                      max={100}
-                      step={5}
+                      max={300}
+                      step={10}
                       value={speakerVolume}
                       onChange={(e) => setSpeakerVolume(Number(e.target.value))}
                       className="w-full accent-[#00A3FF] cursor-pointer h-1.5 rounded-full"
                     />
+                    <div className="grid grid-cols-4 gap-1.5 pt-0.5">
+                      {[100, 180, 250, 300].map((val) => (
+                        <button
+                          key={val}
+                          onClick={() => setSpeakerVolume(val)}
+                          className={`py-1 rounded-lg text-[10px] font-mono font-bold transition-all cursor-pointer ${
+                            speakerVolume === val
+                              ? 'bg-[#0066FF] text-white shadow-sm'
+                              : isDarkStudio
+                              ? 'bg-white/[0.06] text-slate-300 hover:bg-white/[0.12]'
+                              : 'bg-slate-200/80 text-slate-700 hover:bg-slate-300'
+                          }`}
+                        >
+                          {val}%
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
 
@@ -2936,6 +3116,22 @@ export function LiveKitMeetingStage({
       connect={true}
       video={true}
       audio={true}
+      options={{
+        audioCaptureDefaults: {
+          autoGainControl: true,
+          echoCancellation: true,
+          noiseSuppression: true,
+          sampleRate: 48000,
+          channelCount: 1,
+        },
+        publishDefaults: {
+          audioPreset: AudioPresets.music,
+          dtx: false,
+          red: true,
+        },
+        adaptiveStream: true,
+        dynacast: true,
+      }}
       connectOptions={{
         rtcConfig: RTC_CONFIG,
       }}
