@@ -327,18 +327,13 @@ export function PreJoinScreen({ meetingInfo, initialName = '', onJoinSuccess }: 
             </Button>
           </form>
 
-          {/* Meeting Security & Notice */}
-          <div className="pt-4 border-t border-white/[0.08] space-y-2 text-xs text-gray-400">
-            <div className="flex items-center gap-2 text-[11px] text-gray-400">
-              <Shield className="h-3.5 w-3.5 text-emerald-400" />
-              <span>Direct WebRTC P2P media streams. Encrypted via DTLS-SRTP.</span>
-            </div>
-            {meetingInfo.waitingRoom && (
+          {meetingInfo.waitingRoom && (
+            <div className="pt-4 border-t border-white/[0.08] text-xs text-gray-400">
               <p className="text-[11px] text-amber-300/80">
                 Notice: The host has enabled a waiting room. You will be admitted once the host approves.
               </p>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
