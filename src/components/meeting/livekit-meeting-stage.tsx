@@ -3106,50 +3106,56 @@ function LiveKitInnerStage({
           >
             <div
               onClick={(e) => e.stopPropagation()}
-              className={`w-full sm:max-w-[430px] rounded-t-3xl sm:rounded-3xl overflow-hidden border-t sm:border shadow-[0_24px_72px_rgba(0,0,0,0.75)] backdrop-blur-2xl animate-in fade-in slide-in-from-bottom-6 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-200 ${
+              className={`w-full sm:max-w-[430px] max-h-[90dvh] sm:max-h-[88vh] flex flex-col rounded-t-3xl sm:rounded-3xl overflow-hidden border-t sm:border shadow-[0_24px_72px_rgba(0,0,0,0.75)] backdrop-blur-2xl animate-in fade-in slide-in-from-bottom-6 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-200 ${
                 isDarkStudio
                   ? 'bg-[#070f20]/96 border-white/15 text-white'
                   : 'bg-white/98 border-slate-200 text-slate-900'
               }`}
             >
               {/* MetroMeet Top Brand Gradient Accent */}
-              <div className="h-[3px] w-full bg-gradient-to-r from-[#0066FF] via-[#00A3FF] to-[#FF7A00]" />
+              <div className="h-[3px] w-full shrink-0 bg-gradient-to-r from-[#0066FF] via-[#00A3FF] to-[#FF7A00]" />
 
               {/* Native Mobile Drag Handle */}
-              <div className="sm:hidden flex justify-center pt-2.5">
+              <div className="sm:hidden flex justify-center pt-2 shrink-0">
                 <div className="w-10 h-1 rounded-full bg-white/25" />
               </div>
 
-              <div className="p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:p-6 space-y-4">
-                {/* Header */}
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-[#0066FF] via-[#0088FF] to-[#00A3FF] text-white flex items-center justify-center shadow-lg shadow-[#0066FF]/35">
-                      <SlidersHorizontal className="h-4.5 w-4.5" />
-                    </div>
-                    <div>
-                      <h3 className="text-[15px] font-extrabold tracking-tight leading-tight">
-                        Audio &amp; Vedio Quality
-                      </h3>
-                      <div className="flex items-center gap-1.5 mt-0.5">
-                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                        <span className={`text-[11px] font-medium ${isDarkStudio ? 'text-slate-400' : 'text-slate-500'}`}>
-                          {activeVedioCfg.short} {activeVedioCfg.label} · {activeVoiceCfg.short} Audio
-                        </span>
-                      </div>
+              {/* Pinned Header (Always visible on every screen height) */}
+              <div
+                className={`shrink-0 px-5 pt-3.5 pb-3 border-b flex items-center justify-between gap-3 ${
+                  isDarkStudio ? 'border-white/[0.08]' : 'border-slate-200/80'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-2xl bg-gradient-to-br from-[#0066FF] via-[#0088FF] to-[#00A3FF] text-white flex items-center justify-center shadow-lg shadow-[#0066FF]/35">
+                    <SlidersHorizontal className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-[15px] font-extrabold tracking-tight leading-tight">
+                      Audio &amp; Vedio Quality
+                    </h3>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      <span className={`text-[11px] font-medium ${isDarkStudio ? 'text-slate-400' : 'text-slate-500'}`}>
+                        {activeVedioCfg.short} {activeVedioCfg.label} · {activeVoiceCfg.short} Audio
+                      </span>
                     </div>
                   </div>
-                  <button
-                    onClick={() => setShowQualityModal(false)}
-                    className={`h-8 w-8 rounded-full flex items-center justify-center transition-colors cursor-pointer ${
-                      isDarkStudio
-                        ? 'bg-white/[0.06] text-slate-300 hover:text-white hover:bg-white/15'
-                        : 'bg-slate-100 text-slate-500 hover:text-slate-800 hover:bg-slate-200'
-                    }`}
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
                 </div>
+                <button
+                  onClick={() => setShowQualityModal(false)}
+                  className={`h-8 w-8 rounded-full flex items-center justify-center transition-colors cursor-pointer ${
+                    isDarkStudio
+                      ? 'bg-white/[0.06] text-slate-300 hover:text-white hover:bg-white/15'
+                      : 'bg-slate-100 text-slate-500 hover:text-slate-800 hover:bg-slate-200'
+                  }`}
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              {/* Scrollable Body (Never clips on laptops or phones) */}
+              <div className="flex-1 min-h-0 overflow-y-auto px-5 py-3.5 space-y-3">
 
                 {/* 1. VEDIO QUALITY CARD */}
                 <div
@@ -3465,7 +3471,14 @@ function LiveKitInnerStage({
                     </div>
                   </div>
                 </div>
+              </div>
 
+              {/* Pinned Footer Action Button */}
+              <div
+                className={`shrink-0 px-5 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:pb-4 border-t ${
+                  isDarkStudio ? 'border-white/[0.08]' : 'border-slate-200/80'
+                }`}
+              >
                 <button
                   onClick={() => setShowQualityModal(false)}
                   className="w-full py-2.5 rounded-2xl bg-gradient-to-r from-[#0066FF] via-[#0088FF] to-[#00A3FF] hover:opacity-95 text-white text-xs font-extrabold tracking-wide shadow-lg shadow-[#0066FF]/30 active:scale-[0.99] transition-all cursor-pointer"
