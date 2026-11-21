@@ -1574,9 +1574,9 @@ function LiveKitInnerStage({
               </span>
             </div>
             {variant !== 'thumb' && (
-              <span className="pl-0.5 text-[7.5px] font-medium tracking-wider text-white/75 drop-shadow-[0_1px_4px_rgba(0,0,0,0.9)] leading-none">
+              <div className="inline-flex items-center rounded bg-black/40 backdrop-blur-sm border border-white/10 shadow-[0_2px_8px_rgba(0,0,0,0.6)] px-1.5 py-[2px] text-[8px] font-mono font-medium tracking-wider text-white/80 tabular-nums leading-none">
                 {todayFormatted}
-              </span>
+              </div>
             )}
           </div>
         </div>
