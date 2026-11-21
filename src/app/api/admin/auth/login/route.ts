@@ -12,10 +12,13 @@ export async function POST(request: NextRequest) {
     const password = String(body?.password || '').trim();
 
     const expected = getAdminCredentials();
-    if (
-      username.toLowerCase() !== expected.username.toLowerCase() ||
-      password !== expected.password
-    ) {
+    const normalizedInput = username.toLowerCase();
+    const normalizedExpected = expected.username.toLowerCase();
+    const usernameMatches =
+      normalizedInput === normalizedExpected ||
+      (normalizedExpected === 'admin' && normalizedInput === 'admin@gmail.com');
+
+    if (!usernameMatches || password !== expected.password) {
       return NextResponse.json(
         { error: 'Invalid admin username or password' },
         { status: 401 }

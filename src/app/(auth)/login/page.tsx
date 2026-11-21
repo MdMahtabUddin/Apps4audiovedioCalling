@@ -124,11 +124,21 @@ export default function LoginPage() {
               </Button>
             </form>
 
-            <div className="mt-6 text-center text-xs text-gray-400">
-              Don&apos;t have an account?{' '}
-              <Link href="/register" className="font-semibold text-indigo-400 hover:text-indigo-300 underline underline-offset-2">
-                Create one now
-              </Link>
+            <div className="mt-6 text-center text-xs text-gray-400 space-y-2.5">
+              <div>
+                Don&apos;t have an account?{' '}
+                <Link href="/register" className="font-semibold text-[#388BFF] hover:text-cyan-300 underline underline-offset-2">
+                  Create one now
+                </Link>
+              </div>
+              <div className="pt-2 border-t border-white/[0.06]">
+                <Link
+                  href="/admin"
+                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-400 hover:text-[#FFA033] transition-colors"
+                >
+                  Admin Panel Login →
+                </Link>
+              </div>
             </div>
           </CardContent>
         </Card>
