@@ -70,6 +70,8 @@ import {
   Moon,
   Lock,
   FileText,
+  Subtitles,
+  Timer,
 } from 'lucide-react';
 import { BrandLogo } from '@/components/ui/brand-logo';
 import { soundEngine } from '@/lib/audio/sound-engine';
@@ -732,6 +734,30 @@ function LiveKitInnerStage({
           if (data.banner?.text) {
             soundEngine.playIntroChime();
           }
+        } else if (data.type === 'live-caption' && data.text) {
+          setLiveCaption({
+            speaker: data.speaker || participant?.name || participant?.identity || 'Participant',
+            text: data.text,
+            updatedAt: Date.now(),
+          });
+        } else if (data.type === 'live-reaction' && data.emoji) {
+          const rid = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+          setFloatingReactions((prev) => [
+            ...prev.slice(-8),
+            {
+              id: rid,
+              emoji: data.emoji,
+              sender: data.sender || participant?.name || participant?.identity || 'Participant',
+            },
+          ]);
+          setTimeout(() => {
+            setFloatingReactions((prev) => prev.filter((r) => r.id !== rid));
+          }, 3200);
+        } else if (data.type === 'meeting-timer') {
+          setMeetingTimerEndAt(typeof data.endAt === 'number' ? data.endAt : null);
+          if (typeof data.endAt === 'number') {
+            soundEngine.playIntroChime();
+          }
         }
       } catch {}
     };
@@ -741,6 +767,173 @@ function LiveKitInnerStage({
       room.off('dataReceived', handleDataReceived);
     };
   }, [room, toast, isHost]);
+
+  // =========================================================================
+  // PRO FEATURES: LIVE CAPTIONS (CC), FLOATING REACTIONS & MEETING TIMER
+  // =========================================================================
+  const [captionsEnabled, setCaptionsEnabled] = useState(false);
+  const [captionLang, setCaptionLang] = useState<'en-US' | 'bn-BD'>('en-US');
+  const [liveCaption, setLiveCaption] = useState<{
+    speaker: string;
+    text: string;
+    updatedAt: number;
+  } | null>(null);
+  const recognitionRef = useRef<any>(null);
+
+  const [floatingReactions, setFloatingReactions] = useState<
+    { id: string; emoji: string; sender: string }[]
+  >([]);
+
+  const [meetingTimerEndAt, setMeetingTimerEndAt] = useState<number | null>(null);
+  const [meetingTimerRemaining, setMeetingTimerRemaining] = useState<number>(0);
+  const [showTimerModal, setShowTimerModal] = useState(false);
+  const [customTimerMinutes, setCustomTimerMinutes] = useState('15');
+  const timerDoneRef = useRef(false);
+
+  // Auto-hide stale caption after 6 seconds of silence
+  useEffect(() => {
+    if (!liveCaption) return;
+    const t = setTimeout(() => {
+      setLiveCaption((curr) => (curr && Date.now() - curr.updatedAt >= 5800 ? null : curr));
+    }, 6000);
+    return () => clearTimeout(t);
+  }, [liveCaption]);
+
+  // Browser Web Speech API Live Captions + LiveKit DataChannel broadcast
+  useEffect(() => {
+    if (!captionsEnabled || typeof window === 'undefined') {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch {}
+        recognitionRef.current = null;
+      }
+      return;
+    }
+
+    const SpeechRecognitionCtor =
+      (window as unknown as { SpeechRecognition?: any; webkitSpeechRecognition?: any })
+        .SpeechRecognition ||
+      (window as unknown as { webkitSpeechRecognition?: any }).webkitSpeechRecognition;
+
+    if (!SpeechRecognitionCtor) {
+      toast.info('Live Captions require Chrome, Edge, or Safari.');
+      setCaptionsEnabled(false);
+      return;
+    }
+
+    const rec = new SpeechRecognitionCtor();
+    rec.continuous = true;
+    rec.interimResults = true;
+    rec.lang = captionLang;
+
+    rec.onresult = (event: any) => {
+      let transcript = '';
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        transcript += event.results[i][0].transcript;
+      }
+      const cleaned = transcript.trim();
+      if (!cleaned) return;
+      setLiveCaption({ speaker: displayName, text: cleaned, updatedAt: Date.now() });
+      try {
+        const payload = new TextEncoder().encode(
+          JSON.stringify({ type: 'live-caption', speaker: displayName, text: cleaned })
+        );
+        room?.localParticipant.publishData(payload, { reliable: false });
+      } catch {}
+    };
+
+    rec.onend = () => {
+      if (captionsEnabled && recognitionRef.current === rec) {
+        try {
+          rec.start();
+        } catch {}
+      }
+    };
+
+    try {
+      rec.start();
+      recognitionRef.current = rec;
+    } catch {
+      setCaptionsEnabled(false);
+    }
+
+    return () => {
+      try {
+        rec.onend = null;
+        rec.stop();
+      } catch {}
+      if (recognitionRef.current === rec) recognitionRef.current = null;
+    };
+  }, [captionsEnabled, captionLang, displayName, room, toast]);
+
+  const sendLiveReaction = (emoji: string) => {
+    const rid = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    setFloatingReactions((prev) => [
+      ...prev.slice(-8),
+      { id: rid, emoji, sender: displayName },
+    ]);
+    setTimeout(() => {
+      setFloatingReactions((prev) => prev.filter((r) => r.id !== rid));
+    }, 3200);
+    try {
+      const payload = new TextEncoder().encode(
+        JSON.stringify({ type: 'live-reaction', emoji, sender: displayName })
+      );
+      room?.localParticipant.publishData(payload, { reliable: false });
+    } catch {}
+  };
+
+  // Synced Meeting Countdown Timer Tick
+  useEffect(() => {
+    if (!meetingTimerEndAt) {
+      setMeetingTimerRemaining(0);
+      timerDoneRef.current = false;
+      return;
+    }
+    timerDoneRef.current = false;
+    const updateTick = () => {
+      const left = Math.max(0, Math.ceil((meetingTimerEndAt - Date.now()) / 1000));
+      setMeetingTimerRemaining(left);
+      if (left === 0 && !timerDoneRef.current) {
+        timerDoneRef.current = true;
+        soundEngine.playKnockChime();
+        toast.info('Meeting countdown timer finished!');
+      }
+    };
+    updateTick();
+    const interval = setInterval(updateTick, 1000);
+    return () => clearInterval(interval);
+  }, [meetingTimerEndAt, toast]);
+
+  const handleStartMeetingTimer = (minutes: number) => {
+    if (!minutes || minutes <= 0) return;
+    const endAt = Date.now() + Math.round(minutes * 60 * 1000);
+    setMeetingTimerEndAt(endAt);
+    setShowTimerModal(false);
+    try {
+      const payload = new TextEncoder().encode(
+        JSON.stringify({ type: 'meeting-timer', endAt })
+      );
+      room?.localParticipant.publishData(payload, { reliable: true });
+    } catch {}
+    toast.success(`Meeting timer started (${minutes} min)`);
+  };
+
+  const handleClearMeetingTimer = () => {
+    setMeetingTimerEndAt(null);
+    setShowTimerModal(false);
+    try {
+      const payload = new TextEncoder().encode(
+        JSON.stringify({ type: 'meeting-timer', endAt: null })
+      );
+      room?.localParticipant.publishData(payload, { reliable: true });
+    } catch {}
+  };
+
+  const isPoorNetwork =
+    localParticipant?.connectionQuality === ConnectionQuality.Poor ||
+    localParticipant?.connectionQuality === ConnectionQuality.Lost;
 
   const handleLaunchPoll = (e: React.FormEvent) => {
     e.preventDefault();
@@ -1707,6 +1900,113 @@ function LiveKitInnerStage({
             </div>
           )}
 
+          {/* Auto Network Quality Guard Banner (only when connection is Poor & not already on 360p) */}
+          {isPoorNetwork && vedioQuality !== 'low' && (
+            <div className="shrink-0 rounded-2xl px-3.5 py-2 bg-amber-500/15 border border-amber-500/35 backdrop-blur-xl flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2 text-xs text-amber-200 font-semibold min-w-0">
+                <Wifi className="h-3.5 w-3.5 text-amber-400 shrink-0 animate-pulse" />
+                <span className="truncate">Unstable network detected — switch to Data Saver for smoother audio &amp; vedio.</span>
+              </div>
+              <button
+                onClick={() => void applyVedioQuality('low')}
+                className="px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-[11px] font-extrabold shrink-0 cursor-pointer transition-colors"
+              >
+                Use 360p
+              </button>
+            </div>
+          )}
+
+          {/* Synced Host Meeting Countdown Timer Pill */}
+          {meetingTimerEndAt && (
+            <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 pointer-events-auto">
+              <div
+                className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full backdrop-blur-2xl border shadow-xl text-xs font-mono font-extrabold ${
+                  meetingTimerRemaining === 0
+                    ? 'bg-rose-600/90 border-rose-300/40 text-white animate-pulse'
+                    : meetingTimerRemaining <= 60
+                    ? 'bg-amber-500/90 border-amber-300/50 text-slate-950 animate-pulse'
+                    : 'bg-[#060c1a]/82 border-[#00A3FF]/35 text-white'
+                }`}
+              >
+                <Timer className="h-3.5 w-3.5" />
+                <span>
+                  {meetingTimerRemaining === 0
+                    ? "Time's Up!"
+                    : `${String(Math.floor(meetingTimerRemaining / 60)).padStart(2, '0')}:${String(
+                        meetingTimerRemaining % 60
+                      ).padStart(2, '0')}`}
+                </span>
+                {hasHostPrivileges && (
+                  <button
+                    onClick={handleClearMeetingTimer}
+                    className="ml-0.5 h-4 w-4 rounded-full bg-black/25 hover:bg-black/45 flex items-center justify-center cursor-pointer"
+                    title="Clear Timer"
+                  >
+                    <X className="h-2.5 w-2.5" />
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Floating Synced Live Emoji Reactions */}
+          {floatingReactions.length > 0 && (
+            <div className="absolute bottom-20 left-4 z-30 flex flex-col gap-1.5 pointer-events-none">
+              {floatingReactions.map((r) => (
+                <div
+                  key={r.id}
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#060c1a]/80 backdrop-blur-xl border border-white/15 shadow-lg text-white text-xs font-semibold animate-in fade-in slide-in-from-bottom-4 duration-300"
+                >
+                  <span className="text-base leading-none">{r.emoji}</span>
+                  <span className="max-w-[120px] truncate">{r.sender}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Live Auto Captions / Subtitles Overlay (CC) */}
+          {(captionsEnabled || liveCaption) && (
+            <div className="absolute bottom-16 sm:bottom-18 left-1/2 -translate-x-1/2 z-30 max-w-xl w-[92%] pointer-events-auto">
+              <div className="rounded-2xl bg-black/78 backdrop-blur-xl border border-white/15 px-4 py-2.5 shadow-2xl flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#0066FF]/30 text-cyan-300 text-[9px] font-black uppercase tracking-wider">
+                      <Subtitles className="h-2.5 w-2.5" />
+                      CC
+                    </span>
+                    <span className="text-[11px] font-bold text-cyan-300 truncate">
+                      {liveCaption ? liveCaption.speaker : displayName}
+                    </span>
+                  </div>
+                  <p className="text-xs sm:text-sm text-white/95 font-medium leading-snug">
+                    {liveCaption?.text || 'Listening... start speaking to display live captions'}
+                  </p>
+                </div>
+                {captionsEnabled && (
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      onClick={() => setCaptionLang((l) => (l === 'en-US' ? 'bn-BD' : 'en-US'))}
+                      className="px-2 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-[10px] font-bold text-white cursor-pointer"
+                      title="Switch Caption Language (English / বাংলা)"
+                    >
+                      {captionLang === 'en-US' ? 'EN' : 'বাংলা'}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setCaptionsEnabled(false);
+                        setLiveCaption(null);
+                      }}
+                      className="h-6 w-6 rounded-full bg-white/10 hover:bg-white/20 text-slate-300 flex items-center justify-center cursor-pointer"
+                      title="Turn Off Captions"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Floating Live Poll Card (Glassmorphic Broadcast Overlay) */}
           {activePoll && (
             <div
@@ -2098,6 +2398,29 @@ function LiveKitInnerStage({
                     </div>
                   </div>
 
+                  {/* Quick Live Emoji Reactions Bar */}
+                  <div
+                    className={`flex items-center justify-between gap-1 px-2 py-1.5 rounded-xl border mb-1 ${
+                      isDarkStudio
+                        ? 'bg-white/[0.04] border-white/10'
+                        : 'bg-slate-50 border-slate-200/80'
+                    }`}
+                  >
+                    {['👍', '👏', '❤️', '😂', '🎉', '🔥'].map((emoji) => (
+                      <button
+                        key={emoji}
+                        onClick={() => {
+                          sendLiveReaction(emoji);
+                          setShowMoreMenu(false);
+                        }}
+                        className="h-8 w-8 rounded-lg hover:bg-white/10 active:scale-90 flex items-center justify-center text-base transition-transform cursor-pointer"
+                        title={`React with ${emoji}`}
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>
+
                   {/* Mobile-only Quick Access for Screen Share & Whiteboard */}
                   <button
                     onClick={() => {
@@ -2131,6 +2454,37 @@ function LiveKitInnerStage({
                     <SlidersHorizontal className="h-4 w-4 text-cyan-400" />
                     <span>Voice &amp; Vedio Quality</span>
                   </button>
+
+                  <button
+                    onClick={() => {
+                      setCaptionsEnabled((prev) => !prev);
+                      setShowMoreMenu(false);
+                    }}
+                    className="w-full flex items-center justify-between gap-3 sm:gap-2.5 px-3.5 py-2.5 sm:px-3 sm:py-2 rounded-xl bg-white/[0.04] sm:bg-transparent hover:bg-[#3B82F6]/10 text-xs font-semibold cursor-pointer"
+                  >
+                    <span className="flex items-center gap-3 sm:gap-2.5">
+                      <Subtitles className={`h-4 w-4 ${captionsEnabled ? 'text-emerald-400' : 'text-sky-400'}`} />
+                      <span>{captionsEnabled ? 'Stop Live Captions (CC)' : 'Live Captions (CC)'}</span>
+                    </span>
+                    {captionsEnabled && (
+                      <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[9px] font-black">
+                        ON
+                      </span>
+                    )}
+                  </button>
+
+                  {hasHostPrivileges && (
+                    <button
+                      onClick={() => {
+                        setShowTimerModal(true);
+                        setShowMoreMenu(false);
+                      }}
+                      className="w-full flex items-center gap-3 sm:gap-2.5 px-3.5 py-2.5 sm:px-3 sm:py-2 rounded-xl bg-white/[0.04] sm:bg-transparent hover:bg-[#3B82F6]/10 text-xs font-semibold cursor-pointer"
+                    >
+                      <Timer className="h-4 w-4 text-amber-400" />
+                      <span>{meetingTimerEndAt ? 'Manage Meeting Timer' : 'Start Meeting Timer'}</span>
+                    </button>
+                  )}
 
                   <button
                     onClick={() => {
@@ -3123,6 +3477,100 @@ function LiveKitInnerStage({
           </div>
         );
       })()}
+
+      {/* Synced Host Meeting Countdown Timer Modal */}
+      {showTimerModal && (
+        <div
+          className="fixed inset-0 z-[100] bg-black/65 backdrop-blur-md flex items-end sm:items-center justify-center sm:p-4"
+          onClick={() => setShowTimerModal(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className={`w-full sm:max-w-sm rounded-t-3xl sm:rounded-3xl overflow-hidden border-t sm:border shadow-2xl backdrop-blur-2xl ${
+              isDarkStudio
+                ? 'bg-[#070f20]/96 border-white/15 text-white'
+                : 'bg-white/98 border-slate-200 text-slate-900'
+            }`}
+          >
+            <div className="h-[3px] w-full bg-gradient-to-r from-[#0066FF] via-[#00A3FF] to-[#FF7A00]" />
+            <div className="p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-[#FF7A00] to-[#FF4D2E] text-white flex items-center justify-center shadow-lg shadow-[#FF7A00]/30">
+                    <Timer className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-extrabold tracking-tight">Meeting Countdown Timer</h3>
+                    <p className={`text-[11px] ${isDarkStudio ? 'text-slate-400' : 'text-slate-500'}`}>
+                      Visible live to all participants
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowTimerModal(false)}
+                  className="h-8 w-8 rounded-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 cursor-pointer"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-4 gap-2">
+                {[5, 10, 15, 30].map((m) => (
+                  <button
+                    key={m}
+                    onClick={() => handleStartMeetingTimer(m)}
+                    className={`py-2.5 rounded-xl border text-xs font-extrabold transition-all cursor-pointer active:scale-95 ${
+                      isDarkStudio
+                        ? 'bg-white/[0.05] hover:bg-[#0066FF] border-white/10 hover:border-[#00A3FF] text-white'
+                        : 'bg-slate-100 hover:bg-[#0066FF] hover:text-white border-slate-200 text-slate-800'
+                    }`}
+                  >
+                    {m} min
+                  </button>
+                ))}
+              </div>
+
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const mins = Number(customTimerMinutes);
+                  if (mins > 0 && mins <= 240) handleStartMeetingTimer(mins);
+                }}
+                className="flex items-center gap-2"
+              >
+                <input
+                  type="number"
+                  min={1}
+                  max={240}
+                  value={customTimerMinutes}
+                  onChange={(e) => setCustomTimerMinutes(e.target.value)}
+                  placeholder="Minutes"
+                  className={`flex-1 rounded-xl px-3.5 py-2.5 text-xs font-mono outline-none border ${
+                    isDarkStudio
+                      ? 'bg-black/40 border-white/15 text-white focus:border-[#00A3FF]'
+                      : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#0066FF]'
+                  }`}
+                />
+                <button
+                  type="submit"
+                  className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#0066FF] to-[#00A3FF] text-white text-xs font-bold shadow-md shadow-[#0066FF]/30 cursor-pointer"
+                >
+                  Start
+                </button>
+              </form>
+
+              {meetingTimerEndAt && (
+                <button
+                  onClick={handleClearMeetingTimer}
+                  className="w-full py-2 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-400 text-xs font-bold cursor-pointer"
+                >
+                  Stop &amp; Clear Active Timer
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Live Collaborative Whiteboard */}
       <WhiteboardCanvas
