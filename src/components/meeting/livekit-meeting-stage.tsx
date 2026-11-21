@@ -1554,8 +1554,8 @@ function LiveKitInnerStage({
             </div>
           </div>
 
-          {/* Smaller LIVE + Time strip directly below the logo */}
-          <div className="flex items-center gap-1.5 pl-0.5">
+          {/* Smaller LIVE + Time strip + tiny Date directly below the logo */}
+          <div className="flex flex-col items-start gap-0.5 pl-0.5">
             <div
               className={`inline-flex items-center gap-1 rounded bg-black/40 backdrop-blur-sm border border-white/10 shadow-[0_2px_8px_rgba(0,0,0,0.6)] ${
                 variant === 'thumb' ? 'px-1 py-[1px] text-[7px]' : 'px-1.5 py-[2px] text-[8.5px]'
@@ -1573,6 +1573,11 @@ function LiveKitInnerStage({
                 {formatDuration(callDuration)}
               </span>
             </div>
+            {variant !== 'thumb' && (
+              <span className="pl-0.5 text-[7.5px] font-medium tracking-wider text-white/75 drop-shadow-[0_1px_4px_rgba(0,0,0,0.9)] leading-none">
+                {todayFormatted}
+              </span>
+            )}
           </div>
         </div>
 
@@ -1747,8 +1752,6 @@ function LiveKitInnerStage({
                   isDarkStudio ? 'text-slate-400' : 'text-slate-500'
                 }`}
               >
-                <span className="whitespace-nowrap">{todayFormatted}</span>
-                <span className="opacity-40">•</span>
                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-[#0066FF] to-[#00A3FF] text-white text-[10px] sm:text-[10.5px] font-bold shadow-sm shadow-[#0066FF]/30">
                   <Users className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                   <span>{isHost ? 'Host Meeting' : 'Live Meeting'}</span>
