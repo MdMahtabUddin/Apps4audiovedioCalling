@@ -593,9 +593,108 @@ export default function DashboardPage() {
         onQuickNewMeeting={() => setIsNewMeetingOpen(true)}
       />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-28 md:py-7 space-y-7 relative z-10">
-        {/* 1. Executive Studio Command Header */}
-        <div className="relative overflow-hidden rounded-3xl border border-[#0066FF]/25 bg-gradient-to-r from-[#091326]/95 via-[#0d1b35]/90 to-[#091220]/95 p-6 sm:p-8 backdrop-blur-2xl shadow-2xl shadow-black/60">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-28 md:py-7 space-y-5 md:space-y-7 relative z-10">
+        {/* ================================================================= */}
+        {/* MOBILE APP HOME LAYOUT (Clean Zoom/Meet Native App Feel on < md)  */}
+        {/* ================================================================= */}
+        <div className="md:hidden space-y-4">
+          {/* Compact Greeting Row */}
+          <div className="flex items-center justify-between gap-2 px-0.5">
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold text-slate-400">{greetingText}</p>
+              <h1 className="text-lg font-black tracking-tight text-white truncate">
+                {user?.name || 'Host'}
+              </h1>
+            </div>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-[10px] font-bold text-emerald-300 shrink-0">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              {analytics.activeMeetings > 0 ? `${analytics.activeMeetings} Live` : 'Online'}
+            </span>
+          </div>
+
+          {/* 4 Symmetrical Native App Action Icons (Zoom / Meet Style) */}
+          <div className="grid grid-cols-4 gap-2.5">
+            <button
+              onClick={() => setIsNewMeetingOpen(true)}
+              className="flex flex-col items-center gap-1.5 active:scale-95 transition-transform cursor-pointer"
+            >
+              <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-[#FF7A00] to-[#FF4D2E] text-white flex items-center justify-center shadow-lg shadow-[#FF7A00]/30">
+                <Video className="h-6 w-6" />
+              </div>
+              <span className="text-[11px] font-bold text-slate-200">New</span>
+            </button>
+
+            <button
+              onClick={() => setIsJoinMeetingOpen(true)}
+              className="flex flex-col items-center gap-1.5 active:scale-95 transition-transform cursor-pointer"
+            >
+              <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-[#0066FF] to-[#00A3FF] text-white flex items-center justify-center shadow-lg shadow-[#0066FF]/30">
+                <LogIn className="h-6 w-6" />
+              </div>
+              <span className="text-[11px] font-bold text-slate-200">Join</span>
+            </button>
+
+            <button
+              onClick={() => setIsScheduleOpen(true)}
+              className="flex flex-col items-center gap-1.5 active:scale-95 transition-transform cursor-pointer"
+            >
+              <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-violet-600 to-purple-500 text-white flex items-center justify-center shadow-lg shadow-violet-600/30">
+                <Calendar className="h-6 w-6" />
+              </div>
+              <span className="text-[11px] font-bold text-slate-200">Schedule</span>
+            </button>
+
+            <button
+              onClick={() => setIsSettingsOpen(true)}
+              className="flex flex-col items-center gap-1.5 active:scale-95 transition-transform cursor-pointer"
+            >
+              <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-500 text-white flex items-center justify-center shadow-lg shadow-emerald-600/30">
+                <Camera className="h-6 w-6" />
+              </div>
+              <span className="text-[11px] font-bold text-slate-200">Studio</span>
+            </button>
+          </div>
+
+          {/* Compact 3-Stat App Summary Strip */}
+          <div className="grid grid-cols-3 gap-2">
+            <div className="p-3 rounded-2xl bg-[#091222]/90 border border-white/[0.08] text-center">
+              <div className="text-base font-black text-white leading-none">{analytics.totalMeetings}</div>
+              <div className="text-[10px] font-semibold text-slate-400 mt-1">Meetings</div>
+            </div>
+            <div className="p-3 rounded-2xl bg-[#091222]/90 border border-white/[0.08] text-center">
+              <div className="text-base font-black text-[#FFA033] leading-none">{analytics.formattedTotalTime}</div>
+              <div className="text-[10px] font-semibold text-slate-400 mt-1">Talk Time</div>
+            </div>
+            <div className="p-3 rounded-2xl bg-[#091222]/90 border border-white/[0.08] text-center">
+              <div className="text-base font-black text-cyan-400 leading-none">{scheduledMeetings.length}</div>
+              <div className="text-[10px] font-semibold text-slate-400 mt-1">Scheduled</div>
+            </div>
+          </div>
+
+          {/* Compact 1-Line Instant Join Bar */}
+          <form
+            onSubmit={handleInlineJoin}
+            className="p-2 rounded-2xl bg-[#091222]/90 border border-[#0066FF]/25 flex items-center gap-2"
+          >
+            <input
+              type="text"
+              placeholder="Paste meeting code or link..."
+              value={inlineCode}
+              onChange={(e) => setInlineCode(e.target.value)}
+              className="flex-1 bg-transparent px-2.5 py-1.5 text-xs text-gray-100 placeholder:text-gray-500 outline-none font-mono min-w-0"
+            />
+            <button
+              type="submit"
+              disabled={!inlineCode.trim()}
+              className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-[#0066FF] to-[#00A3FF] text-white text-xs font-bold shrink-0 disabled:opacity-40 cursor-pointer"
+            >
+              Join
+            </button>
+          </form>
+        </div>
+
+        {/* 1. Executive Studio Command Header (Desktop) */}
+        <div className="hidden md:block relative overflow-hidden rounded-3xl border border-[#0066FF]/25 bg-gradient-to-r from-[#091326]/95 via-[#0d1b35]/90 to-[#091220]/95 p-6 sm:p-8 backdrop-blur-2xl shadow-2xl shadow-black/60">
           <div className="absolute -top-24 -right-24 w-96 h-96 bg-[#0066FF]/15 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute -bottom-24 left-1/3 w-80 h-80 bg-[#FF7A00]/10 rounded-full blur-3xl pointer-events-none" />
 
@@ -640,8 +739,8 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* 2. International-Standard Executive Telemetry & KPI Strip */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-5">
+        {/* 2. International-Standard Executive Telemetry & KPI Strip (Desktop) */}
+        <div className="hidden md:grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-5">
           {/* KPI 1: Total Meetings Conducted */}
           <div className="p-4 sm:p-5 rounded-3xl bg-[#091222]/85 border border-[#0066FF]/20 backdrop-blur-xl shadow-xl flex flex-col justify-between gap-3 hover:border-[#0066FF]/45 transition-all">
             <div className="flex items-center justify-between">
@@ -728,8 +827,8 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* 3. 4 Signature Quick-Launch Studio Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+        {/* 3. 4 Signature Quick-Launch Studio Cards (Desktop) */}
+        <div className="hidden md:grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
           {/* Card 1: New Meeting */}
           <button
             onClick={() => setIsNewMeetingOpen(true)}
@@ -827,8 +926,8 @@ export default function DashboardPage() {
           </button>
         </div>
 
-        {/* 3.5 One-Click Quick Meeting Templates */}
-        <div className="space-y-3">
+        {/* 3.5 One-Click Quick Meeting Templates (Desktop) */}
+        <div className="hidden md:block space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-xs font-black uppercase tracking-widest text-gray-400 flex items-center gap-2">
               <Sparkles className="h-3.5 w-3.5 text-[#FFA033]" />
@@ -890,8 +989,8 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* 4. Quick Meeting Code Entry Bar */}
-        <div className="p-4 sm:p-5 rounded-3xl bg-[#091222]/90 border border-[#0066FF]/20 backdrop-blur-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-lg">
+        {/* 4. Quick Meeting Code Entry Bar (Desktop) */}
+        <div className="hidden md:flex p-4 sm:p-5 rounded-3xl bg-[#091222]/90 border border-[#0066FF]/20 backdrop-blur-xl flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-lg">
           <div className="flex items-center gap-3.5">
             <div className="h-11 w-11 rounded-2xl bg-[#0066FF]/15 text-[#388BFF] flex items-center justify-center border border-[#0066FF]/30 shrink-0">
               <LogIn className="h-5 w-5" />
@@ -925,29 +1024,29 @@ export default function DashboardPage() {
             {/* Control Header: Primary Tabs + Search + Filter & Sort */}
             <div className="p-4 sm:p-5 rounded-3xl bg-[#091222]/85 border border-white/[0.08] backdrop-blur-xl space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-1.5 sm:gap-2 p-1 sm:p-0 rounded-2xl bg-black/35 sm:bg-transparent border border-white/[0.06] sm:border-0">
                   <button
                     onClick={() => setActiveTab('history')}
-                    className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                    className={`flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
                       activeTab === 'history'
                         ? 'bg-gradient-to-r from-[#0066FF] to-[#0052CC] text-white shadow-lg shadow-[#0066FF]/30 border border-[#388BFF]/40'
                         : 'text-gray-400 hover:text-white hover:bg-white/[0.06] border border-transparent'
                     }`}
                   >
-                    <History className="h-4 w-4" />
-                    <span>Meeting History ({recentMeetings.length})</span>
+                    <History className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+                    <span className="truncate">History ({recentMeetings.length})</span>
                   </button>
 
                   <button
                     onClick={() => setActiveTab('upcoming')}
-                    className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                    className={`flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
                       activeTab === 'upcoming'
                         ? 'bg-gradient-to-r from-[#0066FF] to-[#0052CC] text-white shadow-lg shadow-[#0066FF]/30 border border-[#388BFF]/40'
                         : 'text-gray-400 hover:text-white hover:bg-white/[0.06] border border-transparent'
                     }`}
                   >
-                    <CalendarDays className="h-4 w-4" />
-                    <span>Upcoming Schedule ({scheduledMeetings.length})</span>
+                    <CalendarDays className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+                    <span className="truncate">Upcoming ({scheduledMeetings.length})</span>
                   </button>
                 </div>
 

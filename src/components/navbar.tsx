@@ -42,11 +42,16 @@ export function Navbar({ user, onOpenSettings, onQuickNewMeeting }: NavbarProps)
   };
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-[#0066FF]/20 bg-[#050a14]/85 backdrop-blur-2xl transition-all">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between">
-        {/* Brand Logo */}
+    <header className="sticky top-0 z-40 w-full border-b border-[#0066FF]/20 bg-[#050a14]/90 backdrop-blur-2xl transition-all pt-[env(safe-area-inset-top)]">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 sm:h-20 flex items-center justify-between">
+        {/* Brand Logo (Compact on mobile app bar, full with tagline on desktop) */}
         <div className="flex items-center gap-6">
-          <BrandLogo size="md" showTagline={true} href={user ? '/dashboard' : '/'} />
+          <div className="sm:hidden">
+            <BrandLogo size="sm" showTagline={false} href={user ? '/dashboard' : '/'} />
+          </div>
+          <div className="hidden sm:block">
+            <BrandLogo size="md" showTagline={true} href={user ? '/dashboard' : '/'} />
+          </div>
         </div>
 
         {/* Right Actions */}

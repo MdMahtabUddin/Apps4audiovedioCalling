@@ -3,10 +3,11 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Video, ArrowRight, Eye, EyeOff } from 'lucide-react';
+import { ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { BrandLogo } from '@/components/ui/brand-logo';
 import { useToast } from '@/components/ui/toast';
 
 export default function LoginPage() {
@@ -50,21 +51,15 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-b from-[#0b0f19] via-[#0d1322] to-[#090d16] relative overflow-hidden">
-      {/* Background glow accents */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[300px] bg-indigo-600/15 rounded-full blur-3xl pointer-events-none" />
+    <div className="min-h-screen flex items-center justify-center p-4 bg-[#050a14] relative overflow-hidden">
+      {/* Background MetroMeet brand glow accents */}
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[300px] bg-[#0066FF]/15 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-1/4 right-1/4 w-[360px] h-[240px] bg-[#FF7A00]/10 rounded-full blur-3xl pointer-events-none" />
 
       <div className="w-full max-w-md space-y-6 relative z-10">
-        {/* Brand Header */}
-        <div className="text-center space-y-2">
-          <Link href="/" className="inline-flex items-center gap-2.5 group">
-            <div className="h-12 w-12 rounded-2xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-violet-500 flex items-center justify-center shadow-xl shadow-indigo-600/30 group-hover:scale-105 transition-all">
-              <Video className="h-6 w-6 text-white" />
-            </div>
-            <span className="text-2xl font-bold tracking-tight text-white">
-              Metro<span className="text-indigo-400">Meet</span>
-            </span>
-          </Link>
+        {/* Official MetroMeet PRO Brand Header */}
+        <div className="text-center space-y-2.5 flex flex-col items-center">
+          <BrandLogo size="lg" showTagline={true} href="/" />
           <h2 className="text-2xl font-bold tracking-tight text-white pt-2">Welcome back</h2>
           <p className="text-xs sm:text-sm text-gray-400">Sign in to your account to start or join meetings</p>
         </div>
