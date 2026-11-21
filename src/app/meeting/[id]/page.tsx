@@ -11,6 +11,7 @@ import { PreJoinScreen } from '@/components/meeting/pre-join-screen';
 import { WaitingRoomScreen } from '@/components/meeting/waiting-room-screen';
 import { MeetingRoomView } from '@/components/meeting/meeting-room-view';
 import { LiveKitMeetingStage } from '@/components/meeting/livekit-meeting-stage';
+import { AgoraBackupStage } from '@/components/meeting/agora-backup-stage';
 import { DailyBackupStage } from '@/components/meeting/daily-backup-stage';
 import { MeetingValidationResponse, UserProfile } from '@/types';
 import { generateMeetingId } from '@/lib/utils';
@@ -23,11 +24,17 @@ function MeetingContainer({ meetingId }: { meetingId: string }) {
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [livekitData, setLivekitData] = useState<{ token: string; wsUrl: string } | null>(null);
   const [livekitFailed, setLivekitFailed] = useState(false);
+  const [agoraBackupData, setAgoraBackupData] = useState<{
+    appId: string;
+    channel: string;
+    uid: number;
+    token: string | null;
+  } | null>(null);
   const [dailyBackupData, setDailyBackupData] = useState<{
     roomUrl: string;
     token?: string | null;
   } | null>(null);
-  const [dailyBackupChecked, setDailyBackupChecked] = useState(false);
+  const [backupChecked, setBackupChecked] = useState(false);
 
   const { isJoined, isWaitingApproval, leaveRoom, endRoom, myDisplayName } = useMeeting();
 
@@ -50,31 +57,63 @@ function MeetingContainer({ meetingId }: { meetingId: string }) {
       });
   }, [isJoined, meetingId, myDisplayName, currentUser?.name]);
 
-  // Backup Provider Failover: Daily.co (ONLY runs if LiveKit fails / quota exhausted)
+  // Backup Provider Failover Chain: Agora Cloud (1st) -> Daily.co (2nd) -> WebRTC Mesh (3rd)
   useEffect(() => {
     if (!isJoined || !livekitFailed) return;
-    const nameToUse = myDisplayName || currentUser?.name || 'Participant';
-    const isHostFlag =
-      (currentUser?.id && meetingInfo?.hostId && currentUser.id === meetingInfo.hostId) ||
-      (typeof window !== 'undefined' && localStorage.getItem(`metromeet_host_${meetingId}`) === 'true');
+    let cancelled = false;
 
-    fetch(
-      `/api/backup/daily/room?room=${encodeURIComponent(meetingId)}&username=${encodeURIComponent(
-        nameToUse
-      )}&host=${isHostFlag ? 'true' : 'false'}`
-    )
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (data?.isConfigured && data?.roomUrl) {
-          setDailyBackupData({ roomUrl: data.roomUrl, token: data.token || null });
+    const checkBackups = async () => {
+      const nameToUse = myDisplayName || currentUser?.name || 'Participant';
+      const isHostFlag =
+        (currentUser?.id && meetingInfo?.hostId && currentUser.id === meetingInfo.hostId) ||
+        (typeof window !== 'undefined' && localStorage.getItem(`metromeet_host_${meetingId}`) === 'true');
+
+      // 1. Try Agora Backup Cloud (10,000 free mins/mo, no card required)
+      try {
+        const agoraRes = await fetch(
+          `/api/backup/agora/token?room=${encodeURIComponent(meetingId)}&username=${encodeURIComponent(nameToUse)}`
+        );
+        if (agoraRes.ok) {
+          const agoraJson = await agoraRes.json();
+          if (!cancelled && agoraJson?.isConfigured && agoraJson?.appId && agoraJson?.channel) {
+            setAgoraBackupData({
+              appId: agoraJson.appId,
+              channel: agoraJson.channel,
+              uid: agoraJson.uid,
+              token: agoraJson.token || null,
+            });
+            setBackupChecked(true);
+            return;
+          }
         }
-      })
-      .catch((e) => {
+      } catch (e) {
+        console.warn('Agora backup check note:', e);
+      }
+
+      // 2. Fallback to Daily.co Backup Cloud if configured
+      try {
+        const dailyRes = await fetch(
+          `/api/backup/daily/room?room=${encodeURIComponent(meetingId)}&username=${encodeURIComponent(
+            nameToUse
+          )}&host=${isHostFlag ? 'true' : 'false'}`
+        );
+        if (dailyRes.ok) {
+          const dailyJson = await dailyRes.json();
+          if (!cancelled && dailyJson?.isConfigured && dailyJson?.roomUrl) {
+            setDailyBackupData({ roomUrl: dailyJson.roomUrl, token: dailyJson.token || null });
+          }
+        }
+      } catch (e) {
         console.warn('Daily backup check note:', e);
-      })
-      .finally(() => {
-        setDailyBackupChecked(true);
-      });
+      } finally {
+        if (!cancelled) setBackupChecked(true);
+      }
+    };
+
+    void checkBackups();
+    return () => {
+      cancelled = true;
+    };
   }, [isJoined, livekitFailed, meetingId, myDisplayName, currentUser?.name, currentUser?.id, meetingInfo?.hostId]);
 
   useEffect(() => {
@@ -208,7 +247,7 @@ function MeetingContainer({ meetingId }: { meetingId: string }) {
       );
     }
 
-    if (livekitFailed && !dailyBackupChecked) {
+    if (livekitFailed && !backupChecked) {
       return (
         <div className="h-screen w-screen bg-[#06080e] flex items-center justify-center">
           <div className="flex flex-col items-center gap-4">
@@ -223,6 +262,23 @@ function MeetingContainer({ meetingId }: { meetingId: string }) {
             </p>
           </div>
         </div>
+      );
+    }
+
+    if (agoraBackupData?.appId && agoraBackupData?.channel) {
+      return (
+        <AgoraBackupStage
+          meetingId={meetingId}
+          meetingTitle={meetingInfo.title}
+          isHost={isMeetingHost}
+          appId={agoraBackupData.appId}
+          channel={agoraBackupData.channel}
+          uid={agoraBackupData.uid}
+          token={agoraBackupData.token}
+          displayName={myDisplayName || currentUser?.name || 'Participant'}
+          onLeave={leaveRoom}
+          onEndMeeting={endRoom}
+        />
       );
     }
 

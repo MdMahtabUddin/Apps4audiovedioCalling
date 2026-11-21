@@ -140,6 +140,9 @@ export async function GET() {
     const livekitConfigured = Boolean(
       livekitKey && livekitSecret && livekitUrl && !livekitSecret.includes('•') && livekitSecret.length >= 16
     );
+    const agoraConfigured = Boolean(
+      (process.env.AGORA_APP_ID || process.env.NEXT_PUBLIC_AGORA_APP_ID || '').trim()
+    );
     const dailyConfigured = Boolean(process.env.DAILY_API_KEY?.trim());
 
     return NextResponse.json({
@@ -152,6 +155,7 @@ export async function GET() {
         databaseMode: usePrisma ? 'PostgreSQL Cloud' : 'Local Fallback Store',
         livekitConfigured,
         livekitUrl,
+        agoraConfigured,
         dailyConfigured,
         webrtcMeshAvailable: true,
         environment: process.env.VERCEL ? 'Vercel Production' : 'Local Studio',

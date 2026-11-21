@@ -22,10 +22,11 @@ export async function PATCH(request: NextRequest) {
     const patch: Record<string, unknown> = {};
 
     if (typeof body.primaryEnabled === 'boolean') patch.primaryEnabled = body.primaryEnabled;
+    if (typeof body.agoraEnabled === 'boolean') patch.agoraEnabled = body.agoraEnabled;
     if (typeof body.backupEnabled === 'boolean') patch.backupEnabled = body.backupEnabled;
     if (
       typeof body.routingMode === 'string' &&
-      ['auto', 'livekit', 'daily', 'webrtc'].includes(body.routingMode)
+      ['auto', 'livekit', 'agora', 'daily', 'webrtc'].includes(body.routingMode)
     ) {
       patch.routingMode = body.routingMode as RtcRoutingMode;
     }

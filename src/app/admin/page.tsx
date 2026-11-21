@@ -42,6 +42,7 @@ interface AdminOverviewData {
     databaseMode: string;
     livekitConfigured: boolean;
     livekitUrl: string;
+    agoraConfigured: boolean;
     dailyConfigured: boolean;
     webrtcMeshAvailable: boolean;
     environment: string;
@@ -211,10 +212,15 @@ export default function AdminPanelPage() {
     if (!data) return 'LiveKit Cloud';
     const { config, infrastructure } = data;
     if (config.routingMode === 'webrtc') return 'WebRTC P2P Mesh (Forced)';
+    if (config.routingMode === 'agora') {
+      return config.agoraEnabled && infrastructure.agoraConfigured
+        ? 'Agora Backup Cloud (Forced)'
+        : 'WebRTC Mesh (AGORA_APP_ID not set or Agora OFF)';
+    }
     if (config.routingMode === 'daily') {
       return config.backupEnabled && infrastructure.dailyConfigured
-        ? 'Daily.co Backup Cloud (Forced)'
-        : 'WebRTC Mesh (Daily key not set or Backup OFF)';
+        ? 'Daily.co Cloud (Forced)'
+        : 'WebRTC Mesh (Daily key not set or OFF)';
     }
     if (config.routingMode === 'livekit') {
       return config.primaryEnabled && infrastructure.livekitConfigured
@@ -223,14 +229,21 @@ export default function AdminPanelPage() {
     }
     // Auto Failover
     if (config.primaryEnabled && infrastructure.livekitConfigured) {
-      return config.backupEnabled && infrastructure.dailyConfigured
-        ? 'LiveKit Primary → Auto-Failover to Daily.co Backup'
-        : 'LiveKit Primary → Auto-Fallback to WebRTC Mesh';
+      if (config.agoraEnabled && infrastructure.agoraConfigured) {
+        return 'LiveKit Primary → Auto-Failover to Agora Backup';
+      }
+      if (config.backupEnabled && infrastructure.dailyConfigured) {
+        return 'LiveKit Primary → Auto-Failover to Daily Backup';
+      }
+      return 'LiveKit Primary → Auto-Fallback to WebRTC Mesh';
+    }
+    if (config.agoraEnabled && infrastructure.agoraConfigured) {
+      return 'Agora Backup Cloud (Primary is OFF)';
     }
     if (config.backupEnabled && infrastructure.dailyConfigured) {
       return 'Daily.co Backup Cloud (Primary is OFF)';
     }
-    return 'WebRTC P2P Mesh (Both Cloud Providers OFF)';
+    return 'WebRTC P2P Mesh (All Cloud Providers OFF)';
   }, [data]);
 
   const filteredMeetings = useMemo(() => {
@@ -596,10 +609,10 @@ export default function AdminPanelPage() {
                 </div>
               </div>
 
-              {/* BACKUP: Daily.co Cloud */}
+              {/* BACKUP: Agora Cloud (10,000 Free Mins/mo · No Card Required) */}
               <div
                 className={`p-5 rounded-2xl border transition-all space-y-4 ${
-                  config.backupEnabled
+                  config.agoraEnabled
                     ? 'bg-[#FF7A00]/[0.07] border-[#FF7A00]/35 shadow-[0_0_24px_rgba(255,122,0,0.1)]'
                     : 'bg-white/[0.02] border-white/10 opacity-80'
                 }`}
@@ -608,54 +621,54 @@ export default function AdminPanelPage() {
                   <div className="flex items-center gap-3">
                     <div
                       className={`h-11 w-11 rounded-2xl flex items-center justify-center border ${
-                        config.backupEnabled
+                        config.agoraEnabled
                           ? 'bg-[#FF7A00]/20 border-[#FF7A00]/40 text-[#FFA033]'
                           : 'bg-white/5 border-white/10 text-slate-500'
                       }`}
                     >
-                      {config.backupEnabled ? <Cloud className="h-5 w-5" /> : <CloudOff className="h-5 w-5" />}
+                      {config.agoraEnabled ? <Cloud className="h-5 w-5" /> : <CloudOff className="h-5 w-5" />}
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <h3 className="text-sm font-extrabold text-white">Backup — Daily.co Cloud</h3>
+                        <h3 className="text-sm font-extrabold text-white">Backup — Agora Cloud</h3>
                         <span
                           className={`px-2 py-0.5 rounded-full text-[9.5px] font-black uppercase ${
-                            config.backupEnabled
+                            config.agoraEnabled
                               ? 'bg-emerald-500/20 text-emerald-300'
                               : 'bg-rose-500/20 text-rose-300'
                           }`}
                         >
-                          {config.backupEnabled ? 'ON' : 'OFF'}
+                          {config.agoraEnabled ? 'ON' : 'OFF'}
                         </span>
                       </div>
                       <p className="text-[11px] text-slate-400 mt-0.5">
-                        10,000 free participant-mins/mo · Auto Failover Cloud
+                        10,000 free mins/mo · No Card Required · Native MetroMeet UI
                       </p>
                     </div>
                   </div>
 
-                  {/* Backup ON/OFF Switch */}
+                  {/* Agora Backup ON/OFF Switch */}
                   <button
-                    disabled={savingKey === 'backup'}
+                    disabled={savingKey === 'agora'}
                     onClick={() =>
                       void updateConfig(
-                        { backupEnabled: !config.backupEnabled },
-                        'backup',
-                        !config.backupEnabled
-                          ? 'Backup Daily.co Cloud turned ON'
-                          : 'Backup Daily.co Cloud turned OFF'
+                        { agoraEnabled: !config.agoraEnabled },
+                        'agora',
+                        !config.agoraEnabled
+                          ? 'Backup Agora Cloud turned ON'
+                          : 'Backup Agora Cloud turned OFF'
                       )
                     }
                     className={`w-12 h-7 rounded-full transition-all relative cursor-pointer shrink-0 ${
-                      config.backupEnabled
+                      config.agoraEnabled
                         ? 'bg-gradient-to-r from-[#FF7A00] to-[#FF4D2E] shadow-md shadow-[#FF7A00]/40'
                         : 'bg-slate-700'
                     }`}
-                    title="Toggle Backup Daily.co Cloud"
+                    title="Toggle Backup Agora Cloud"
                   >
                     <span
                       className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-all ${
-                        config.backupEnabled ? 'left-6' : 'left-1'
+                        config.agoraEnabled ? 'left-6' : 'left-1'
                       }`}
                     />
                   </button>
@@ -663,14 +676,14 @@ export default function AdminPanelPage() {
 
                 <div className="flex items-center justify-between text-[11px] pt-2 border-t border-white/[0.08]">
                   <span className="text-slate-400">
-                    Env Var: <code className="text-slate-200 font-mono">DAILY_API_KEY</code>
+                    Env: <code className="text-slate-200 font-mono">AGORA_APP_ID</code>
                   </span>
                   <span
                     className={`inline-flex items-center gap-1 font-bold shrink-0 ${
-                      infrastructure.dailyConfigured ? 'text-emerald-400' : 'text-amber-400'
+                      infrastructure.agoraConfigured ? 'text-emerald-400' : 'text-amber-400'
                     }`}
                   >
-                    {infrastructure.dailyConfigured ? (
+                    {infrastructure.agoraConfigured ? (
                       <>
                         <CheckCircle2 className="h-3.5 w-3.5" />
                         Keys Connected
@@ -678,7 +691,7 @@ export default function AdminPanelPage() {
                     ) : (
                       <>
                         <AlertTriangle className="h-3.5 w-3.5" />
-                        Add Key in Vercel
+                        Add App ID in Vercel
                       </>
                     )}
                   </span>
@@ -698,7 +711,7 @@ export default function AdminPanelPage() {
                     {
                       id: 'auto',
                       label: 'Auto Failover',
-                      desc: 'LiveKit → Daily → Mesh',
+                      desc: 'LiveKit → Agora → Mesh',
                     },
                     {
                       id: 'livekit',
@@ -706,9 +719,9 @@ export default function AdminPanelPage() {
                       desc: 'LiveKit Cloud only',
                     },
                     {
-                      id: 'daily',
-                      label: 'Force Backup',
-                      desc: 'Daily.co Cloud directly',
+                      id: 'agora',
+                      label: 'Force Backup (Agora)',
+                      desc: 'Agora Cloud directly',
                     },
                     {
                       id: 'webrtc',

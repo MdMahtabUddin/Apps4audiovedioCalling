@@ -5,7 +5,12 @@ import { getSystemConfig } from '@/lib/admin/system-config';
 export async function GET(req: NextRequest) {
   try {
     const sysConfig = await getSystemConfig();
-    if (!sysConfig.primaryEnabled || sysConfig.routingMode === 'daily' || sysConfig.routingMode === 'webrtc') {
+    if (
+      !sysConfig.primaryEnabled ||
+      sysConfig.routingMode === 'agora' ||
+      sysConfig.routingMode === 'daily' ||
+      sysConfig.routingMode === 'webrtc'
+    ) {
       return NextResponse.json({
         isConfigured: false,
         disabledByAdmin: true,

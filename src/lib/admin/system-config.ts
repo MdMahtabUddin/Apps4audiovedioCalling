@@ -2,10 +2,11 @@ import fs from 'fs';
 import path from 'path';
 import { prisma, checkPrisma } from '@/lib/db';
 
-export type RtcRoutingMode = 'auto' | 'livekit' | 'daily' | 'webrtc';
+export type RtcRoutingMode = 'auto' | 'livekit' | 'agora' | 'daily' | 'webrtc';
 
 export interface SystemConfig {
   primaryEnabled: boolean;
+  agoraEnabled: boolean;
   backupEnabled: boolean;
   routingMode: RtcRoutingMode;
   allowGuestJoin: boolean;
@@ -18,6 +19,7 @@ export interface SystemConfig {
 
 export const DEFAULT_SYSTEM_CONFIG: SystemConfig = {
   primaryEnabled: true,
+  agoraEnabled: true,
   backupEnabled: true,
   routingMode: 'auto',
   allowGuestJoin: true,
