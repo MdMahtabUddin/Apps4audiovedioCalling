@@ -2140,7 +2140,7 @@ function LiveKitInnerStage({
 
           {presentationTrack ? (
             /* Google Meet & Zoom Presentation Mode (Auto when Screen Sharing or Pinned) */
-            <div className="flex-1 min-h-0 flex flex-col lg:flex-row gap-2.5">
+            <div className="flex-1 min-h-0 flex flex-col lg:flex-row gap-2.5 pb-16 sm:pb-14">
               {/* Primary Presentation / Pinned Stage */}
               <div className="flex-1 min-h-0">
                 {renderVideoTile(presentationTrack, 'main')}
@@ -2159,7 +2159,7 @@ function LiveKitInnerStage({
             </div>
           ) : (
             /* Google Meet & Zoom Adaptive Gallery Grid with Smart Pagination (up to 50+ participants) */
-            <div className="flex-1 min-h-0 relative">
+            <div className="flex-1 min-h-0 relative pb-16 sm:pb-14">
               <div className={getGridClasses(pagedTracks.length)}>
                 {pagedTracks.map((t) => renderVideoTile(t, 'grid'))}
               </div>
