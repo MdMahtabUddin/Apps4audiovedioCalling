@@ -1,0 +1,40 @@
+{
+  "name": "MetroMeet PRO — Vedio Conferencing",
+  "short_name": "MetroMeet",
+  "description": "Enterprise HD Vedio Conferencing & Live Studio by MetroNet",
+  "start_url": "/dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#050a14",
+  "theme_color": "#050a14",
+  "categories": ["business", "communication", "productivity"],
+  "icons": [
+    {
+      "src": "/icon-app.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/metronet-logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/metronet-logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "short_name": "Home",
+      "url": "/dashboard",
+      "icons": [{ "src": "/icon-app.svg", "sizes": "any" }]
+    }
+  ]
+}

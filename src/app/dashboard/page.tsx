@@ -33,6 +33,9 @@ import {
   Award,
   Activity,
   ExternalLink,
+  Home,
+  Plus,
+  Settings,
 } from 'lucide-react';
 import { Navbar } from '@/components/navbar';
 import { Button } from '@/components/ui/button';
@@ -590,7 +593,7 @@ export default function DashboardPage() {
         onQuickNewMeeting={() => setIsNewMeetingOpen(true)}
       />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-7 space-y-7 relative z-10">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-28 md:py-7 space-y-7 relative z-10">
         {/* 1. Executive Studio Command Header */}
         <div className="relative overflow-hidden rounded-3xl border border-[#0066FF]/25 bg-gradient-to-r from-[#091326]/95 via-[#0d1b35]/90 to-[#091220]/95 p-6 sm:p-8 backdrop-blur-2xl shadow-2xl shadow-black/60">
           <div className="absolute -top-24 -right-24 w-96 h-96 bg-[#0066FF]/15 rounded-full blur-3xl pointer-events-none" />
@@ -1637,6 +1640,62 @@ export default function DashboardPage() {
           </div>
         </div>
       </main>
+
+      {/* Native Mobile App Bottom Navigation Bar */}
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-[#060d1d]/92 backdrop-blur-2xl border-t border-white/10 shadow-[0_-10px_32px_rgba(0,0,0,0.6)] pb-[env(safe-area-inset-bottom)]">
+        <div className="grid grid-cols-5 items-end px-2 pt-2 pb-2.5 max-w-md mx-auto">
+          <button
+            onClick={() => {
+              setActiveTab('history');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            className={`flex flex-col items-center gap-1 py-1 rounded-xl transition-colors cursor-pointer ${
+              activeTab === 'history' ? 'text-[#00A3FF]' : 'text-slate-400 active:text-white'
+            }`}
+          >
+            <Home className="h-5 w-5" strokeWidth={activeTab === 'history' ? 2.3 : 1.8} />
+            <span className="text-[10px] font-semibold">Home</span>
+          </button>
+
+          <button
+            onClick={() => setIsJoinMeetingOpen(true)}
+            className="flex flex-col items-center gap-1 py-1 rounded-xl text-slate-400 active:text-white transition-colors cursor-pointer"
+          >
+            <LogIn className="h-5 w-5" strokeWidth={1.8} />
+            <span className="text-[10px] font-semibold">Join</span>
+          </button>
+
+          {/* Center Floating Native Action Button: New Meeting */}
+          <div className="flex flex-col items-center -mt-6">
+            <button
+              onClick={() => setIsNewMeetingOpen(true)}
+              className="h-13 w-13 rounded-2xl bg-gradient-to-br from-[#0066FF] via-[#0088FF] to-[#FF7A00] text-white flex items-center justify-center shadow-[0_8px_24px_rgba(0,102,255,0.5)] border-2 border-[#060d1d] active:scale-95 transition-transform cursor-pointer"
+              title="New Meeting"
+            >
+              <Plus className="h-6 w-6" strokeWidth={2.6} />
+            </button>
+            <span className="text-[10px] font-bold text-white mt-1">New</span>
+          </div>
+
+          <button
+            onClick={() => setIsScheduleOpen(true)}
+            className={`flex flex-col items-center gap-1 py-1 rounded-xl transition-colors cursor-pointer ${
+              activeTab === 'upcoming' ? 'text-[#00A3FF]' : 'text-slate-400 active:text-white'
+            }`}
+          >
+            <Calendar className="h-5 w-5" strokeWidth={activeTab === 'upcoming' ? 2.3 : 1.8} />
+            <span className="text-[10px] font-semibold">Schedule</span>
+          </button>
+
+          <button
+            onClick={() => setIsSettingsOpen(true)}
+            className="flex flex-col items-center gap-1 py-1 rounded-xl text-slate-400 active:text-white transition-colors cursor-pointer"
+          >
+            <Settings className="h-5 w-5" strokeWidth={1.8} />
+            <span className="text-[10px] font-semibold">Settings</span>
+          </button>
+        </div>
+      </nav>
 
       {/* Modals */}
       <NewMeetingModal
