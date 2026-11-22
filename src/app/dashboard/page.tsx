@@ -926,69 +926,6 @@ export default function DashboardPage() {
           </button>
         </div>
 
-        {/* 3.5 One-Click Quick Meeting Templates (Desktop) */}
-        <div className="hidden md:block space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xs font-black uppercase tracking-widest text-gray-400 flex items-center gap-2">
-              <Sparkles className="h-3.5 w-3.5 text-[#FFA033]" />
-              One-Click Meeting Templates
-            </h3>
-            <span className="text-[11px] text-gray-500">Instant room launch with preset security</span>
-          </div>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            {[
-              {
-                title: 'Daily Standup',
-                subtitle: 'Quick 15m team sync',
-                waitingRoom: false,
-                accent: 'border-[#0066FF]/30 hover:border-[#0066FF]/70 text-[#388BFF]',
-                tag: 'Open Room',
-              },
-              {
-                title: 'Executive Boardroom',
-                subtitle: 'Protected leadership call',
-                waitingRoom: true,
-                accent: 'border-[#FF7A00]/30 hover:border-[#FF7A00]/70 text-[#FFA033]',
-                tag: 'Waiting Room',
-              },
-              {
-                title: 'Whiteboard Brainstorm',
-                subtitle: 'Sketch & collaborate live',
-                waitingRoom: false,
-                accent: 'border-violet-500/30 hover:border-violet-500/70 text-violet-300',
-                tag: 'Draw Ready',
-              },
-              {
-                title: '1-on-1 Interview',
-                subtitle: 'Private candidate lobby',
-                waitingRoom: true,
-                accent: 'border-emerald-500/30 hover:border-emerald-500/70 text-emerald-300',
-                tag: 'Waiting Room',
-              },
-            ].map((tpl) => (
-              <button
-                key={tpl.title}
-                disabled={launchingTemplate === tpl.title}
-                onClick={() => handleLaunchTemplate(tpl.title, tpl.waitingRoom)}
-                className={`group text-left p-4 rounded-2xl bg-[#091222]/85 border transition-all hover:-translate-y-0.5 cursor-pointer flex flex-col justify-between gap-2 ${tpl.accent}`}
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs sm:text-sm font-extrabold text-white truncate">
-                    {tpl.title}
-                  </span>
-                  <ArrowRight className="h-3.5 w-3.5 shrink-0 opacity-60 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
-                </div>
-                <div className="flex items-center justify-between gap-1 text-[10px]">
-                  <span className="text-gray-400 truncate">{tpl.subtitle}</span>
-                  <span className="px-1.5 py-0.5 rounded-md bg-white/[0.06] font-bold shrink-0">
-                    {launchingTemplate === tpl.title ? 'Starting...' : tpl.tag}
-                  </span>
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
-
         {/* 4. Quick Meeting Code Entry Bar (Desktop) */}
         <div className="hidden md:flex p-4 sm:p-5 rounded-3xl bg-[#091222]/90 border border-[#0066FF]/20 backdrop-blur-xl flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-lg">
           <div className="flex items-center gap-3.5">
