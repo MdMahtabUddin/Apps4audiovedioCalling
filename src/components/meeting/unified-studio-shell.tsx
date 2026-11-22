@@ -7,6 +7,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Copy,
+  Download,
   FileText,
   FlipHorizontal,
   Hand,
@@ -25,6 +26,7 @@ import {
   PinOff,
   Plus,
   Send,
+  Share2,
   SlidersHorizontal,
   Subtitles,
   Sun,
@@ -352,6 +354,43 @@ export function UnifiedStudioShell({
     setIsCopied(true);
     toast.success('Meeting link copied!');
     setTimeout(() => setIsCopied(false), 2500);
+  };
+
+  const handleCopyFormattedInvite = () => {
+    if (typeof window === 'undefined') return;
+    const url = `${window.location.origin}/meeting/${meetingId}`;
+    const inviteText = [
+      `MetroMeet PRO — Meeting Invitation`,
+      `Topic: ${meetingTitle}`,
+      `Join Link: ${url}`,
+      `Room Code: ${meetingId}`,
+    ].join('\n');
+    navigator.clipboard.writeText(inviteText).catch(() => {});
+    toast.success('Full WhatsApp / Email invitation copied!');
+  };
+
+  const handleExportAttendanceCSV = () => {
+    const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const rows = [
+      ['Meeting Title', 'Room Code', 'Date', 'Participant Name', 'Role', 'Captured At'],
+      ...participants.map((p) => [
+        `"${(meetingTitle || 'Meeting').replace(/"/g, '""')}"`,
+        meetingId,
+        todayFormatted,
+        `"${p.name.replace(/"/g, '""')}"`,
+        p.isHost ? 'Host' : 'Participant',
+        nowTime,
+      ]),
+    ];
+    const csv = rows.map((r) => r.join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `MetroMeet-Attendance-${meetingId}-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success(`Attendance exported (${participants.length} participant${participants.length === 1 ? '' : 's'})`);
   };
 
   const handleToggleRecord = async () => {
@@ -1127,6 +1166,30 @@ export function UnifiedStudioShell({
                         <FileText className="h-4 w-4 text-emerald-500" />
                         <span>Meeting Notepad</span>
                       </button>
+
+                      <button
+                        onClick={() => {
+                          handleCopyFormattedInvite();
+                          setShowMoreMenu(false);
+                        }}
+                        className="w-full flex items-center gap-3 sm:gap-2.5 px-3.5 py-2.5 sm:px-3 sm:py-2 rounded-xl bg-white/[0.04] sm:bg-transparent hover:bg-[#3B82F6]/10 text-xs font-semibold cursor-pointer"
+                      >
+                        <Share2 className="h-4 w-4 text-[#FF7A00]" />
+                        <span>Copy Full Invite</span>
+                      </button>
+
+                      {isHost && (
+                        <button
+                          onClick={() => {
+                            handleExportAttendanceCSV();
+                            setShowMoreMenu(false);
+                          }}
+                          className="w-full flex items-center gap-3 sm:gap-2.5 px-3.5 py-2.5 sm:px-3 sm:py-2 rounded-xl bg-white/[0.04] sm:bg-transparent hover:bg-[#3B82F6]/10 text-xs font-semibold cursor-pointer"
+                        >
+                          <Download className="h-4 w-4 text-emerald-400" />
+                          <span>Export Attendance (CSV)</span>
+                        </button>
+                      )}
 
                       <button
                         onClick={() => {

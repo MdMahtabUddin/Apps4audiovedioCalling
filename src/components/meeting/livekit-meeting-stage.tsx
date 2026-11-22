@@ -72,6 +72,8 @@ import {
   FileText,
   Subtitles,
   Timer,
+  Download,
+  Share2,
 } from 'lucide-react';
 import { BrandLogo } from '@/components/ui/brand-logo';
 import { soundEngine } from '@/lib/audio/sound-engine';
@@ -1356,6 +1358,71 @@ function LiveKitInnerStage({
     totalCountRef.current = totalCount;
   }, [totalCount]);
 
+  // Live Attendance Log (tracks every participant who joined with join time for 1-click CSV export)
+  const attendanceLogRef = useRef<
+    Map<string, { name: string; role: string; joinedAt: string; currentlyPresent: boolean }>
+  >(new Map());
+
+  useEffect(() => {
+    const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const presentIds = new Set<string>();
+    participants.forEach((p) => {
+      const id = p.identity || p.sid;
+      presentIds.add(id);
+      const name = p.name || p.identity || (p.isLocal ? displayName : 'Participant');
+      const role = p.isLocal && isHost ? 'Host' : coHosts[p.identity] ? 'Co-Host' : 'Participant';
+      const existing = attendanceLogRef.current.get(id);
+      if (!existing) {
+        attendanceLogRef.current.set(id, { name, role, joinedAt: nowTime, currentlyPresent: true });
+      } else {
+        attendanceLogRef.current.set(id, { ...existing, name, role, currentlyPresent: true });
+      }
+    });
+    attendanceLogRef.current.forEach((entry, id) => {
+      if (!presentIds.has(id) && entry.currentlyPresent) {
+        attendanceLogRef.current.set(id, { ...entry, currentlyPresent: false });
+      }
+    });
+  }, [participants, displayName, isHost, coHosts]);
+
+  const handleExportAttendanceCSV = () => {
+    const entries = Array.from(attendanceLogRef.current.values());
+    const rows = [
+      ['Meeting Title', 'Room Code', 'Date', 'Participant Name', 'Role', 'First Joined', 'Status'],
+      ...entries.map((e) => [
+        `"${(meetingTitle || 'Meeting').replace(/"/g, '""')}"`,
+        meetingId,
+        todayFormatted,
+        `"${e.name.replace(/"/g, '""')}"`,
+        e.role,
+        e.joinedAt,
+        e.currentlyPresent ? 'In Meeting' : 'Left',
+      ]),
+    ];
+    const csv = rows.map((r) => r.join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `MetroMeet-Attendance-${meetingId}-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success(`Attendance sheet exported (${entries.length} participant${entries.length === 1 ? '' : 's'})`);
+  };
+
+  const handleCopyFormattedInvite = () => {
+    if (typeof window === 'undefined') return;
+    const url = `${window.location.origin}/meeting/${meetingId}`;
+    const inviteText = [
+      `MetroMeet PRO — Meeting Invitation`,
+      `Topic: ${meetingTitle}`,
+      `Join Link: ${url}`,
+      `Room Code: ${meetingId}`,
+    ].join('\n');
+    navigator.clipboard.writeText(inviteText).catch(() => {});
+    toast.success('Full WhatsApp / Email invitation copied!');
+  };
+
   // Automatic LiveKit usage telemetry for Admin Panel:
   // Pauses when Host is alone and on another tab/page; resumes automatically on return or when 2+ participants join
   useEffect(() => {
@@ -2615,6 +2682,30 @@ function LiveKitInnerStage({
                         <span>Broadcast Announcement</span>
                       </button>
                     </>
+                  )}
+
+                  <button
+                    onClick={() => {
+                      handleCopyFormattedInvite();
+                      setShowMoreMenu(false);
+                    }}
+                    className="w-full flex items-center gap-3 sm:gap-2.5 px-3.5 py-2.5 sm:px-3 sm:py-2 rounded-xl bg-white/[0.04] sm:bg-transparent hover:bg-[#3B82F6]/10 text-xs font-semibold cursor-pointer"
+                  >
+                    <Share2 className="h-4 w-4 text-[#FF7A00]" />
+                    <span>Copy Full Invite</span>
+                  </button>
+
+                  {hasHostPrivileges && (
+                    <button
+                      onClick={() => {
+                        handleExportAttendanceCSV();
+                        setShowMoreMenu(false);
+                      }}
+                      className="w-full flex items-center gap-3 sm:gap-2.5 px-3.5 py-2.5 sm:px-3 sm:py-2 rounded-xl bg-white/[0.04] sm:bg-transparent hover:bg-[#3B82F6]/10 text-xs font-semibold cursor-pointer"
+                    >
+                      <Download className="h-4 w-4 text-emerald-400" />
+                      <span>Export Attendance (CSV)</span>
+                    </button>
                   )}
 
                   <button
