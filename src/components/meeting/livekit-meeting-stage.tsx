@@ -1368,7 +1368,7 @@ function LiveKitInnerStage({
       }).catch(() => {});
     };
     sendUsage(0); // Register provider immediately on join
-    const id = setInterval(() => sendUsage(30), 30000);
+    const id = setInterval(() => sendUsage(10), 10000);
     return () => clearInterval(id);
   }, [isHost, meetingId, meetingTitle]);
 

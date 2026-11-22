@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { RtcRole, RtcTokenBuilder } from 'agora-token';
 import { getSystemConfig } from '@/lib/admin/system-config';
+import { recordProviderHeartbeat } from '@/lib/admin/usage-tracker';
 
 function sanitizeChannel(raw: string): string {
   const cleaned = raw.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 60);
@@ -54,6 +55,15 @@ export async function GET(request: NextRequest) {
         privilegeExpireTs
       );
     }
+
+    // Tag this room's active provider as Agora immediately for accurate Admin telemetry
+    void recordProviderHeartbeat({
+      meetingId: roomParam,
+      meetingTitle: roomParam,
+      provider: 'agora',
+      participantCount: 1,
+      deltaSeconds: 0,
+    }).catch(() => {});
 
     return NextResponse.json({
       isConfigured: true,

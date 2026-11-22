@@ -156,10 +156,12 @@ export async function GET() {
         !Number.isNaN(startMs) && !Number.isNaN(endMs)
           ? Math.max(0, Math.min(60 * 60 * 6, Math.round((endMs - startMs) / 1000)))
           : 0;
-      const durationSeconds = log ? log.durationSeconds : fallbackSecs;
-      const participantMinutes = log
-        ? log.participantMinutes
-        : Number(((durationSeconds / 60) * Math.max(1, m.participantCount)).toFixed(1));
+      const durationSeconds =
+        log && log.durationSeconds > 0 ? Math.max(log.durationSeconds, fallbackSecs) : fallbackSecs;
+      const participantMinutes =
+        log && log.participantMinutes > 0
+          ? log.participantMinutes
+          : Number(((durationSeconds / 60) * Math.max(1, m.participantCount)).toFixed(1));
       return {
         ...m,
         provider: log?.provider || 'livekit',
@@ -168,8 +170,57 @@ export async function GET() {
       };
     };
 
-    const enrichedActive = activeMeetings.map(enrichMeeting);
-    const enrichedRecent = meetings.slice(0, 50).map(enrichMeeting);
+    const allEnrichedMeetings = meetings.map(enrichMeeting);
+    const enrichedActive = allEnrichedMeetings.filter((m) => m.isActive);
+    const enrichedRecent = allEnrichedMeetings.slice(0, 50);
+
+    // Aggregate current month's usage directly from ALL enriched meetings (existing DB meetings + live ProviderUsageLog)
+    const monthPrefix = usage.monthKey; // e.g. "2026-11"
+    const monthMeetings = allEnrichedMeetings.filter((m) => {
+      const iso = m.startTime || m.createdAt || '';
+      return iso.startsWith(monthPrefix);
+    });
+
+    const sumProvider = (prov: 'livekit' | 'agora' | 'daily' | 'webrtc') => {
+      const list = monthMeetings.filter((m) => m.provider === prov);
+      const used = Number(
+        list.reduce((sum, m) => sum + (m.participantMinutes || 0), 0).toFixed(1)
+      );
+      return { used, count: list.length };
+    };
+
+    const lkTotals = sumProvider('livekit');
+    const agTotals = sumProvider('agora');
+    const dlTotals = sumProvider('daily');
+    const wrTotals = sumProvider('webrtc');
+
+    const mergedUsage = {
+      ...usage,
+      quotas: {
+        livekit: {
+          limitMinutes: 5000,
+          usedMinutes: lkTotals.used,
+          remainingMinutes: Math.max(0, Number((5000 - lkTotals.used).toFixed(1))),
+          meetingsCount: lkTotals.count,
+        },
+        agora: {
+          limitMinutes: 10000,
+          usedMinutes: agTotals.used,
+          remainingMinutes: Math.max(0, Number((10000 - agTotals.used).toFixed(1))),
+          meetingsCount: agTotals.count,
+        },
+        daily: {
+          limitMinutes: 10000,
+          usedMinutes: dlTotals.used,
+          remainingMinutes: Math.max(0, Number((10000 - dlTotals.used).toFixed(1))),
+          meetingsCount: dlTotals.count,
+        },
+        webrtc: {
+          usedMinutes: wrTotals.used,
+          meetingsCount: wrTotals.count,
+        },
+      },
+    };
 
     return NextResponse.json({
       admin: {
@@ -177,7 +228,7 @@ export async function GET() {
         email: `${adminSession.username}@metromeet.admin`,
       },
       config,
-      usage,
+      usage: mergedUsage,
       infrastructure: {
         databaseMode: usePrisma ? 'PostgreSQL Cloud' : 'Local Fallback Store',
         livekitConfigured,

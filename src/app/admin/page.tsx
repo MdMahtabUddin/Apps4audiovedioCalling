@@ -526,7 +526,7 @@ export default function AdminPanelPage() {
                     Voice &amp; Vedio Infrastructure Control
                   </h2>
                   <p className="text-xs text-slate-400">
-                    Turn Primary (LiveKit) &amp; Backup (Daily.co) ON or OFF live without redeploying
+                    Turn Primary (LiveKit) &amp; Backup (Agora) ON or OFF live without redeploying
                   </p>
                 </div>
               </div>

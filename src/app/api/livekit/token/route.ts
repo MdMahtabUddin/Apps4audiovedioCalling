@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AccessToken } from 'livekit-server-sdk';
 import { getSystemConfig } from '@/lib/admin/system-config';
+import { recordProviderHeartbeat } from '@/lib/admin/usage-tracker';
 
 export async function GET(req: NextRequest) {
   try {
@@ -63,6 +64,15 @@ export async function GET(req: NextRequest) {
     });
 
     const token = await at.toJwt();
+
+    // Tag this room's active provider as LiveKit immediately for accurate Admin telemetry
+    void recordProviderHeartbeat({
+      meetingId: room,
+      meetingTitle: room,
+      provider: 'livekit',
+      participantCount: 1,
+      deltaSeconds: 0,
+    }).catch(() => {});
 
     return NextResponse.json({
       isConfigured: true,

@@ -120,7 +120,7 @@ export function AgoraBackupStage({
       }).catch(() => {});
     };
     sendUsage(0);
-    const id = setInterval(() => sendUsage(30), 30000);
+    const id = setInterval(() => sendUsage(10), 10000);
     return () => clearInterval(id);
   }, [isHost, meetingId, meetingTitle]);
 
