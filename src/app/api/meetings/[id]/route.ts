@@ -39,27 +39,36 @@ export async function GET(
     const { id } = await params;
     const session = await getCurrentUser();
 
-    let meeting = await meetingService.getById(id);
+    let meeting = null;
+    try {
+      meeting = await meetingService.getById(id);
+    } catch (e) {
+      console.warn('meetingService.getById fallback note:', e);
+    }
 
-    // Check LiveKit Cloud centralized store for cross-container availability on Vercel
+    // Check LiveKit Cloud centralized store for cross-container availability on Vercel (non-blocking)
     if (!meeting) {
-      const cloudMeeting = await getMeetingFromLiveKit(id);
-      if (cloudMeeting) {
-        meeting = {
-          ...cloudMeeting,
-          hostName: cloudMeeting.hostName || 'Meeting Host',
-          hostEmail: '',
-          hostAvatar: null,
-          hasPassword: Boolean(cloudMeeting.password && cloudMeeting.password.trim()),
-          waitingRoom: Boolean(cloudMeeting.waitingRoom) || Boolean(cloudMeeting.password && cloudMeeting.password.trim()),
-          participantCount: 0,
-          settings: {
-            allowChat: true,
-            allowScreenShare: true,
-            muteOnEntry: false,
-            allowReactions: true,
-          },
-        } as any;
+      try {
+        const cloudMeeting = await getMeetingFromLiveKit(id);
+        if (cloudMeeting) {
+          meeting = {
+            ...cloudMeeting,
+            hostName: cloudMeeting.hostName || 'Meeting Host',
+            hostEmail: '',
+            hostAvatar: null,
+            hasPassword: Boolean(cloudMeeting.password && cloudMeeting.password.trim()),
+            waitingRoom: Boolean(cloudMeeting.waitingRoom) || Boolean(cloudMeeting.password && cloudMeeting.password.trim()),
+            participantCount: 0,
+            settings: {
+              allowChat: true,
+              allowScreenShare: true,
+              muteOnEntry: false,
+              allowReactions: true,
+            },
+          } as any;
+        }
+      } catch (e) {
+        console.warn('getMeetingFromLiveKit skipped (non-fatal):', e);
       }
     }
 

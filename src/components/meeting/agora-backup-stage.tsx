@@ -102,6 +102,18 @@ export function AgoraBackupStage({
     return () => clearInterval(id);
   }, []);
 
+  // Keep meeting session alive on server so shared links stay active for all joining guests
+  useEffect(() => {
+    const sendHeartbeat = () => {
+      fetch(`/api/meetings/${encodeURIComponent(meetingId)}/heartbeat`, {
+        method: 'POST',
+      }).catch(() => {});
+    };
+    sendHeartbeat();
+    const hb = setInterval(sendHeartbeat, 25000);
+    return () => clearInterval(hb);
+  }, [meetingId]);
+
   const formatDuration = (secs: number) => {
     const m = Math.floor(secs / 60);
     const s = secs % 60;
@@ -162,7 +174,7 @@ export function AgoraBackupStage({
           await client.publish([micTrack, camTrack]);
         } catch (mediaErr) {
           console.warn('Agora media capture notice:', mediaErr);
-          toast.info('Joined Agora Backup room (camera/mic permission pending)');
+          toast.info('Joined meeting room (camera/mic permission pending)');
           setCamOn(false);
           setMicOn(false);
         }
@@ -174,7 +186,7 @@ export function AgoraBackupStage({
         console.error('Agora connection error:', err);
         if (mounted) {
           setConnectError(
-            err instanceof Error ? err.message : 'Could not connect to Agora Backup Cloud'
+            err instanceof Error ? err.message : 'Could not connect to the meeting room'
           );
         }
       }
@@ -317,9 +329,9 @@ export function AgoraBackupStage({
               {meetingTitle}
             </h1>
             <div className="flex items-center flex-wrap gap-1.5 mt-0.5">
-              <span className="inline-flex items-center gap-1 px-2 py-[2px] rounded-full text-[10px] font-semibold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
-                <ShieldCheck className="h-2.5 w-2.5" />
-                <span>Agora Backup Cloud</span>
+              <span className="inline-flex items-center gap-1.5 px-2 py-[2px] rounded-full text-[10px] font-semibold bg-[#0066FF]/15 text-[#60A5FA] border border-[#0066FF]/30">
+                <span className="h-1.5 w-1.5 rounded-full bg-[#00A3FF]" />
+                <span>{isHost ? 'Host Meeting' : 'Live Meeting'}</span>
               </span>
               <button
                 onClick={copyMeetingLink}
@@ -346,7 +358,7 @@ export function AgoraBackupStage({
       <div className="flex-1 min-h-0 relative pb-16 sm:pb-14">
         {connectError ? (
           <div className="h-full w-full rounded-2xl border border-rose-500/30 bg-[#081020] flex flex-col items-center justify-center p-6 text-center gap-3">
-            <p className="text-sm font-bold text-rose-400">Agora Backup Connection Notice</p>
+            <p className="text-sm font-bold text-rose-400">Connection Notice</p>
             <p className="text-xs text-slate-400 max-w-md">{connectError}</p>
             <button
               onClick={onLeave}
@@ -361,7 +373,7 @@ export function AgoraBackupStage({
               <Video className="h-5 w-5 text-[#00A3FF] animate-pulse" />
             </div>
             <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
-              Connecting to Agora Backup Cloud...
+              Connecting to meeting room...
             </p>
           </div>
         ) : (

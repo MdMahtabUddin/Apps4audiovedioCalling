@@ -12,27 +12,36 @@ export async function POST(
     const session = await getCurrentUser();
     const { displayName, password } = await req.json();
 
-    let meeting = await meetingService.getById(id);
+    let meeting = null;
+    try {
+      meeting = await meetingService.getById(id);
+    } catch (e) {
+      console.warn('join meetingService.getById fallback note:', e);
+    }
 
-    // Check LiveKit Cloud centralized store for cross-container availability on Vercel
+    // Check LiveKit Cloud centralized store for cross-container availability on Vercel (non-blocking)
     if (!meeting) {
-      const cloudMeeting = await getMeetingFromLiveKit(id);
-      if (cloudMeeting) {
-        meeting = {
-          ...cloudMeeting,
-          hostName: cloudMeeting.hostName || 'Meeting Host',
-          hostEmail: '',
-          hostAvatar: null,
-          hasPassword: Boolean(cloudMeeting.password && cloudMeeting.password.trim()),
-          waitingRoom: Boolean(cloudMeeting.waitingRoom) || Boolean(cloudMeeting.password && cloudMeeting.password.trim()),
-          participantCount: 0,
-          settings: {
-            allowChat: true,
-            allowScreenShare: true,
-            muteOnEntry: false,
-            allowReactions: true,
-          },
-        } as any;
+      try {
+        const cloudMeeting = await getMeetingFromLiveKit(id);
+        if (cloudMeeting) {
+          meeting = {
+            ...cloudMeeting,
+            hostName: cloudMeeting.hostName || 'Meeting Host',
+            hostEmail: '',
+            hostAvatar: null,
+            hasPassword: Boolean(cloudMeeting.password && cloudMeeting.password.trim()),
+            waitingRoom: Boolean(cloudMeeting.waitingRoom) || Boolean(cloudMeeting.password && cloudMeeting.password.trim()),
+            participantCount: 0,
+            settings: {
+              allowChat: true,
+              allowScreenShare: true,
+              muteOnEntry: false,
+              allowReactions: true,
+            },
+          } as any;
+        }
+      } catch (e) {
+        console.warn('join getMeetingFromLiveKit skipped (non-fatal):', e);
       }
     }
     if (!meeting) {
