@@ -34,10 +34,29 @@ import {
 import { BrandLogo } from '@/components/ui/brand-logo';
 import { useToast } from '@/components/ui/toast';
 import type { RtcRoutingMode, SystemConfig } from '@/lib/admin/system-config';
+import type { MediaProviderType, ProviderUsageSummary } from '@/lib/admin/usage-tracker';
+
+interface AdminMeetingRow {
+  id: string;
+  title: string;
+  hostName: string;
+  hostEmail: string;
+  isActive: boolean;
+  isLocked: boolean;
+  waitingRoom: boolean;
+  participantCount: number;
+  startTime: string;
+  endTime: string | null;
+  createdAt: string;
+  provider?: MediaProviderType;
+  durationSeconds?: number;
+  participantMinutes?: number;
+}
 
 interface AdminOverviewData {
   admin: { name: string; email: string };
   config: SystemConfig;
+  usage?: ProviderUsageSummary;
   infrastructure: {
     databaseMode: string;
     livekitConfigured: boolean;
@@ -54,32 +73,8 @@ interface AdminOverviewData {
     scheduledMeetingsCount: number;
     totalParticipants: number;
   };
-  activeMeetings: Array<{
-    id: string;
-    title: string;
-    hostName: string;
-    hostEmail: string;
-    isActive: boolean;
-    isLocked: boolean;
-    waitingRoom: boolean;
-    participantCount: number;
-    startTime: string;
-    endTime: string | null;
-    createdAt: string;
-  }>;
-  recentMeetings: Array<{
-    id: string;
-    title: string;
-    hostName: string;
-    hostEmail: string;
-    isActive: boolean;
-    isLocked: boolean;
-    waitingRoom: boolean;
-    participantCount: number;
-    startTime: string;
-    endTime: string | null;
-    createdAt: string;
-  }>;
+  activeMeetings: AdminMeetingRow[];
+  recentMeetings: AdminMeetingRow[];
   users: Array<{
     id: string;
     name: string;
@@ -106,7 +101,18 @@ export default function AdminPanelPage() {
   const [roomActionLoading, setRoomActionLoading] = useState<string | null>(null);
   const [announcementDraft, setAnnouncementDraft] = useState('');
   const [activeDirectoryTab, setActiveDirectoryTab] = useState<'meetings' | 'users'>('meetings');
+  const [providerFilter, setProviderFilter] = useState<'all' | 'livekit' | 'agora' | 'webrtc'>('all');
   const [searchQuery, setSearchQuery] = useState('');
+
+  const formatSecs = (secs?: number) => {
+    const s = Math.max(0, Math.round(secs || 0));
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const r = s % 60;
+    if (h > 0) return `${h}h ${m}m`;
+    if (m > 0) return `${m}m ${r}s`;
+    return `${r}s`;
+  };
 
   const fetchOverview = useCallback(
     async (silent = false) => {
@@ -249,14 +255,16 @@ export default function AdminPanelPage() {
   const filteredMeetings = useMemo(() => {
     if (!data) return [];
     const q = searchQuery.trim().toLowerCase();
-    if (!q) return data.recentMeetings;
-    return data.recentMeetings.filter(
-      (m) =>
+    return data.recentMeetings.filter((m) => {
+      if (providerFilter !== 'all' && (m.provider || 'livekit') !== providerFilter) return false;
+      if (!q) return true;
+      return (
         m.title.toLowerCase().includes(q) ||
         m.id.toLowerCase().includes(q) ||
         m.hostName.toLowerCase().includes(q)
-    );
-  }, [data, searchQuery]);
+      );
+    });
+  }, [data, searchQuery, providerFilter]);
 
   const filteredUsers = useMemo(() => {
     if (!data) return [];
@@ -270,13 +278,16 @@ export default function AdminPanelPage() {
   const exportCsv = () => {
     if (!data) return;
     const rows = [
-      ['Meeting ID', 'Title', 'Host', 'Status', 'Participants', 'Created At'],
+      ['Meeting ID', 'Title', 'Host', 'Provider', 'Status', 'Participants', 'Duration', 'Participant-Mins Used', 'Created At'],
       ...data.recentMeetings.map((m) => [
         m.id,
         `"${(m.title || '').replace(/"/g, '""')}"`,
         `"${(m.hostName || '').replace(/"/g, '""')}"`,
+        (m.provider || 'livekit').toUpperCase(),
         m.isActive ? 'Live' : 'Completed',
         String(m.participantCount),
+        formatSecs(m.durationSeconds),
+        String(m.participantMinutes ?? 0),
         new Date(m.createdAt).toLocaleString(),
       ]),
     ];
@@ -594,6 +605,41 @@ export default function AdminPanelPage() {
                   </button>
                 </div>
 
+                {/* LiveKit Monthly Usage Progress Bar */}
+                {(() => {
+                  const q = data.usage?.quotas.livekit;
+                  const used = q?.usedMinutes ?? 0;
+                  const limit = q?.limitMinutes ?? 5000;
+                  const rem = q?.remainingMinutes ?? limit;
+                  const pct = Math.min(100, Math.round((used / limit) * 100));
+                  return (
+                    <div className="p-3 rounded-xl bg-black/30 border border-white/[0.07] space-y-2">
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="text-slate-300 font-bold">
+                          Used: <span className="text-cyan-300 font-mono">{used} min</span> / {limit.toLocaleString()} min
+                        </span>
+                        <span className="text-emerald-400 font-mono font-bold">
+                          {rem.toLocaleString()} min left
+                        </span>
+                      </div>
+                      <div className="h-2 w-full rounded-full bg-white/[0.08] overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-500 ${
+                            pct >= 85
+                              ? 'bg-gradient-to-r from-rose-500 to-amber-400'
+                              : 'bg-gradient-to-r from-[#0066FF] to-[#00D2FF]'
+                          }`}
+                          style={{ width: `${Math.max(used > 0 ? 3 : 0, pct)}%` }}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between text-[10px] text-slate-400">
+                        <span>{q?.meetingsCount ?? 0} meetings this month ({data.usage?.monthKey || 'Current'})</span>
+                        <span className="font-mono font-bold text-slate-300">{pct}% used</span>
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 <div className="flex items-center justify-between text-[11px] pt-2 border-t border-white/[0.08]">
                   <span className="text-slate-400 font-mono truncate max-w-[220px]">
                     {infrastructure.livekitUrl}
@@ -673,6 +719,41 @@ export default function AdminPanelPage() {
                     />
                   </button>
                 </div>
+
+                {/* Agora Monthly Usage Progress Bar */}
+                {(() => {
+                  const q = data.usage?.quotas.agora;
+                  const used = q?.usedMinutes ?? 0;
+                  const limit = q?.limitMinutes ?? 10000;
+                  const rem = q?.remainingMinutes ?? limit;
+                  const pct = Math.min(100, Math.round((used / limit) * 100));
+                  return (
+                    <div className="p-3 rounded-xl bg-black/30 border border-white/[0.07] space-y-2">
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="text-slate-300 font-bold">
+                          Used: <span className="text-[#FFA033] font-mono">{used} min</span> / {limit.toLocaleString()} min
+                        </span>
+                        <span className="text-emerald-400 font-mono font-bold">
+                          {rem.toLocaleString()} min left
+                        </span>
+                      </div>
+                      <div className="h-2 w-full rounded-full bg-white/[0.08] overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-500 ${
+                            pct >= 85
+                              ? 'bg-gradient-to-r from-rose-500 to-amber-400'
+                              : 'bg-gradient-to-r from-[#FF7A00] to-[#FFB347]'
+                          }`}
+                          style={{ width: `${Math.max(used > 0 ? 3 : 0, pct)}%` }}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between text-[10px] text-slate-400">
+                        <span>{q?.meetingsCount ?? 0} meetings this month ({data.usage?.monthKey || 'Current'})</span>
+                        <span className="font-mono font-bold text-slate-300">{pct}% used</span>
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 <div className="flex items-center justify-between text-[11px] pt-2 border-t border-white/[0.08]">
                   <span className="text-slate-400">
@@ -1115,46 +1196,101 @@ export default function AdminPanelPage() {
           </div>
 
           {activeDirectoryTab === 'meetings' ? (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead>
-                  <tr className="border-b border-white/10 text-slate-400 uppercase text-[10px] tracking-wider">
-                    <th className="py-2.5 pr-4">Meeting</th>
-                    <th className="py-2.5 pr-4">Host</th>
-                    <th className="py-2.5 pr-4">Status</th>
-                    <th className="py-2.5 pr-4">Joins</th>
-                    <th className="py-2.5">Created</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/[0.06]">
-                  {filteredMeetings.map((m) => (
-                    <tr key={m.id} className="hover:bg-white/[0.02]">
-                      <td className="py-3 pr-4">
-                        <div className="font-bold text-white max-w-[240px] truncate">{m.title}</div>
-                        <div className="font-mono text-[10px] text-slate-500">{m.id}</div>
-                      </td>
-                      <td className="py-3 pr-4 text-slate-300">{m.hostName}</td>
-                      <td className="py-3 pr-4">
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                            m.isActive
-                              ? 'bg-emerald-500/20 text-emerald-300'
-                              : 'bg-slate-700/70 text-slate-300'
-                          }`}
-                        >
-                          {m.isActive ? 'Live' : 'Ended'}
-                        </span>
-                      </td>
-                      <td className="py-3 pr-4 font-mono text-cyan-300 font-bold">
-                        {m.participantCount}
-                      </td>
-                      <td className="py-3 text-slate-400 whitespace-nowrap">
-                        {new Date(m.createdAt).toLocaleString()}
-                      </td>
+            <div className="space-y-3">
+              {/* Provider Filter Chips */}
+              <div className="flex flex-wrap items-center gap-1.5">
+                {(
+                  [
+                    { id: 'all', label: 'All Providers' },
+                    { id: 'livekit', label: 'LiveKit' },
+                    { id: 'agora', label: 'Agora' },
+                    { id: 'webrtc', label: 'WebRTC Mesh' },
+                  ] as const
+                ).map((chip) => (
+                  <button
+                    key={chip.id}
+                    onClick={() => setProviderFilter(chip.id)}
+                    className={`px-3 py-1 rounded-full text-[11px] font-bold transition-all cursor-pointer border ${
+                      providerFilter === chip.id
+                        ? 'bg-[#0066FF]/20 text-cyan-300 border-[#00A3FF]/45'
+                        : 'bg-white/[0.04] text-slate-400 border-white/10 hover:text-white'
+                    }`}
+                  >
+                    {chip.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-white/10 text-slate-400 uppercase text-[10px] tracking-wider">
+                      <th className="py-2.5 pr-4">Meeting</th>
+                      <th className="py-2.5 pr-4">Host</th>
+                      <th className="py-2.5 pr-4">Provider</th>
+                      <th className="py-2.5 pr-4">Duration</th>
+                      <th className="py-2.5 pr-4">Mins Used</th>
+                      <th className="py-2.5 pr-4">Status</th>
+                      <th className="py-2.5">Created</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-white/[0.06]">
+                    {filteredMeetings.map((m) => {
+                      const prov = m.provider || 'livekit';
+                      const provBadge =
+                        prov === 'agora'
+                          ? 'bg-[#FF7A00]/20 text-[#FFA033] border-[#FF7A00]/35'
+                          : prov === 'webrtc'
+                          ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                          : 'bg-[#0066FF]/20 text-[#60A5FA] border-[#0066FF]/35';
+                      const provLabel =
+                        prov === 'agora'
+                          ? 'Agora'
+                          : prov === 'webrtc'
+                          ? 'WebRTC'
+                          : prov === 'daily'
+                          ? 'Daily'
+                          : 'LiveKit';
+                      return (
+                        <tr key={m.id} className="hover:bg-white/[0.02]">
+                          <td className="py-3 pr-4">
+                            <div className="font-bold text-white max-w-[220px] truncate">{m.title}</div>
+                            <div className="font-mono text-[10px] text-slate-500">{m.id}</div>
+                          </td>
+                          <td className="py-3 pr-4 text-slate-300">{m.hostName}</td>
+                          <td className="py-3 pr-4">
+                            <span
+                              className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${provBadge}`}
+                            >
+                              {provLabel}
+                            </span>
+                          </td>
+                          <td className="py-3 pr-4 font-mono text-slate-200 whitespace-nowrap">
+                            {formatSecs(m.durationSeconds)}
+                          </td>
+                          <td className="py-3 pr-4 font-mono font-bold text-cyan-300 whitespace-nowrap">
+                            {(m.participantMinutes ?? 0).toFixed(1)} min
+                          </td>
+                          <td className="py-3 pr-4">
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                m.isActive
+                                  ? 'bg-emerald-500/20 text-emerald-300'
+                                  : 'bg-slate-700/70 text-slate-300'
+                              }`}
+                            >
+                              {m.isActive ? 'Live' : 'Ended'}
+                            </span>
+                          </td>
+                          <td className="py-3 text-slate-400 whitespace-nowrap">
+                            {new Date(m.createdAt).toLocaleString()}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
           ) : (
             <div className="overflow-x-auto">

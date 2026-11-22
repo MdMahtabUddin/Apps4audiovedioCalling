@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getAdminSession } from '@/lib/admin/admin-auth';
 import { prisma, checkPrisma } from '@/lib/db';
 import { getSystemConfig } from '@/lib/admin/system-config';
+import { getProviderUsageSummary } from '@/lib/admin/usage-tracker';
 import fs from 'fs';
 import path from 'path';
 
@@ -144,6 +145,31 @@ export async function GET() {
       (process.env.AGORA_APP_ID || process.env.NEXT_PUBLIC_AGORA_APP_ID || '').trim()
     );
     const dailyConfigured = Boolean(process.env.DAILY_API_KEY?.trim());
+    const usage = await getProviderUsageSummary();
+    const usageByMeeting = new Map(usage.records.map((r) => [r.meetingId, r]));
+
+    const enrichMeeting = (m: (typeof meetings)[number]) => {
+      const log = usageByMeeting.get(m.id);
+      const startMs = new Date(m.startTime).getTime();
+      const endMs = m.endTime ? new Date(m.endTime).getTime() : Date.now();
+      const fallbackSecs =
+        !Number.isNaN(startMs) && !Number.isNaN(endMs)
+          ? Math.max(0, Math.min(60 * 60 * 6, Math.round((endMs - startMs) / 1000)))
+          : 0;
+      const durationSeconds = log ? log.durationSeconds : fallbackSecs;
+      const participantMinutes = log
+        ? log.participantMinutes
+        : Number(((durationSeconds / 60) * Math.max(1, m.participantCount)).toFixed(1));
+      return {
+        ...m,
+        provider: log?.provider || 'livekit',
+        durationSeconds,
+        participantMinutes,
+      };
+    };
+
+    const enrichedActive = activeMeetings.map(enrichMeeting);
+    const enrichedRecent = meetings.slice(0, 50).map(enrichMeeting);
 
     return NextResponse.json({
       admin: {
@@ -151,6 +177,7 @@ export async function GET() {
         email: `${adminSession.username}@metromeet.admin`,
       },
       config,
+      usage,
       infrastructure: {
         databaseMode: usePrisma ? 'PostgreSQL Cloud' : 'Local Fallback Store',
         livekitConfigured,
@@ -167,8 +194,8 @@ export async function GET() {
         scheduledMeetingsCount: scheduledCount,
         totalParticipants,
       },
-      activeMeetings,
-      recentMeetings: meetings.slice(0, 40),
+      activeMeetings: enrichedActive,
+      recentMeetings: enrichedRecent,
       users,
     });
   } catch (err) {

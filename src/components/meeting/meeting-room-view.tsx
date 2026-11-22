@@ -196,6 +196,32 @@ export function MeetingRoomView() {
     return () => clearInterval(interval);
   }, [fetchParticipants]);
 
+  // Automatic WebRTC Mesh usage telemetry for Admin Panel
+  const remoteStreamsCountRef = useRef(remoteStreams.size);
+  useEffect(() => {
+    remoteStreamsCountRef.current = remoteStreams.size;
+  }, [remoteStreams.size]);
+
+  useEffect(() => {
+    if (!isHost) return;
+    const sendUsage = (deltaSeconds: number) => {
+      fetch('/api/usage/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          meetingId,
+          meetingTitle: title || 'MetroMeet Session',
+          provider: 'webrtc',
+          participantCount: 1 + remoteStreamsCountRef.current,
+          deltaSeconds,
+        }),
+      }).catch(() => {});
+    };
+    sendUsage(0);
+    const id = setInterval(() => sendUsage(30), 30000);
+    return () => clearInterval(id);
+  }, [isHost, meetingId, title]);
+
   // Resilient HTTPS Polling for Guest Knocks (Works on Vercel Serverless without port 3001)
   useEffect(() => {
     let previousCount = 0;

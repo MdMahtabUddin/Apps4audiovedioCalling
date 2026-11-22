@@ -1346,6 +1346,31 @@ function LiveKitInnerStage({
 
   // Total participants count
   const totalCount = participants.length;
+  const totalCountRef = useRef(totalCount);
+  useEffect(() => {
+    totalCountRef.current = totalCount;
+  }, [totalCount]);
+
+  // Automatic LiveKit usage telemetry for Admin Panel (Host reports every 30s to prevent double-counting)
+  useEffect(() => {
+    if (!isHost) return;
+    const sendUsage = (deltaSeconds: number) => {
+      fetch('/api/usage/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          meetingId,
+          meetingTitle,
+          provider: 'livekit',
+          participantCount: Math.max(1, totalCountRef.current),
+          deltaSeconds,
+        }),
+      }).catch(() => {});
+    };
+    sendUsage(0); // Register provider immediately on join
+    const id = setInterval(() => sendUsage(30), 30000);
+    return () => clearInterval(id);
+  }, [isHost, meetingId, meetingTitle]);
 
   const todayFormatted = useMemo(
     () =>

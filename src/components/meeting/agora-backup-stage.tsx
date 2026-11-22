@@ -87,6 +87,11 @@ export function AgoraBackupStage({
   const [remoteUsers, setRemoteUsers] = useState<IAgoraRTCRemoteUser[]>([]);
 
   // Keep meeting session alive on server so shared links stay active for all joining guests
+  const remoteCountRef = useRef(remoteUsers.length);
+  useEffect(() => {
+    remoteCountRef.current = remoteUsers.length;
+  }, [remoteUsers.length]);
+
   useEffect(() => {
     const sendHeartbeat = () => {
       fetch(`/api/meetings/${encodeURIComponent(meetingId)}/heartbeat`, {
@@ -97,6 +102,27 @@ export function AgoraBackupStage({
     const hb = setInterval(sendHeartbeat, 25000);
     return () => clearInterval(hb);
   }, [meetingId]);
+
+  // Automatic Agora usage telemetry for Admin Panel
+  useEffect(() => {
+    if (!isHost) return;
+    const sendUsage = (deltaSeconds: number) => {
+      fetch('/api/usage/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          meetingId,
+          meetingTitle,
+          provider: 'agora',
+          participantCount: 1 + remoteCountRef.current,
+          deltaSeconds,
+        }),
+      }).catch(() => {});
+    };
+    sendUsage(0);
+    const id = setInterval(() => sendUsage(30), 30000);
+    return () => clearInterval(id);
+  }, [isHost, meetingId, meetingTitle]);
 
   useEffect(() => {
     let mounted = true;
