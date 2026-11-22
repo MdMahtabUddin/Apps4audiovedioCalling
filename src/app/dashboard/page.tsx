@@ -212,6 +212,7 @@ export default function DashboardPage() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [endingId, setEndingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [repeatingId, setRepeatingId] = useState<string | null>(null);
   const [launchingTemplate, setLaunchingTemplate] = useState<string | null>(null);
   const [nowMs, setNowMs] = useState<number>(() => Date.now());
@@ -315,6 +316,32 @@ export default function DashboardPage() {
       toast.error('Network error while ending meeting');
     } finally {
       setEndingId(null);
+    }
+  };
+
+  const handleDeleteMeeting = async (meetingId: string, meetingTitle: string) => {
+    if (
+      typeof window !== 'undefined' &&
+      !window.confirm(`Delete "${meetingTitle}" from your meeting history?`)
+    ) {
+      return;
+    }
+    setDeletingId(meetingId);
+    try {
+      const res = await fetch(`/api/meetings/${encodeURIComponent(meetingId)}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        setRecentMeetings((prev) => prev.filter((m) => m.id !== meetingId));
+        toast.success('Meeting deleted permanently');
+      } else {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || 'Could not delete meeting');
+      }
+    } catch {
+      toast.error('Network error while deleting meeting');
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -694,7 +721,9 @@ export default function DashboardPage() {
         </div>
 
         {/* 1. Executive Studio Command Header (Desktop) */}
-        <div className="hidden md:block relative overflow-hidden rounded-3xl border border-[#0066FF]/25 bg-gradient-to-r from-[#091326]/95 via-[#0d1b35]/90 to-[#091220]/95 p-6 sm:p-8 backdrop-blur-2xl shadow-2xl shadow-black/60">
+        <div className="hidden md:block relative overflow-hidden rounded-3xl border border-white/[0.1] bg-gradient-to-br from-[#081226]/95 via-[#0b1831]/92 to-[#071020]/95 backdrop-blur-2xl shadow-[0_20px_60px_rgba(0,0,0,0.55)]">
+          <div className="h-[2.5px] w-full bg-gradient-to-r from-[#0066FF] via-[#00A3FF] to-[#FF7A00]" />
+          <div className="p-6 sm:p-7 relative">
           <div className="absolute -top-24 -right-24 w-96 h-96 bg-[#0066FF]/15 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute -bottom-24 left-1/3 w-80 h-80 bg-[#FF7A00]/10 rounded-full blur-3xl pointer-events-none" />
 
@@ -736,6 +765,7 @@ export default function DashboardPage() {
                 </button>
               </div>
             </div>
+          </div>
           </div>
         </div>
 
@@ -832,7 +862,7 @@ export default function DashboardPage() {
           {/* Card 1: New Meeting */}
           <button
             onClick={() => setIsNewMeetingOpen(true)}
-            className="group text-left p-6 rounded-3xl bg-gradient-to-br from-[#FF7A00]/20 via-orange-600/10 to-[#091222] border border-[#FF7A00]/30 hover:border-[#FF7A00]/70 transition-all hover:-translate-y-1 hover:shadow-2xl hover:shadow-[#FF7A00]/20 cursor-pointer relative overflow-hidden flex flex-col justify-between h-44"
+            className="group text-left p-6 rounded-3xl bg-gradient-to-br from-[#FF7A00]/20 via-orange-600/10 to-[#091222] border border-[#FF7A00]/30 hover:border-[#FF7A00]/70 transition-all hover:-translate-y-1 hover:shadow-2xl hover:shadow-[#FF7A00]/20 cursor-pointer relative overflow-hidden flex flex-col justify-between h-36"
           >
             <div className="flex items-center justify-between w-full">
               <div className="h-12 w-12 rounded-2xl bg-gradient-to-tr from-[#FF7A00] to-amber-500 text-white flex items-center justify-center shadow-lg shadow-[#FF7A00]/30 group-hover:scale-110 transition-transform">
@@ -856,7 +886,7 @@ export default function DashboardPage() {
           {/* Card 2: Join Meeting */}
           <button
             onClick={() => setIsJoinMeetingOpen(true)}
-            className="group text-left p-6 rounded-3xl bg-gradient-to-br from-[#0066FF]/20 via-blue-600/10 to-[#091222] border border-[#0066FF]/30 hover:border-[#0066FF]/70 transition-all hover:-translate-y-1 hover:shadow-2xl hover:shadow-[#0066FF]/20 cursor-pointer relative overflow-hidden flex flex-col justify-between h-44"
+            className="group text-left p-6 rounded-3xl bg-gradient-to-br from-[#0066FF]/20 via-blue-600/10 to-[#091222] border border-[#0066FF]/30 hover:border-[#0066FF]/70 transition-all hover:-translate-y-1 hover:shadow-2xl hover:shadow-[#0066FF]/20 cursor-pointer relative overflow-hidden flex flex-col justify-between h-36"
           >
             <div className="flex items-center justify-between w-full">
               <div className="h-12 w-12 rounded-2xl bg-gradient-to-tr from-[#0066FF] to-cyan-500 text-white flex items-center justify-center shadow-lg shadow-[#0066FF]/30 group-hover:scale-110 transition-transform">
@@ -880,7 +910,7 @@ export default function DashboardPage() {
           {/* Card 3: Schedule */}
           <button
             onClick={() => setIsScheduleOpen(true)}
-            className="group text-left p-6 rounded-3xl bg-gradient-to-br from-violet-500/20 via-purple-600/10 to-[#091222] border border-violet-500/30 hover:border-violet-500/70 transition-all hover:-translate-y-1 hover:shadow-2xl hover:shadow-violet-500/20 cursor-pointer relative overflow-hidden flex flex-col justify-between h-44"
+            className="group text-left p-6 rounded-3xl bg-gradient-to-br from-violet-500/20 via-purple-600/10 to-[#091222] border border-violet-500/30 hover:border-violet-500/70 transition-all hover:-translate-y-1 hover:shadow-2xl hover:shadow-violet-500/20 cursor-pointer relative overflow-hidden flex flex-col justify-between h-36"
           >
             <div className="flex items-center justify-between w-full">
               <div className="h-12 w-12 rounded-2xl bg-gradient-to-tr from-violet-600 to-purple-500 text-white flex items-center justify-center shadow-lg shadow-violet-500/30 group-hover:scale-110 transition-transform">
@@ -904,7 +934,7 @@ export default function DashboardPage() {
           {/* Card 4: Audio/Video Device Studio */}
           <button
             onClick={() => setIsSettingsOpen(true)}
-            className="group text-left p-6 rounded-3xl bg-gradient-to-br from-emerald-500/20 via-teal-600/10 to-[#091222] border border-emerald-500/30 hover:border-emerald-500/70 transition-all hover:-translate-y-1 hover:shadow-2xl hover:shadow-emerald-500/20 cursor-pointer relative overflow-hidden flex flex-col justify-between h-44"
+            className="group text-left p-6 rounded-3xl bg-gradient-to-br from-emerald-500/20 via-teal-600/10 to-[#091222] border border-emerald-500/30 hover:border-emerald-500/70 transition-all hover:-translate-y-1 hover:shadow-2xl hover:shadow-emerald-500/20 cursor-pointer relative overflow-hidden flex flex-col justify-between h-36"
           >
             <div className="flex items-center justify-between w-full">
               <div className="h-12 w-12 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/30 group-hover:scale-110 transition-transform">
@@ -1257,6 +1287,18 @@ export default function DashboardPage() {
                                   <span>Host Again</span>
                                 </Button>
                               )}
+
+                              {isUserHost && (
+                                <button
+                                  type="button"
+                                  disabled={deletingId === item.id}
+                                  onClick={() => handleDeleteMeeting(item.id, item.title)}
+                                  className="h-8 w-8 rounded-xl bg-rose-500/10 hover:bg-rose-500/25 border border-rose-500/25 hover:border-rose-500/50 text-rose-400 hover:text-rose-200 flex items-center justify-center transition-all cursor-pointer active:scale-95 disabled:opacity-40"
+                                  title="Delete meeting from history"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -1581,95 +1623,6 @@ export default function DashboardPage() {
                       />
                     </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* 3. Quick Meeting Agenda & Host Scratchpad */}
-            <Card className="bg-[#091222]/90 border-white/[0.08]">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-emerald-400" />
-                    Host Agenda Scratchpad
-                  </CardTitle>
-                  <Badge variant="success">Auto-Saved</Badge>
-                </div>
-                <CardDescription className="text-xs">
-                  Jot down key talking points or action items before starting your next meeting
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <textarea
-                  rows={4}
-                  value={scratchpad}
-                  onChange={(e) => handleScratchpadChange(e.target.value)}
-                  placeholder="• Review sprint deliverables&#10;• Discuss Q4 architecture milestones&#10;• Action items & follow-ups..."
-                  className="w-full rounded-2xl bg-black/50 border border-white/[0.1] p-3 text-xs text-gray-200 placeholder:text-gray-500 outline-none focus:border-[#0066FF] resize-none leading-relaxed"
-                />
-                <div className="flex items-center justify-between gap-2">
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    className="flex-1 text-xs"
-                    disabled={!scratchpad.trim()}
-                    onClick={() => {
-                      navigator.clipboard.writeText(scratchpad);
-                      toast.success('Agenda notes copied to clipboard');
-                    }}
-                  >
-                    <Copy className="h-3.5 w-3.5 mr-1" />
-                    Copy Notes
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="text-xs text-gray-400 hover:text-rose-400"
-                    disabled={!scratchpad.trim()}
-                    onClick={() => {
-                      handleScratchpadChange('');
-                      toast.info('Scratchpad cleared');
-                    }}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* 4. Studio System & Media Readiness */}
-            <Card className="bg-[#091222]/90 border-white/[0.08]">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm flex items-center gap-2">
-                    <Activity className="h-4 w-4 text-[#388BFF]" />
-                    Studio Media Readiness
-                  </CardTitle>
-                  <Badge variant="success" dot>
-                    Optimal
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-2.5 text-xs">
-                <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06]">
-                  <span className="text-gray-400 flex items-center gap-2">
-                    <Radio className="h-3.5 w-3.5 text-emerald-400" /> WebRTC & SFU Engine
-                  </span>
-                  <span className="font-bold text-emerald-400">Ready (Opus 48kHz)</span>
-                </div>
-                <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06]">
-                  <span className="text-gray-400 flex items-center gap-2">
-                    <Camera className="h-3.5 w-3.5 text-[#388BFF]" /> Detected AV Inputs
-                  </span>
-                  <span className="font-bold text-gray-200">
-                    {deviceCount.video} Cam • {deviceCount.audio} Mic
-                  </span>
-                </div>
-                <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06]">
-                  <span className="text-gray-400 flex items-center gap-2">
-                    <Zap className="h-3.5 w-3.5 text-[#FFA033]" /> Connection Status
-                  </span>
-                  <span className="font-semibold text-emerald-400">Encrypted &amp; Ready</span>
                 </div>
               </CardContent>
             </Card>

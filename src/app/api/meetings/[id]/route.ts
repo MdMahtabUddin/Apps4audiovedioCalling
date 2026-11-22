@@ -1,7 +1,67 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth/session';
-import { meetingService, userService } from '@/lib/db';
+import { meetingService, userService, prisma, checkPrisma } from '@/lib/db';
 import { getMeetingFromLiveKit } from '@/lib/livekit/livekit-knocks';
+import fs from 'fs';
+import path from 'path';
+
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const session = await getCurrentUser();
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (await checkPrisma()) {
+      const existing = await prisma.meeting.findUnique({ where: { id } });
+      if (!existing) {
+        return NextResponse.json({ error: 'Meeting not found' }, { status: 404 });
+      }
+      if (existing.hostId !== session.userId) {
+        return NextResponse.json(
+          { error: 'Only the host can delete this meeting.' },
+          { status: 403 }
+        );
+      }
+      await prisma.meeting.delete({ where: { id } });
+      return NextResponse.json({ success: true, deletedId: id });
+    }
+
+    // Local fallback JSON store
+    const dataDir =
+      process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME ? '/tmp' : process.cwd();
+    const filePath = path.join(dataDir, '.metromeet-dev-data.json');
+    if (fs.existsSync(filePath)) {
+      const raw = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+      const meetings = Array.isArray(raw.meetings) ? raw.meetings : [];
+      const target = meetings.find((m: any) => m.id === id);
+      if (!target) {
+        return NextResponse.json({ error: 'Meeting not found' }, { status: 404 });
+      }
+      if (target.hostId !== session.userId) {
+        return NextResponse.json(
+          { error: 'Only the host can delete this meeting.' },
+          { status: 403 }
+        );
+      }
+      raw.meetings = meetings.filter((m: any) => m.id !== id);
+      if (Array.isArray(raw.participants)) {
+        raw.participants = raw.participants.filter((p: any) => p.meetingId !== id);
+      }
+      fs.writeFileSync(filePath, JSON.stringify(raw, null, 2), 'utf-8');
+      return NextResponse.json({ success: true, deletedId: id });
+    }
+
+    return NextResponse.json({ error: 'Meeting not found' }, { status: 404 });
+  } catch (error) {
+    console.error('Delete meeting error:', error);
+    return NextResponse.json({ error: 'Failed to delete meeting' }, { status: 500 });
+  }
+}
 
 export async function PATCH(
   req: NextRequest,
