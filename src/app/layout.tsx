@@ -4,6 +4,7 @@ import './globals.css';
 import { ToastProvider } from '@/components/ui/toast';
 import { SplashScreen } from '@/components/ui/splash-screen';
 import { PwaInstallBanner } from '@/components/ui/pwa-install-banner';
+import { SystemStatusOverlay } from '@/components/ui/system-status-overlay';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -49,6 +50,7 @@ export default function RootLayout({
       <body className="min-h-screen bg-[#050a14] text-gray-100 antialiased selection:bg-[#0066FF] selection:text-white overscroll-none">
         <SplashScreen />
         <ToastProvider>
+          <SystemStatusOverlay />
           {children}
           <PwaInstallBanner />
         </ToastProvider>

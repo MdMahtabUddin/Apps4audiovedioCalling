@@ -820,36 +820,53 @@ export default function AdminPanelPage() {
                 </button>
               </div>
 
-              {/* Maintenance Mode */}
+              {/* Maintenance Mode (Executive Toggle with Live Status) */}
               <div
-                className={`flex items-center justify-between gap-3 p-3 rounded-2xl border ${
+                className={`p-3.5 rounded-2xl border transition-all space-y-2 ${
                   config.maintenanceMode
-                    ? 'bg-amber-500/15 border-amber-500/40'
+                    ? 'bg-gradient-to-br from-amber-500/18 to-orange-600/10 border-amber-500/45 shadow-[0_0_24px_rgba(245,158,11,0.15)]'
                     : 'bg-white/[0.03] border-white/[0.06]'
                 }`}
               >
-                <div>
-                  <p className="text-xs font-bold text-white">Maintenance Mode</p>
-                  <p className="text-[10.5px] text-slate-400">Flag platform maintenance status</p>
-                </div>
-                <button
-                  onClick={() =>
-                    void updateConfig(
-                      { maintenanceMode: !config.maintenanceMode },
-                      'maintenance',
-                      `Maintenance Mode ${!config.maintenanceMode ? 'Activated' : 'Deactivated'}`
-                    )
-                  }
-                  className={`w-10 h-6 rounded-full relative transition-all cursor-pointer shrink-0 ${
-                    config.maintenanceMode ? 'bg-amber-500' : 'bg-slate-700'
-                  }`}
-                >
-                  <span
-                    className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all ${
-                      config.maintenanceMode ? 'left-[18px]' : 'left-0.5'
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="text-xs font-extrabold text-white">Maintenance Mode</p>
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${
+                          config.maintenanceMode
+                            ? 'bg-amber-500 text-slate-950 animate-pulse'
+                            : 'bg-emerald-500/20 text-emerald-300'
+                        }`}
+                      >
+                        {config.maintenanceMode ? 'ACTIVE' : 'ONLINE'}
+                      </span>
+                    </div>
+                    <p className="text-[10.5px] text-slate-400 mt-0.5">
+                      {config.maintenanceMode
+                        ? 'Users see the full-screen Maintenance Notice (Admin stays unlocked)'
+                        : 'Platform is live & open for all users'}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() =>
+                      void updateConfig(
+                        { maintenanceMode: !config.maintenanceMode },
+                        'maintenance',
+                        `Maintenance Mode ${!config.maintenanceMode ? 'Activated' : 'Deactivated'}`
+                      )
+                    }
+                    className={`w-11 h-6 rounded-full relative transition-all cursor-pointer shrink-0 ${
+                      config.maintenanceMode ? 'bg-amber-500 shadow-md shadow-amber-500/40' : 'bg-slate-700'
                     }`}
-                  />
-                </button>
+                  >
+                    <span
+                      className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${
+                        config.maintenanceMode ? 'left-[22px]' : 'left-0.5'
+                      }`}
+                    />
+                  </button>
+                </div>
               </div>
 
               {/* Max Participants Per Room */}
@@ -883,7 +900,7 @@ export default function AdminPanelPage() {
                 </div>
               </div>
 
-              {/* Global System Announcement */}
+              {/* Global System Announcement with Quick Presets & Live Banner Preview */}
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
@@ -891,29 +908,84 @@ export default function AdminPanelPage() {
                     { globalAnnouncement: announcementDraft.trim() },
                     'announcement',
                     announcementDraft.trim()
-                      ? 'Global system notice saved'
+                      ? 'Global system notice published!'
                       : 'Global system notice cleared'
                   );
                 }}
-                className="p-3 rounded-2xl bg-white/[0.03] border border-white/[0.06] space-y-2"
+                className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-2.5"
               >
-                <label className="text-xs font-bold text-white block">
-                  Global System Notice
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-extrabold text-white">
+                    Global System Notice
+                  </label>
+                  <span className="text-[10px] font-semibold text-cyan-300">
+                    {config.globalAnnouncement ? 'Live on Site' : 'Hidden'}
+                  </span>
+                </div>
+
+                {/* Quick 1-Tap Preset Chips */}
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    { label: 'Upgrade', text: 'Scheduled server upgrade tonight at 11:00 PM (10 mins).' },
+                    { label: 'HD Active', text: 'MetroMeet PRO HD Voice & Vedio Boost is now live!' },
+                  ].map((preset) => (
+                    <button
+                      key={preset.label}
+                      type="button"
+                      onClick={() => setAnnouncementDraft(preset.text)}
+                      className="px-2 py-1 rounded-lg bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-[10px] font-semibold text-slate-300 cursor-pointer"
+                    >
+                      + {preset.label}
+                    </button>
+                  ))}
+                </div>
+
                 <input
                   type="text"
                   value={announcementDraft}
                   onChange={(e) => setAnnouncementDraft(e.target.value)}
-                  placeholder="Optional banner message for users..."
+                  placeholder="Write a live banner notice for all users..."
                   className="w-full rounded-xl bg-black/40 border border-white/10 px-3 py-2 text-xs text-white placeholder:text-slate-500 outline-none focus:border-[#00A3FF]"
                 />
-                <button
-                  type="submit"
-                  disabled={savingKey === 'announcement'}
-                  className="w-full py-2 rounded-xl bg-gradient-to-r from-[#0066FF] to-[#00A3FF] text-white text-xs font-bold cursor-pointer hover:opacity-95"
-                >
-                  Save Notice
-                </button>
+
+                {/* Live Preview of how users will see the notice */}
+                {announcementDraft.trim() && (
+                  <div className="rounded-xl bg-gradient-to-r from-[#071631] via-[#0c1f44] to-[#1a1328] border border-[#00A3FF]/30 px-2.5 py-2 flex items-center gap-2">
+                    <span className="px-1.5 py-0.5 rounded-full bg-gradient-to-r from-[#FF7A00] to-[#FF4D2E] text-white text-[8.5px] font-black uppercase shrink-0">
+                      Notice
+                    </span>
+                    <span className="text-[10.5px] text-white/95 font-medium truncate">
+                      {announcementDraft.trim()}
+                    </span>
+                  </div>
+                )}
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="submit"
+                    disabled={savingKey === 'announcement'}
+                    className="flex-1 py-2 rounded-xl bg-gradient-to-r from-[#0066FF] to-[#00A3FF] text-white text-xs font-bold cursor-pointer hover:opacity-95"
+                  >
+                    Publish Notice
+                  </button>
+                  {(config.globalAnnouncement || announcementDraft) && (
+                    <button
+                      type="button"
+                      disabled={savingKey === 'announcement'}
+                      onClick={() => {
+                        setAnnouncementDraft('');
+                        void updateConfig(
+                          { globalAnnouncement: '' },
+                          'announcement',
+                          'Global system notice cleared'
+                        );
+                      }}
+                      className="px-3 py-2 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 text-xs font-bold cursor-pointer"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
               </form>
             </div>
           </div>
