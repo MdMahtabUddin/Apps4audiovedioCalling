@@ -163,9 +163,19 @@ export function UnifiedStudioShell({
     { id: string; emoji: string; sender: string }[]
   >([]);
 
-  // Live Duration Clock
+  // Live Duration Clock: pauses when alone and tab is hidden; resumes automatically on return or when 2+ participants connect
+  const participantsCountRef = useRef(participants.length);
   useEffect(() => {
-    const id = setInterval(() => setCallDuration((s) => s + 1), 1000);
+    participantsCountRef.current = participants.length;
+  }, [participants.length]);
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      const isSingleUser = participantsCountRef.current <= 1;
+      const isTabHidden = typeof document !== 'undefined' && document.visibilityState !== 'visible';
+      if (isSingleUser && isTabHidden) return;
+      setCallDuration((s) => s + 1);
+    }, 1000);
     return () => clearInterval(id);
   }, []);
 

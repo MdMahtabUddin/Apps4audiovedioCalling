@@ -157,7 +157,7 @@ export async function GET() {
           ? Math.max(0, Math.min(60 * 60 * 6, Math.round((endMs - startMs) / 1000)))
           : 0;
       const durationSeconds =
-        log && log.durationSeconds > 0 ? Math.max(log.durationSeconds, fallbackSecs) : fallbackSecs;
+        log && log.durationSeconds > 0 ? log.durationSeconds : fallbackSecs;
       const participantMinutes =
         log && log.participantMinutes > 0
           ? log.participantMinutes

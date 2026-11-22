@@ -1298,9 +1298,14 @@ function LiveKitInnerStage({
     } catch {}
   };
 
-  // Call duration counter
+  // Call duration counter: pauses when alone and tab is hidden; always runs if 2+ participants or tab is visible
   useEffect(() => {
-    const timer = setInterval(() => setCallDuration((d) => d + 1), 1000);
+    const timer = setInterval(() => {
+      const isSingleUser = totalCountRef.current <= 1;
+      const isTabHidden = typeof document !== 'undefined' && document.visibilityState !== 'visible';
+      if (isSingleUser && isTabHidden) return;
+      setCallDuration((d) => d + 1);
+    }, 1000);
     return () => clearInterval(timer);
   }, []);
 
@@ -1351,10 +1356,14 @@ function LiveKitInnerStage({
     totalCountRef.current = totalCount;
   }, [totalCount]);
 
-  // Automatic LiveKit usage telemetry for Admin Panel (Host reports every 30s to prevent double-counting)
+  // Automatic LiveKit usage telemetry for Admin Panel:
+  // Pauses when Host is alone and on another tab/page; resumes automatically on return or when 2+ participants join
   useEffect(() => {
     if (!isHost) return;
     const sendUsage = (deltaSeconds: number) => {
+      const count = Math.max(1, totalCountRef.current);
+      const isTabHidden = typeof document !== 'undefined' && document.visibilityState !== 'visible';
+      if (deltaSeconds > 0 && count <= 1 && isTabHidden) return;
       fetch('/api/usage/track', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1362,7 +1371,7 @@ function LiveKitInnerStage({
           meetingId,
           meetingTitle,
           provider: 'livekit',
-          participantCount: Math.max(1, totalCountRef.current),
+          participantCount: count,
           deltaSeconds,
         }),
       }).catch(() => {});

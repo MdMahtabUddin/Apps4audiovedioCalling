@@ -205,6 +205,9 @@ export function MeetingRoomView() {
   useEffect(() => {
     if (!isHost) return;
     const sendUsage = (deltaSeconds: number) => {
+      const count = 1 + remoteStreamsCountRef.current;
+      const isTabHidden = typeof document !== 'undefined' && document.visibilityState !== 'visible';
+      if (deltaSeconds > 0 && count <= 1 && isTabHidden) return;
       fetch('/api/usage/track', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -212,13 +215,13 @@ export function MeetingRoomView() {
           meetingId,
           meetingTitle: title || 'MetroMeet Session',
           provider: 'webrtc',
-          participantCount: 1 + remoteStreamsCountRef.current,
+          participantCount: count,
           deltaSeconds,
         }),
       }).catch(() => {});
     };
     sendUsage(0);
-    const id = setInterval(() => sendUsage(30), 30000);
+    const id = setInterval(() => sendUsage(10), 10000);
     return () => clearInterval(id);
   }, [isHost, meetingId, title]);
 

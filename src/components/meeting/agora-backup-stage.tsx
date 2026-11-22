@@ -103,10 +103,14 @@ export function AgoraBackupStage({
     return () => clearInterval(hb);
   }, [meetingId]);
 
-  // Automatic Agora usage telemetry for Admin Panel
+  // Automatic Agora usage telemetry for Admin Panel:
+  // Pauses when Host is alone and on another tab/page; resumes automatically on return or when 2+ participants join
   useEffect(() => {
     if (!isHost) return;
     const sendUsage = (deltaSeconds: number) => {
+      const count = 1 + remoteCountRef.current;
+      const isTabHidden = typeof document !== 'undefined' && document.visibilityState !== 'visible';
+      if (deltaSeconds > 0 && count <= 1 && isTabHidden) return;
       fetch('/api/usage/track', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -114,7 +118,7 @@ export function AgoraBackupStage({
           meetingId,
           meetingTitle,
           provider: 'agora',
-          participantCount: 1 + remoteCountRef.current,
+          participantCount: count,
           deltaSeconds,
         }),
       }).catch(() => {});
