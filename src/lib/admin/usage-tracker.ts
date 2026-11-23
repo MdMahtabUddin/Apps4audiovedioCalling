@@ -19,7 +19,7 @@ export interface ProviderUsageRecord {
 export interface ProviderUsageSummary {
   monthKey: string;
   quotas: {
-    livekit: { limitMinutes: number; usedMinutes: number; remainingMinutes: number; meetingsCount: number };
+    livekit: { limitMinutes: number | null; usedMinutes: number; remainingMinutes: number | null; meetingsCount: number };
     agora: { limitMinutes: number; usedMinutes: number; remainingMinutes: number; meetingsCount: number };
     daily: { limitMinutes: number; usedMinutes: number; remainingMinutes: number; meetingsCount: number };
     webrtc: { usedMinutes: number; meetingsCount: number };
@@ -210,9 +210,9 @@ export async function getProviderUsageSummary(): Promise<ProviderUsageSummary> {
     monthKey,
     quotas: {
       livekit: {
-        limitMinutes: 5000,
+        limitMinutes: null,
         usedMinutes: lk.used,
-        remainingMinutes: Math.max(0, Number((5000 - lk.used).toFixed(1))),
+        remainingMinutes: null,
         meetingsCount: lk.count,
       },
       agora: {

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AccessToken } from 'livekit-server-sdk';
 import { getSystemConfig } from '@/lib/admin/system-config';
-import { getProviderUsageSummary, recordProviderHeartbeat } from '@/lib/admin/usage-tracker';
+import { recordProviderHeartbeat } from '@/lib/admin/usage-tracker';
 
 export async function GET(req: NextRequest) {
   try {
@@ -17,26 +17,6 @@ export async function GET(req: NextRequest) {
         disabledByAdmin: true,
         message: 'Primary LiveKit provider paused by Admin Panel. Routing to backup.',
       });
-    }
-
-    // Smart Auto-Quota Guard: if LiveKit reaches >= 4,900 / 5,000 free mins and Agora Backup is ready, auto-route to Agora before hitting a hard error
-    const agoraReady =
-      sysConfig.routingMode === 'auto' &&
-      sysConfig.agoraEnabled &&
-      Boolean((process.env.AGORA_APP_ID || process.env.NEXT_PUBLIC_AGORA_APP_ID || '').trim());
-    if (agoraReady) {
-      try {
-        const usage = await getProviderUsageSummary();
-        if (usage.quotas.livekit.usedMinutes >= 4900) {
-          return NextResponse.json({
-            isConfigured: false,
-            quotaGuardTriggered: true,
-            message: 'LiveKit monthly quota near limit — auto-routing to Agora Backup Cloud.',
-          });
-        }
-      } catch {
-        // Non-blocking: continue with LiveKit if usage check fails
-      }
     }
 
     const room = req.nextUrl.searchParams.get('room');
