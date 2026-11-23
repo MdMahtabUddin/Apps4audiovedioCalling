@@ -24,7 +24,8 @@ export interface CloudMeetingMetadata {
 function getClient(): RoomServiceClient | null {
   const apiKey = process.env.LIVEKIT_API_KEY || 'APIa2BuzPQWD3Vn';
   const apiSecret = process.env.LIVEKIT_API_SECRET || 'gjDmc9QfM68VI45DofbIjQIcAoFAhCuPzPz8jTNGCRc';
-  let wsUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL || process.env.LIVEKIT_URL || 'wss://metromeet-wjbjv475.livekit.cloud';
+  // Prefer internal LIVEKIT_URL (e.g. http://127.0.0.1:7880 on self-hosted VPS) for server-side API calls
+  let wsUrl = process.env.LIVEKIT_URL || process.env.NEXT_PUBLIC_LIVEKIT_URL || 'wss://metromeet-wjbjv475.livekit.cloud';
 
   if (!apiKey || !apiSecret || !wsUrl || apiSecret.includes('•') || apiSecret.length < 16) {
     return null;
