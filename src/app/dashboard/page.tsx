@@ -591,16 +591,13 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#050a14] flex items-center justify-center">
+      <div className="min-h-screen bg-[#060b14] flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <div className="relative">
-            <div className="h-14 w-14 rounded-2xl bg-[#0066FF]/30 border border-[#0066FF]/40 animate-ping absolute inset-0" />
-            <div className="h-14 w-14 rounded-2xl bg-gradient-to-tr from-[#0066FF] to-[#FF7A00] flex items-center justify-center relative z-10 shadow-2xl shadow-[#0066FF]/50">
-              <Video className="h-7 w-7 text-white animate-pulse" />
-            </div>
+          <div className="h-12 w-12 rounded-2xl bg-gradient-to-tr from-[#0066FF] to-[#FF7A00] flex items-center justify-center shadow-lg shadow-[#0066FF]/25">
+            <Video className="h-6 w-6 text-white animate-pulse" />
           </div>
-          <p className="text-xs text-gray-400 font-bold tracking-widest uppercase">
-            Initializing MetroMeet Workspace...
+          <p className="text-xs text-slate-400 font-semibold tracking-wider uppercase">
+            Loading Workspace...
           </p>
         </div>
       </div>
@@ -608,11 +605,10 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#050a14] text-slate-100 flex flex-col selection:bg-[#0066FF] selection:text-white relative overflow-x-hidden">
-      {/* Ambient Executive Background Orbs & Grid */}
-      <div className="fixed inset-0 bg-grid-pattern opacity-35 pointer-events-none" />
-      <div className="absolute top-0 right-1/4 w-[650px] h-[380px] bg-[#0066FF]/12 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute top-80 left-0 w-[520px] h-[340px] bg-[#FF7A00]/8 rounded-full blur-3xl pointer-events-none" />
+    <div className="min-h-screen bg-[#060b14] text-slate-100 flex flex-col selection:bg-[#0066FF] selection:text-white relative overflow-x-hidden">
+      {/* Subtle Executive Ambient Lighting */}
+      <div className="absolute top-0 right-1/4 w-[620px] h-[340px] bg-[#0066FF]/8 rounded-full blur-[130px] pointer-events-none" />
+      <div className="absolute top-80 left-0 w-[480px] h-[300px] bg-[#FF7A00]/5 rounded-full blur-[120px] pointer-events-none" />
 
       <Navbar
         user={user}

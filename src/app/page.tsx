@@ -220,64 +220,56 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#050a14] text-slate-100 flex flex-col selection:bg-[#0066FF] selection:text-white relative overflow-hidden bg-grid-pattern">
-      {/* MetroNet Optical Aurora Ambient Lights */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1300px] h-[650px] bg-gradient-to-b from-[#0066FF]/22 via-[#FF7A00]/14 to-transparent rounded-full blur-[140px] pointer-events-none" />
-      <div className="absolute top-[450px] -left-64 w-[550px] h-[550px] bg-[#0066FF]/16 rounded-full blur-[140px] pointer-events-none animate-float" />
-      <div className="absolute top-[450px] -right-64 w-[550px] h-[550px] bg-[#FF7A00]/16 rounded-full blur-[140px] pointer-events-none animate-float-slow" />
-
-      {/* Floating Network Grid Particles */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-900/10 via-transparent to-transparent pointer-events-none" />
+    <div className="min-h-screen bg-[#060b14] text-slate-100 flex flex-col selection:bg-[#0066FF] selection:text-white relative overflow-hidden">
+      {/* Subtle Architectural Ambient Lighting */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1100px] h-[520px] bg-gradient-to-b from-[#0066FF]/10 via-[#FF7A00]/5 to-transparent rounded-full blur-[130px] pointer-events-none" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-950/15 via-transparent to-transparent pointer-events-none" />
 
       <Navbar user={user} onQuickNewMeeting={handleStartInstant} />
 
       <main className="flex-1 flex flex-col justify-center items-center px-4 sm:px-6 lg:px-8 pt-10 sm:pt-16 pb-24 relative z-10">
-        <div className="max-w-6xl mx-auto text-center space-y-7">
-          {/* Top Pill with Modern International Sonic Identity */}
-          <div className="inline-flex items-center justify-center animate-in fade-in slide-in-from-top-4 duration-700">
+        <div className="max-w-6xl mx-auto text-center space-y-6">
+          {/* Executive Release Pill */}
+          <div className="inline-flex items-center justify-center animate-in fade-in slide-in-from-top-3 duration-500">
             <div
               onClick={() => soundEngine.playIntroChime()}
-              className="inline-flex items-center gap-2.5 px-4 sm:px-6 py-2.5 rounded-full bg-gradient-to-r from-blue-950/40 via-black/60 to-orange-950/40 border border-[#0066FF]/40 backdrop-blur-2xl shadow-2xl shadow-blue-950/60 text-xs sm:text-sm font-semibold text-white hover:border-[#00D4FF] hover:shadow-cyan-500/25 transition-all duration-300 cursor-pointer group select-none relative overflow-hidden"
-              title="Click to hear MetroMeet Modern Sonic Branding Signature"
+              className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-white/[0.04] border border-white/[0.1] backdrop-blur-xl text-xs font-semibold text-slate-200 hover:border-white/20 hover:bg-white/[0.07] transition-colors cursor-pointer group select-none"
+              title="Click to hear MetroMeet Sonic Identity"
             >
-              <span className="relative flex h-2.5 w-2.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00D4FF] opacity-80" />
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#0066FF]" />
+              <span className="h-2 w-2 rounded-full bg-emerald-400" />
+              <span className="tracking-tight text-slate-200">
+                MetroMeet PRO · Enterprise Cloud Infrastructure
               </span>
-              <span className="tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-[#00D4FF] via-white to-[#FFA336] font-bold">
-                MetroMeet 2026 • Enterprise Cloud Infrastructure
+              <span className="text-slate-600 hidden sm:inline">|</span>
+              <span className="text-[11px] text-sky-400 font-semibold hidden sm:inline-flex items-center gap-1">
+                <Sparkles className="h-3 w-3" />
+                Audio Chime
               </span>
-              <span className="text-gray-500 hidden sm:inline">|</span>
-              <span className="text-[11px] text-cyan-300 font-extrabold flex items-center gap-1.5 group-hover:scale-105 transition-transform bg-cyan-950/70 px-2.5 py-0.5 rounded-full border border-cyan-500/30">
-                <Sparkles className="h-3.5 w-3.5 text-cyan-400 animate-spin" />
-                Play Sonic Identity
-              </span>
-              {/* Sleek light sweep beam */}
-              <span className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/15 to-transparent pointer-events-none" />
             </div>
           </div>
 
-          {/* World-Class Hero Heading */}
-          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight text-white leading-[1.08] max-w-4xl mx-auto">
-            Enterprise Vedio Meetings with{' '}
-            <span className="relative inline-block">
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#0066FF] via-[#00D4FF] to-[#FF7A00] text-glow-blue">
+          {/* Executive Hero Heading */}
+          <div className="space-y-4 max-w-4xl mx-auto">
+            <h1 className="text-4xl sm:text-6xl lg:text-[64px] font-extrabold tracking-[-0.03em] text-white leading-[1.08]">
+              Enterprise Vedio Meetings with{' '}
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#388BFF] via-[#00C2FF] to-[#FF8A1E]">
                 Zero Latency.
               </span>
-              {/* Subtle underline light beam */}
-              <span className="absolute -bottom-1.5 left-0 right-0 h-1 bg-gradient-to-r from-[#0066FF] via-[#00D4FF] to-[#FF7A00] rounded-full blur-[2px] opacity-80 animate-pulse" />
-            </span>
-          </h1>
+            </h1>
+            <p className="text-sm sm:text-base text-slate-400 max-w-2xl mx-auto leading-relaxed">
+              Crystal-clear HD conferencing, studio voice processing, and self-hosted reliability — engineered for teams that never compromise on quality.
+            </p>
+          </div>
 
           {/* Quick Launch & Join Bar */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3.5 pt-3 max-w-2xl mx-auto w-full">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2 max-w-2xl mx-auto w-full">
             <Button
               variant="orange"
               size="lg"
-              className="w-full sm:w-auto text-sm sm:text-base font-bold shadow-xl shadow-[#FF7A00]/25 transition-all duration-300 hover:scale-[1.02] active:scale-95 cursor-pointer"
+              className="w-full sm:w-auto text-sm font-semibold cursor-pointer"
               onClick={handleStartInstant}
             >
-              <Video className="h-5 w-5 mr-1 text-white" />
+              <Video className="h-4.5 w-4.5 mr-0.5 text-white" />
               Start Instant Meeting
             </Button>
 
@@ -288,12 +280,12 @@ export default function HomePage() {
                   placeholder="Enter meeting code (e.g. cui-mhjm-uub)"
                   value={meetingInput}
                   onChange={(e) => setMeetingInput(e.target.value)}
-                  className="w-full bg-[#091222]/90 border border-[#0066FF]/35 rounded-2xl pl-4 pr-16 py-3.5 text-xs sm:text-sm text-gray-100 placeholder:text-gray-500 outline-none focus:border-[#FF7A00] focus:ring-2 focus:ring-[#FF7A00]/20 transition-all font-mono shadow-inner"
+                  className="w-full bg-[#0b1322]/90 border border-white/[0.12] rounded-xl pl-4 pr-16 py-3 text-xs sm:text-sm text-slate-100 placeholder:text-slate-500 outline-none focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/20 transition-all font-mono"
                 />
                 <button
                   type="button"
                   onClick={handlePasteCode}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 px-2 py-1 rounded-lg bg-white/[0.06] hover:bg-white/[0.12] text-[10px] font-semibold text-[#388BFF] transition-colors cursor-pointer"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 px-2.5 py-1 rounded-lg bg-white/[0.06] hover:bg-white/[0.12] text-[11px] font-semibold text-sky-400 transition-colors cursor-pointer"
                   title="Paste from clipboard"
                 >
                   Paste
@@ -305,10 +297,10 @@ export default function HomePage() {
                 variant="primary"
                 type="submit"
                 disabled={!meetingInput.trim()}
-                className="font-bold text-xs sm:text-sm shadow-xl shadow-[#0066FF]/30 cursor-pointer disabled:opacity-40"
+                className="font-semibold text-xs sm:text-sm cursor-pointer disabled:opacity-40"
               >
                 Join
-                <ArrowRight className="h-4 w-4 ml-1" />
+                <ArrowRight className="h-4 w-4 ml-0.5" />
               </Button>
             </form>
           </div>
@@ -359,7 +351,7 @@ export default function HomePage() {
               </div>
             ))}
 
-            <div className="stage-tilt rounded-3xl border-2 border-[#0066FF]/30 bg-[#091222]/90 backdrop-blur-2xl p-4 sm:p-6 shadow-2xl shadow-[#001030]/90 relative overflow-hidden group glow-border">
+            <div className="stage-tilt rounded-2xl border border-white/[0.1] bg-[#0b1322]/95 backdrop-blur-2xl p-4 sm:p-6 shadow-[0_28px_70px_-20px_rgba(0,0,0,0.85)] ring-1 ring-inset ring-white/[0.04] relative overflow-hidden group">
               {/* Fake Chrome / Window Header */}
               <div className="flex items-center justify-between pb-4 border-b border-white/[0.08]">
                 {/* Window Traffic Lights */}

@@ -51,20 +51,22 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-[#050a14] relative overflow-hidden">
-      {/* Background MetroMeet brand glow accents */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[300px] bg-[#0066FF]/15 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-1/4 right-1/4 w-[360px] h-[240px] bg-[#FF7A00]/10 rounded-full blur-3xl pointer-events-none" />
+    <div className="min-h-screen flex items-center justify-center p-4 bg-[#060b14] relative overflow-hidden">
+      {/* Subtle Executive Ambient Accent */}
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[520px] h-[280px] bg-[#0066FF]/10 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-1/4 right-1/4 w-[360px] h-[220px] bg-[#FF7A00]/6 rounded-full blur-[110px] pointer-events-none" />
 
       <div className="w-full max-w-md space-y-6 relative z-10">
         {/* Official MetroMeet PRO Brand Header */}
-        <div className="text-center space-y-2.5 flex flex-col items-center">
+        <div className="text-center space-y-2 flex flex-col items-center">
           <BrandLogo size="lg" showTagline={true} href="/" />
           <h2 className="text-2xl font-bold tracking-tight text-white pt-2">Welcome back</h2>
-          <p className="text-xs sm:text-sm text-gray-400">Sign in to your account to start or join meetings</p>
+          <p className="text-xs sm:text-sm text-slate-400">Sign in to your workspace to start or join meetings</p>
         </div>
 
-        <Card className="border-gray-800/80 bg-gray-900/70 shadow-2xl backdrop-blur-xl">
+        <Card className="border-white/[0.09] bg-[#0b1322]/92 shadow-[0_24px_60px_-20px_rgba(0,0,0,0.85)] overflow-hidden p-0">
+          <div className="h-[2px] w-full bg-gradient-to-r from-[#0066FF] via-[#00A3FF] to-[#FF7A00]" />
+          <div className="p-6">
           <CardHeader>
             <CardTitle>Sign In</CardTitle>
             <CardDescription>Enter your email and password to access your dashboard</CardDescription>
@@ -72,7 +74,7 @@ export default function LoginPage() {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               {error && (
-                <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-xs text-red-400 font-medium">
+                <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/25 text-xs text-rose-300 font-medium">
                   {error}
                 </div>
               )}
@@ -89,12 +91,12 @@ export default function LoginPage() {
 
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <label htmlFor="password" className="text-xs font-medium text-gray-300">
+                  <label htmlFor="password" className="text-xs font-medium text-slate-300">
                     Password
                   </label>
                   <Link
                     href="/forgot-password"
-                    className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
+                    className="text-xs text-sky-400 hover:text-sky-300 transition-colors"
                   >
                     Forgot password?
                   </Link>
@@ -111,7 +113,7 @@ export default function LoginPage() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-3 text-gray-400 hover:text-gray-200 transition-colors cursor-pointer"
+                    className="absolute right-3 top-3 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
@@ -124,14 +126,14 @@ export default function LoginPage() {
               </Button>
             </form>
 
-            <div className="mt-6 text-center text-xs text-gray-400 space-y-2.5">
+            <div className="mt-6 text-center text-xs text-slate-400 space-y-2.5">
               <div>
                 Don&apos;t have an account?{' '}
-                <Link href="/register" className="font-semibold text-[#388BFF] hover:text-cyan-300 underline underline-offset-2">
+                <Link href="/register" className="font-semibold text-sky-400 hover:text-sky-300 underline underline-offset-2">
                   Create one now
                 </Link>
               </div>
-              <div className="pt-2 border-t border-white/[0.06]">
+              <div className="pt-2.5 border-t border-white/[0.07]">
                 <Link
                   href="/admin"
                   className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-400 hover:text-[#FFA033] transition-colors"
@@ -141,6 +143,7 @@ export default function LoginPage() {
               </div>
             </div>
           </CardContent>
+          </div>
         </Card>
       </div>
     </div>

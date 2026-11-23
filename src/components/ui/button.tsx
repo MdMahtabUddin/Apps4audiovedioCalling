@@ -9,23 +9,23 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant = 'primary', size = 'md', isLoading = false, children, disabled, ...props }, ref) => {
-    const base = 'inline-flex items-center justify-center font-semibold rounded-2xl transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-[#0066FF]/40 select-none';
+    const base = 'inline-flex items-center justify-center font-semibold rounded-xl transition-all duration-150 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0066FF]/50 focus-visible:ring-offset-1 focus-visible:ring-offset-[#060b14] select-none';
 
     const variants = {
-      primary: 'bg-gradient-to-r from-[#0066FF] via-[#0057B7] to-[#0066FF] hover:from-[#1E78FF] hover:to-[#0052CC] text-white shadow-lg shadow-[#0066FF]/25 active:scale-[0.98] border border-[#388BFF]/40 hover:shadow-[#0066FF]/40',
-      orange: 'bg-gradient-to-r from-[#FF7A00] via-[#F26B00] to-[#FF7A00] hover:from-[#FF8A1E] hover:to-[#E66200] text-white shadow-lg shadow-[#FF7A00]/30 active:scale-[0.98] border border-[#FFA149]/40 hover:shadow-[#FF7A00]/45 font-bold',
-      secondary: 'bg-white/[0.06] hover:bg-white/[0.1] text-gray-200 border border-white/10 active:scale-[0.98] backdrop-blur-md',
-      glass: 'bg-[#0A162D]/70 hover:bg-[#0F2244]/80 text-[#388BFF] border border-[#0066FF]/30 shadow-lg shadow-[#0066FF]/10 active:scale-[0.98]',
-      outline: 'bg-transparent border border-white/10 hover:border-[#0066FF]/40 hover:bg-[#0066FF]/05 text-gray-300 hover:text-white active:scale-[0.98]',
-      danger: 'bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white shadow-lg shadow-red-600/25 active:scale-[0.98] border border-red-400/30',
-      ghost: 'bg-transparent hover:bg-white/[0.06] text-gray-300 hover:text-white',
+      primary: 'bg-[#0066FF] hover:bg-[#1975FF] text-white shadow-sm shadow-[#0066FF]/25 active:scale-[0.985] border border-white/15',
+      orange: 'bg-[#FF7A00] hover:bg-[#FF891A] text-white shadow-sm shadow-[#FF7A00]/25 active:scale-[0.985] border border-white/15 font-bold',
+      secondary: 'bg-white/[0.06] hover:bg-white/[0.11] text-slate-200 border border-white/[0.1] active:scale-[0.985]',
+      glass: 'bg-[#0b1528]/80 hover:bg-[#10203d]/90 text-sky-300 border border-white/[0.1] shadow-sm active:scale-[0.985]',
+      outline: 'bg-transparent border border-white/[0.12] hover:border-white/25 hover:bg-white/[0.05] text-slate-300 hover:text-white active:scale-[0.985]',
+      danger: 'bg-rose-600 hover:bg-rose-500 text-white shadow-sm shadow-rose-600/25 active:scale-[0.985] border border-rose-400/25',
+      ghost: 'bg-transparent hover:bg-white/[0.06] text-slate-300 hover:text-white',
     };
 
     const sizes = {
-      sm: 'text-xs px-3.5 py-1.5 gap-1.5 rounded-xl',
+      sm: 'text-xs px-3 py-1.5 gap-1.5 rounded-lg',
       md: 'text-xs sm:text-sm px-4 py-2.5 gap-2',
-      lg: 'text-sm sm:text-base px-6 py-3.5 gap-2.5 font-bold tracking-tight',
-      icon: 'h-10 w-10 p-0 rounded-xl',
+      lg: 'text-sm sm:text-[15px] px-5 py-3 gap-2 font-semibold tracking-tight',
+      icon: 'h-9 w-9 p-0 rounded-lg',
     };
 
     return (
