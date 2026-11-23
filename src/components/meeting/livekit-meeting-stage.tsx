@@ -227,6 +227,58 @@ function LiveKitInnerStage({
   const [speakerVolume, setSpeakerVolume] = useState(180); // 0–300% (Default 180% crystal-clear voice boost)
   const [isApplyingQuality, setIsApplyingQuality] = useState(false);
 
+  // Live Mid-Call Device Switcher & Studio Camera Lighting Presets
+  const [cameraFilter, setCameraFilter] = useState<'none' | 'bright' | 'warm' | 'cinema'>('none');
+  const [audioInputs, setAudioInputs] = useState<MediaDeviceInfo[]>([]);
+  const [videoInputs, setVideoInputs] = useState<MediaDeviceInfo[]>([]);
+  const [activeAudioDeviceId, setActiveAudioDeviceId] = useState<string>('');
+  const [activeVideoDeviceId, setActiveVideoDeviceId] = useState<string>('');
+
+  const CAMERA_FILTER_STYLES: Record<'none' | 'bright' | 'warm' | 'cinema', string> = {
+    none: 'none',
+    bright: 'brightness(1.14) contrast(1.06) saturate(1.05)',
+    warm: 'brightness(1.07) contrast(1.04) sepia(0.14) saturate(1.15)',
+    cinema: 'contrast(1.16) saturate(1.12) brightness(1.02)',
+  };
+
+  useEffect(() => {
+    if (!showQualityModal || typeof navigator === 'undefined' || !navigator.mediaDevices?.enumerateDevices) return;
+    navigator.mediaDevices
+      .enumerateDevices()
+      .then((devices) => {
+        setAudioInputs(devices.filter((d) => d.kind === 'audioinput'));
+        setVideoInputs(devices.filter((d) => d.kind === 'videoinput'));
+      })
+      .catch(() => {});
+  }, [showQualityModal]);
+
+  const handleSwitchDevice = async (kind: 'audioinput' | 'videoinput', deviceId: string) => {
+    if (!room || !deviceId) return;
+    try {
+      await room.switchActiveDevice(kind, deviceId);
+      if (kind === 'audioinput') {
+        setActiveAudioDeviceId(deviceId);
+        toast.success('Microphone switched live');
+      } else {
+        setActiveVideoDeviceId(deviceId);
+        toast.success('Camera switched live');
+      }
+    } catch (err) {
+      console.warn('Device switch notice:', err);
+      toast.error('Could not switch device');
+    }
+  };
+
+  const handleLowerAllHands = () => {
+    setRaisedHands({});
+    setIsHandRaised(false);
+    try {
+      const payload = new TextEncoder().encode(JSON.stringify({ type: 'lower-all-hands' }));
+      room?.localParticipant.publishData(payload, { reliable: true });
+    } catch {}
+    toast.info('All raised hands lowered');
+  };
+
   // Web Audio API Studio Voice Boost & Clarity Engine (up to 300% loud, crystal-clear voice)
   const audioCtxRef = useRef<AudioContext | null>(null);
   const masterGainRef = useRef<GainNode | null>(null);
@@ -760,6 +812,9 @@ function LiveKitInnerStage({
           if (typeof data.endAt === 'number') {
             soundEngine.playIntroChime();
           }
+        } else if (data.type === 'lower-all-hands') {
+          setRaisedHands({});
+          setIsHandRaised(false);
         }
       } catch {}
     };
@@ -1603,6 +1658,11 @@ function LiveKitInnerStage({
         {hasVideo ? (
           <VideoTrack
             trackRef={trackRef}
+            style={
+              isLocal && trackRef.source === Track.Source.Camera && cameraFilter !== 'none'
+                ? { filter: CAMERA_FILTER_STYLES[cameraFilter] }
+                : undefined
+            }
             className={`w-full h-full object-cover transition-transform duration-300 ${
               isLocal && trackRef.source === Track.Source.Camera && isMirrored ? 'scale-x-[-1]' : ''
             }`}
@@ -2766,6 +2826,15 @@ function LiveKitInnerStage({
               </span>
             </div>
             <div className="flex items-center gap-2">
+              {hasHostPrivileges && Object.values(raisedHands).some(Boolean) && (
+                <button
+                  onClick={handleLowerAllHands}
+                  className="text-[11px] font-bold text-amber-400 hover:underline cursor-pointer"
+                  title="Lower all raised hands"
+                >
+                  Lower Hands
+                </button>
+              )}
               {hasHostPrivileges && (
                 <button
                   onClick={() => handleHostControlMedia('ALL', 'Everyone', 'mic', false)}
@@ -3645,6 +3714,113 @@ function LiveKitInnerStage({
                     </div>
                   </div>
                 </div>
+
+                {/* 4. STUDIO CAMERA LIGHTING FILTER */}
+                <div
+                  className={`rounded-2xl p-3.5 border space-y-2.5 ${
+                    isDarkStudio
+                      ? 'bg-white/[0.03] border-white/10'
+                      : 'bg-slate-50/90 border-slate-200/80'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-extrabold flex items-center gap-1.5">
+                      <Sparkles className="h-3.5 w-3.5 text-[#FFA033]" />
+                      Studio Camera Lighting
+                    </span>
+                    <span className="text-[10px] font-semibold text-slate-400 capitalize">
+                      {cameraFilter === 'none' ? 'Natural' : cameraFilter}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {(
+                      [
+                        { id: 'none', label: 'Natural' },
+                        { id: 'bright', label: 'Bright' },
+                        { id: 'warm', label: 'Warm' },
+                        { id: 'cinema', label: 'Cinema' },
+                      ] as const
+                    ).map((opt) => (
+                      <button
+                        key={opt.id}
+                        onClick={() => {
+                          setCameraFilter(opt.id);
+                          toast.info(`Camera look: ${opt.label}`);
+                        }}
+                        className={`py-1.5 rounded-lg text-[10.5px] font-bold transition-all cursor-pointer ${
+                          cameraFilter === opt.id
+                            ? 'bg-gradient-to-r from-[#FF7A00] to-[#FF4D2E] text-white shadow-sm'
+                            : isDarkStudio
+                            ? 'bg-white/[0.06] text-slate-300 hover:bg-white/[0.12]'
+                            : 'bg-slate-200/80 text-slate-700 hover:bg-slate-300'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 5. LIVE MID-CALL DEVICE SWITCHER (Camera & Microphone) */}
+                {(videoInputs.length > 0 || audioInputs.length > 0) && (
+                  <div
+                    className={`rounded-2xl p-3.5 border space-y-2.5 ${
+                      isDarkStudio
+                        ? 'bg-white/[0.03] border-white/10'
+                        : 'bg-slate-50/90 border-slate-200/80'
+                    }`}
+                  >
+                    <p className="text-xs font-extrabold">Live Device Switcher</p>
+
+                    {audioInputs.length > 0 && (
+                      <div className="space-y-1">
+                        <label className="text-[10.5px] font-semibold text-slate-400 block">
+                          Microphone
+                        </label>
+                        <select
+                          value={activeAudioDeviceId}
+                          onChange={(e) => void handleSwitchDevice('audioinput', e.target.value)}
+                          className={`w-full rounded-xl px-2.5 py-2 text-xs outline-none border cursor-pointer ${
+                            isDarkStudio
+                              ? 'bg-black/45 border-white/12 text-white'
+                              : 'bg-white border-slate-200 text-slate-900'
+                          }`}
+                        >
+                          <option value="">Default Microphone</option>
+                          {audioInputs.map((d, idx) => (
+                            <option key={d.deviceId || idx} value={d.deviceId}>
+                              {d.label || `Microphone ${idx + 1}`}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
+                    {videoInputs.length > 0 && (
+                      <div className="space-y-1">
+                        <label className="text-[10.5px] font-semibold text-slate-400 block">
+                          Camera (Front / Back / USB)
+                        </label>
+                        <select
+                          value={activeVideoDeviceId}
+                          onChange={(e) => void handleSwitchDevice('videoinput', e.target.value)}
+                          className={`w-full rounded-xl px-2.5 py-2 text-xs outline-none border cursor-pointer ${
+                            isDarkStudio
+                              ? 'bg-black/45 border-white/12 text-white'
+                              : 'bg-white border-slate-200 text-slate-900'
+                          }`}
+                        >
+                          <option value="">Default Camera</option>
+                          {videoInputs.map((d, idx) => (
+                            <option key={d.deviceId || idx} value={d.deviceId}>
+                              {d.label || `Camera ${idx + 1}`}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Pinned Footer Action Button */}
