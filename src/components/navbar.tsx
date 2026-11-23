@@ -43,8 +43,8 @@ export function Navbar({ user, onOpenSettings, onQuickNewMeeting }: NavbarProps)
   };
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-[#0066FF]/20 bg-[#050a14]/90 backdrop-blur-2xl transition-all pt-[env(safe-area-inset-top)]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 sm:h-20 flex items-center justify-between">
+    <header className="sticky top-0 z-40 w-full border-b border-white/[0.07] bg-[#090B10]/90 backdrop-blur-xl transition-all pt-[env(safe-area-inset-top)]">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between">
         {/* Brand Logo (Compact on mobile app bar, full with tagline on desktop) */}
         <div className="flex items-center gap-6">
           <div className="sm:hidden">

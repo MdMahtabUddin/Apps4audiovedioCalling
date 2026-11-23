@@ -608,380 +608,251 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#050a14] text-slate-100 flex flex-col selection:bg-[#0066FF] selection:text-white relative overflow-x-hidden">
-      {/* Ambient Executive Background Orbs & Grid */}
-      <div className="fixed inset-0 bg-grid-pattern opacity-35 pointer-events-none" />
-      <div className="absolute top-0 right-1/4 w-[650px] h-[380px] bg-[#0066FF]/12 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute top-80 left-0 w-[520px] h-[340px] bg-[#FF7A00]/8 rounded-full blur-3xl pointer-events-none" />
-
+    <div className="min-h-screen bg-[#090B10] text-zinc-100 flex flex-col selection:bg-[#0066FF] selection:text-white relative overflow-x-hidden">
       <Navbar
         user={user}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onQuickNewMeeting={() => setIsNewMeetingOpen(true)}
       />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-28 md:py-7 space-y-5 md:space-y-7 relative z-10">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-5 pb-28 md:py-8 space-y-6 relative z-10">
         {/* ================================================================= */}
-        {/* MOBILE APP HOME LAYOUT (Clean Zoom/Meet Native App Feel on < md)  */}
+        {/* MOBILE WORKSPACE HEADER (< md)                                    */}
         {/* ================================================================= */}
         <div className="md:hidden space-y-4">
-          {/* Compact Greeting Row */}
-          <div className="flex items-center justify-between gap-2 px-0.5">
+          <div className="flex items-center justify-between gap-2">
             <div className="min-w-0">
-              <p className="text-[11px] font-semibold text-slate-400">{greetingText}</p>
-              <h1 className="text-lg font-black tracking-tight text-white truncate">
+              <p className="text-[11px] font-medium text-zinc-500">{greetingText}</p>
+              <h1 className="text-lg font-semibold tracking-tight text-white truncate">
                 {user?.name || 'Host'}
               </h1>
             </div>
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-[10px] font-bold text-emerald-300 shrink-0">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              {analytics.activeMeetings > 0 ? `${analytics.activeMeetings} Live` : 'Online'}
-            </span>
+            {analytics.activeMeetings > 0 && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[11px] font-medium text-emerald-400 shrink-0">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                {analytics.activeMeetings} Live
+              </span>
+            )}
           </div>
 
-          {/* 4 Symmetrical Native App Action Icons (Zoom / Meet Style) */}
+          {/* 4 Symmetrical Quick Actions (Clean Native App Bar) */}
           <div className="grid grid-cols-4 gap-2.5">
             <button
               onClick={() => setIsNewMeetingOpen(true)}
               className="flex flex-col items-center gap-1.5 active:scale-95 transition-transform cursor-pointer"
             >
-              <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-[#FF7A00] to-[#FF4D2E] text-white flex items-center justify-center shadow-lg shadow-[#FF7A00]/30">
-                <Video className="h-6 w-6" />
+              <div className="h-13 w-13 rounded-2xl bg-[#0066FF] text-white flex items-center justify-center">
+                <Video className="h-5 w-5" />
               </div>
-              <span className="text-[11px] font-bold text-slate-200">New</span>
+              <span className="text-[11px] font-medium text-zinc-300">New</span>
             </button>
 
             <button
               onClick={() => setIsJoinMeetingOpen(true)}
               className="flex flex-col items-center gap-1.5 active:scale-95 transition-transform cursor-pointer"
             >
-              <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-[#0066FF] to-[#00A3FF] text-white flex items-center justify-center shadow-lg shadow-[#0066FF]/30">
-                <LogIn className="h-6 w-6" />
+              <div className="h-13 w-13 rounded-2xl bg-[#161A23] border border-white/[0.08] text-zinc-100 flex items-center justify-center">
+                <LogIn className="h-5 w-5" />
               </div>
-              <span className="text-[11px] font-bold text-slate-200">Join</span>
+              <span className="text-[11px] font-medium text-zinc-300">Join</span>
             </button>
 
             <button
               onClick={() => setIsScheduleOpen(true)}
               className="flex flex-col items-center gap-1.5 active:scale-95 transition-transform cursor-pointer"
             >
-              <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-violet-600 to-purple-500 text-white flex items-center justify-center shadow-lg shadow-violet-600/30">
-                <Calendar className="h-6 w-6" />
+              <div className="h-13 w-13 rounded-2xl bg-[#161A23] border border-white/[0.08] text-zinc-100 flex items-center justify-center">
+                <Calendar className="h-5 w-5" />
               </div>
-              <span className="text-[11px] font-bold text-slate-200">Schedule</span>
+              <span className="text-[11px] font-medium text-zinc-300">Schedule</span>
             </button>
 
             <button
               onClick={() => setIsSettingsOpen(true)}
               className="flex flex-col items-center gap-1.5 active:scale-95 transition-transform cursor-pointer"
             >
-              <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-500 text-white flex items-center justify-center shadow-lg shadow-emerald-600/30">
-                <Camera className="h-6 w-6" />
+              <div className="h-13 w-13 rounded-2xl bg-[#161A23] border border-white/[0.08] text-zinc-100 flex items-center justify-center">
+                <Camera className="h-5 w-5" />
               </div>
-              <span className="text-[11px] font-bold text-slate-200">Studio</span>
+              <span className="text-[11px] font-medium text-zinc-300">Devices</span>
             </button>
           </div>
 
-          {/* Compact 3-Stat App Summary Strip */}
-          <div className="grid grid-cols-3 gap-2">
-            <div className="p-3 rounded-2xl bg-[#091222]/90 border border-white/[0.08] text-center">
-              <div className="text-base font-black text-white leading-none">{analytics.totalMeetings}</div>
-              <div className="text-[10px] font-semibold text-slate-400 mt-1">Meetings</div>
+          {/* Hairline 3-Metric Strip */}
+          <div className="grid grid-cols-3 rounded-xl bg-[#11141C] border border-white/[0.07] divide-x divide-white/[0.07]">
+            <div className="py-2.5 px-2 text-center">
+              <div className="text-sm font-semibold text-white tabular-nums">{analytics.totalMeetings}</div>
+              <div className="text-[10px] text-zinc-500 mt-0.5">Meetings</div>
             </div>
-            <div className="p-3 rounded-2xl bg-[#091222]/90 border border-white/[0.08] text-center">
-              <div className="text-base font-black text-[#FFA033] leading-none">{analytics.formattedTotalTime}</div>
-              <div className="text-[10px] font-semibold text-slate-400 mt-1">Talk Time</div>
+            <div className="py-2.5 px-2 text-center">
+              <div className="text-sm font-semibold text-white tabular-nums">{analytics.formattedTotalTime}</div>
+              <div className="text-[10px] text-zinc-500 mt-0.5">Talk Time</div>
             </div>
-            <div className="p-3 rounded-2xl bg-[#091222]/90 border border-white/[0.08] text-center">
-              <div className="text-base font-black text-cyan-400 leading-none">{scheduledMeetings.length}</div>
-              <div className="text-[10px] font-semibold text-slate-400 mt-1">Scheduled</div>
+            <div className="py-2.5 px-2 text-center">
+              <div className="text-sm font-semibold text-white tabular-nums">{scheduledMeetings.length}</div>
+              <div className="text-[10px] text-zinc-500 mt-0.5">Upcoming</div>
             </div>
           </div>
 
-          {/* Compact 1-Line Instant Join Bar */}
+          {/* Clean Join Input */}
           <form
             onSubmit={handleInlineJoin}
-            className="p-2 rounded-2xl bg-[#091222]/90 border border-[#0066FF]/25 flex items-center gap-2"
+            className="p-1.5 rounded-xl bg-[#11141C] border border-white/[0.08] flex items-center gap-2"
           >
             <input
               type="text"
-              placeholder="Paste meeting code or link..."
+              placeholder="Enter meeting code or link..."
               value={inlineCode}
               onChange={(e) => setInlineCode(e.target.value)}
-              className="flex-1 bg-transparent px-2.5 py-1.5 text-xs text-gray-100 placeholder:text-gray-500 outline-none font-mono min-w-0"
+              className="flex-1 bg-transparent px-2.5 py-1.5 text-xs text-zinc-100 placeholder:text-zinc-500 outline-none font-mono min-w-0"
             />
             <button
               type="submit"
               disabled={!inlineCode.trim()}
-              className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-[#0066FF] to-[#00A3FF] text-white text-xs font-bold shrink-0 disabled:opacity-40 cursor-pointer"
+              className="px-3.5 py-1.5 rounded-lg bg-[#0066FF] hover:bg-[#0055DD] text-white text-xs font-medium shrink-0 disabled:opacity-40 cursor-pointer transition-colors"
             >
               Join
             </button>
           </form>
         </div>
 
-        {/* 1. Executive Studio Command Header (Desktop) */}
-        <div className="hidden md:block relative overflow-hidden rounded-3xl border border-white/[0.1] bg-gradient-to-br from-[#081226]/95 via-[#0b1831]/92 to-[#071020]/95 backdrop-blur-2xl shadow-[0_20px_60px_rgba(0,0,0,0.55)]">
-          <div className="h-[2.5px] w-full bg-gradient-to-r from-[#0066FF] via-[#00A3FF] to-[#FF7A00]" />
-          <div className="p-6 sm:p-7 relative">
-          <div className="absolute -top-24 -right-24 w-96 h-96 bg-[#0066FF]/15 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute -bottom-24 left-1/3 w-80 h-80 bg-[#FF7A00]/10 rounded-full blur-3xl pointer-events-none" />
-
-          <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-            <div className="space-y-3">
-              <div className="flex flex-wrap items-center gap-2.5">
-                <Badge variant="success" dot>
-                  Enterprise Studio Online
-                </Badge>
-                {analytics.activeMeetings > 0 && (
-                  <Badge variant="orange" dot>
-                    {analytics.activeMeetings} Live Session{analytics.activeMeetings > 1 ? 's' : ''} Active
-                  </Badge>
-                )}
-              </div>
-
-              <h1 className="text-2xl sm:text-4xl font-black tracking-tight text-white">
-                {greetingText},{' '}
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#388BFF] via-cyan-300 to-[#FF7A00]">
-                  {user?.name || 'Host'}
-                </span>
+        {/* ================================================================= */}
+        {/* DESKTOP WORKSPACE HEADER & ACTION BAR (Linear / Vercel Style)     */}
+        {/* ================================================================= */}
+        <div className="hidden md:flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-6 border-b border-white/[0.07]">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2.5">
+              <h1 className="text-2xl font-semibold tracking-tight text-white">
+                {greetingText}, {user?.name || 'Host'}
               </h1>
-
-              <p className="text-xs sm:text-sm text-gray-300/90 max-w-2xl font-normal leading-relaxed">
-                Manage your global vedio conferences, monitor complete session history with real-time duration telemetry, and launch high-definition rooms in one click.
-              </p>
+              {analytics.activeMeetings > 0 && (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[11px] font-medium text-emerald-400">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                  {analytics.activeMeetings} live
+                </span>
+              )}
             </div>
-
-            <div className="shrink-0 flex flex-col sm:flex-row lg:flex-col items-start sm:items-center lg:items-end justify-between gap-4 pt-2 lg:pt-0 border-t lg:border-t-0 border-white/[0.08]">
-              <ClockWidget />
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handleExportHistoryCSV}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.1] text-xs font-semibold text-gray-300 hover:text-white transition-all cursor-pointer"
-                  title="Download complete meeting history report (CSV)"
-                >
-                  <Download className="h-3.5 w-3.5 text-[#388BFF]" />
-                  <span>Export CSV Log</span>
-                </button>
-              </div>
-            </div>
-          </div>
-          </div>
-        </div>
-
-        {/* 2. International-Standard Executive Telemetry & KPI Strip (Desktop) */}
-        <div className="hidden md:grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-5">
-          {/* KPI 1: Total Meetings Conducted */}
-          <div className="p-4 sm:p-5 rounded-3xl bg-[#091222]/85 border border-[#0066FF]/20 backdrop-blur-xl shadow-xl flex flex-col justify-between gap-3 hover:border-[#0066FF]/45 transition-all">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-gray-400">
-                Total Meetings
-              </span>
-              <div className="h-9 w-9 rounded-2xl bg-[#0066FF]/15 border border-[#0066FF]/30 text-[#388BFF] flex items-center justify-center">
-                <Video className="h-4 w-4" />
-              </div>
-            </div>
-            <div>
-              <div className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-                {analytics.totalMeetings}
-              </div>
-              <p className="text-[11px] text-gray-400 mt-1 flex items-center gap-1.5">
-                <span className="text-emerald-400 font-semibold">{analytics.completedMeetings} completed</span>
-                <span>•</span>
-                <span className="text-[#FFA033] font-semibold">{analytics.activeMeetings} live</span>
-              </p>
+            <div className="flex items-center gap-3 text-xs text-zinc-500">
+              <span>{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' })}</span>
+              <span>•</span>
+              <span>{deviceCount.video} camera, {deviceCount.audio} microphone ready</span>
             </div>
           </div>
 
-          {/* KPI 2: Total Collaboration Time & Duration */}
-          <div className="p-4 sm:p-5 rounded-3xl bg-[#091222]/85 border border-[#FF7A00]/20 backdrop-blur-xl shadow-xl flex flex-col justify-between gap-3 hover:border-[#FF7A00]/45 transition-all">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-gray-400">
-                Total Meeting Time
-              </span>
-              <div className="h-9 w-9 rounded-2xl bg-[#FF7A00]/15 border border-[#FF7A00]/30 text-[#FFA033] flex items-center justify-center">
-                <Timer className="h-4 w-4" />
-              </div>
-            </div>
-            <div>
-              <div className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-                {analytics.formattedTotalTime}
-              </div>
-              <p className="text-[11px] text-gray-400 mt-1">
-                Avg. duration:{' '}
-                <span className="text-amber-300 font-semibold">{analytics.formattedAvgTime}</span> / call
-              </p>
-            </div>
-          </div>
+          {/* Right: Clean Unified Action Bar (Join by Code + Primary New Meeting + Secondary Actions) */}
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <form
+              onSubmit={handleInlineJoin}
+              className="flex items-center rounded-lg bg-[#11141C] border border-white/[0.09] focus-within:border-white/25 transition-colors p-1"
+            >
+              <input
+                type="text"
+                placeholder="Paste code or link..."
+                value={inlineCode}
+                onChange={(e) => setInlineCode(e.target.value)}
+                className="w-44 xl:w-52 bg-transparent px-2.5 py-1 text-xs text-zinc-100 placeholder:text-zinc-500 outline-none font-mono"
+              />
+              <button
+                type="submit"
+                disabled={!inlineCode.trim()}
+                className="px-3 py-1.5 rounded-md bg-white/[0.07] hover:bg-white/[0.13] text-zinc-200 text-xs font-medium disabled:opacity-35 transition-colors cursor-pointer"
+              >
+                Join
+              </button>
+            </form>
 
-          {/* KPI 3: Total Participants Connected */}
-          <div className="p-4 sm:p-5 rounded-3xl bg-[#091222]/85 border border-emerald-500/20 backdrop-blur-xl shadow-xl flex flex-col justify-between gap-3 hover:border-emerald-500/45 transition-all">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-gray-400">
-                Total Attendees
-              </span>
-              <div className="h-9 w-9 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center">
-                <Users className="h-4 w-4" />
-              </div>
-            </div>
-            <div>
-              <div className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-                {analytics.totalParticipants}
-              </div>
-              <p className="text-[11px] text-gray-400 mt-1">
-                Across all hosted & joined rooms
-              </p>
-            </div>
-          </div>
+            <button
+              onClick={() => setIsScheduleOpen(true)}
+              className="h-9 px-3 rounded-lg bg-[#11141C] hover:bg-[#171B26] border border-white/[0.09] text-zinc-200 text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
+              title="Schedule a future meeting"
+            >
+              <Calendar className="h-3.5 w-3.5 text-zinc-400" />
+              <span>Schedule</span>
+            </button>
 
-          {/* KPI 4: Upcoming Scheduled Syncs */}
-          <div className="p-4 sm:p-5 rounded-3xl bg-[#091222]/85 border border-violet-500/20 backdrop-blur-xl shadow-xl flex flex-col justify-between gap-3 hover:border-violet-500/45 transition-all">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-gray-400">
-                Scheduled Agenda
-              </span>
-              <div className="h-9 w-9 rounded-2xl bg-violet-500/15 border border-violet-500/30 text-violet-400 flex items-center justify-center">
-                <CalendarDays className="h-4 w-4" />
-              </div>
-            </div>
-            <div>
-              <div className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-                {scheduledMeetings.length}
-              </div>
-              <p className="text-[11px] text-gray-400 mt-1 truncate">
-                {scheduledMeetings.length > 0
-                  ? `Next: ${scheduledMeetings[0].title}`
-                  : 'No upcoming calls scheduled'}
-              </p>
-            </div>
+            <button
+              onClick={() => setIsSettingsOpen(true)}
+              className="h-9 w-9 rounded-lg bg-[#11141C] hover:bg-[#171B26] border border-white/[0.09] text-zinc-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+              title="Audio & Vedio Device Settings"
+            >
+              <Camera className="h-4 w-4" />
+            </button>
+
+            <button
+              onClick={handleExportHistoryCSV}
+              className="h-9 w-9 rounded-lg bg-[#11141C] hover:bg-[#171B26] border border-white/[0.09] text-zinc-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+              title="Export Meeting History (CSV)"
+            >
+              <Download className="h-4 w-4" />
+            </button>
+
+            <button
+              onClick={() => setIsNewMeetingOpen(true)}
+              className="h-9 px-4 rounded-lg bg-[#0066FF] hover:bg-[#0055DD] text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
+            >
+              <Plus className="h-4 w-4" />
+              <span>New Meeting</span>
+            </button>
           </div>
         </div>
 
-        {/* 3. 4 Signature Quick-Launch Studio Cards (Desktop) */}
-        <div className="hidden md:grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
-          {/* Card 1: New Meeting */}
-          <button
-            onClick={() => setIsNewMeetingOpen(true)}
-            className="group text-left p-6 rounded-3xl bg-gradient-to-br from-[#FF7A00]/20 via-orange-600/10 to-[#091222] border border-[#FF7A00]/30 hover:border-[#FF7A00]/70 transition-all hover:-translate-y-1 hover:shadow-2xl hover:shadow-[#FF7A00]/20 cursor-pointer relative overflow-hidden flex flex-col justify-between h-36"
-          >
-            <div className="flex items-center justify-between w-full">
-              <div className="h-12 w-12 rounded-2xl bg-gradient-to-tr from-[#FF7A00] to-amber-500 text-white flex items-center justify-center shadow-lg shadow-[#FF7A00]/30 group-hover:scale-110 transition-transform">
-                <Video className="h-6 w-6" />
-              </div>
-              <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-[#FF7A00]/15 text-[#FFA033] border border-[#FF7A00]/30">
-                Instant HD
-              </span>
+        {/* ================================================================= */}
+        {/* UNIFIED 4-COLUMN HAIRLINE METRIC BAR (Desktop — Zero Neon Noise)  */}
+        {/* ================================================================= */}
+        <div className="hidden md:grid grid-cols-4 rounded-xl bg-[#11141C] border border-white/[0.07] divide-x divide-white/[0.07]">
+          <div className="px-5 py-4 space-y-1">
+            <div className="flex items-center justify-between text-xs text-zinc-500">
+              <span>Total Meetings</span>
+              <Video className="h-3.5 w-3.5 text-zinc-600" />
             </div>
-            <div>
-              <h3 className="text-base sm:text-lg font-extrabold text-white group-hover:text-[#FFA033] transition-colors">
-                New Meeting
-              </h3>
-              <p className="text-xs text-gray-400 mt-0.5">Start an instant room or shareable link</p>
+            <div className="text-2xl font-semibold text-white tracking-tight tabular-nums">
+              {analytics.totalMeetings}
             </div>
-            <div className="flex items-center gap-1.5 text-xs font-bold text-[#FFA033] group-hover:translate-x-1 transition-transform">
-              Launch studio room <ArrowRight className="h-3.5 w-3.5" />
-            </div>
-          </button>
-
-          {/* Card 2: Join Meeting */}
-          <button
-            onClick={() => setIsJoinMeetingOpen(true)}
-            className="group text-left p-6 rounded-3xl bg-gradient-to-br from-[#0066FF]/20 via-blue-600/10 to-[#091222] border border-[#0066FF]/30 hover:border-[#0066FF]/70 transition-all hover:-translate-y-1 hover:shadow-2xl hover:shadow-[#0066FF]/20 cursor-pointer relative overflow-hidden flex flex-col justify-between h-36"
-          >
-            <div className="flex items-center justify-between w-full">
-              <div className="h-12 w-12 rounded-2xl bg-gradient-to-tr from-[#0066FF] to-cyan-500 text-white flex items-center justify-center shadow-lg shadow-[#0066FF]/30 group-hover:scale-110 transition-transform">
-                <LogIn className="h-6 w-6" />
-              </div>
-              <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-[#0066FF]/15 text-[#388BFF] border border-[#0066FF]/30">
-                Direct Code
-              </span>
-            </div>
-            <div>
-              <h3 className="text-base sm:text-lg font-extrabold text-white group-hover:text-[#388BFF] transition-colors">
-                Join Meeting
-              </h3>
-              <p className="text-xs text-gray-400 mt-0.5">Connect via room code or invitation link</p>
-            </div>
-            <div className="flex items-center gap-1.5 text-xs font-bold text-[#388BFF] group-hover:translate-x-1 transition-transform">
-              Enter room lobby <ArrowRight className="h-3.5 w-3.5" />
-            </div>
-          </button>
-
-          {/* Card 3: Schedule */}
-          <button
-            onClick={() => setIsScheduleOpen(true)}
-            className="group text-left p-6 rounded-3xl bg-gradient-to-br from-violet-500/20 via-purple-600/10 to-[#091222] border border-violet-500/30 hover:border-violet-500/70 transition-all hover:-translate-y-1 hover:shadow-2xl hover:shadow-violet-500/20 cursor-pointer relative overflow-hidden flex flex-col justify-between h-36"
-          >
-            <div className="flex items-center justify-between w-full">
-              <div className="h-12 w-12 rounded-2xl bg-gradient-to-tr from-violet-600 to-purple-500 text-white flex items-center justify-center shadow-lg shadow-violet-500/30 group-hover:scale-110 transition-transform">
-                <Calendar className="h-6 w-6" />
-              </div>
-              <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-violet-500/15 text-violet-300 border border-violet-500/30">
-                Calendar
-              </span>
-            </div>
-            <div>
-              <h3 className="text-base sm:text-lg font-extrabold text-white group-hover:text-violet-300 transition-colors">
-                Schedule Call
-              </h3>
-              <p className="text-xs text-gray-400 mt-0.5">Plan future sessions with passcodes</p>
-            </div>
-            <div className="flex items-center gap-1.5 text-xs font-bold text-violet-400 group-hover:translate-x-1 transition-transform">
-              Book time slot <ArrowRight className="h-3.5 w-3.5" />
-            </div>
-          </button>
-
-          {/* Card 4: Audio/Video Device Studio */}
-          <button
-            onClick={() => setIsSettingsOpen(true)}
-            className="group text-left p-6 rounded-3xl bg-gradient-to-br from-emerald-500/20 via-teal-600/10 to-[#091222] border border-emerald-500/30 hover:border-emerald-500/70 transition-all hover:-translate-y-1 hover:shadow-2xl hover:shadow-emerald-500/20 cursor-pointer relative overflow-hidden flex flex-col justify-between h-36"
-          >
-            <div className="flex items-center justify-between w-full">
-              <div className="h-12 w-12 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/30 group-hover:scale-110 transition-transform">
-                <Camera className="h-6 w-6" />
-              </div>
-              <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
-                AV Check
-              </span>
-            </div>
-            <div>
-              <h3 className="text-base sm:text-lg font-extrabold text-white group-hover:text-emerald-300 transition-colors">
-                Device Studio
-              </h3>
-              <p className="text-xs text-gray-400 mt-0.5">Test microphone level & HD camera</p>
-            </div>
-            <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-400 group-hover:translate-x-1 transition-transform">
-              Configure hardware <ArrowRight className="h-3.5 w-3.5" />
-            </div>
-          </button>
-        </div>
-
-        {/* 4. Quick Meeting Code Entry Bar (Desktop) */}
-        <div className="hidden md:flex p-4 sm:p-5 rounded-3xl bg-[#091222]/90 border border-[#0066FF]/20 backdrop-blur-xl flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-lg">
-          <div className="flex items-center gap-3.5">
-            <div className="h-11 w-11 rounded-2xl bg-[#0066FF]/15 text-[#388BFF] flex items-center justify-center border border-[#0066FF]/30 shrink-0">
-              <LogIn className="h-5 w-5" />
-            </div>
-            <div>
-              <h4 className="text-sm font-bold text-white">Instant Room Connect</h4>
-              <p className="text-xs text-gray-400">
-                Paste any meeting code or full URL to jump straight into the conference
-              </p>
-            </div>
+            <p className="text-[11px] text-zinc-500">
+              {analytics.completedMeetings} ended · {analytics.activeMeetings} live
+            </p>
           </div>
 
-          <form onSubmit={handleInlineJoin} className="flex items-center gap-2.5 max-w-md w-full">
-            <input
-              type="text"
-              placeholder="e.g. abc-defg-hij or full link"
-              value={inlineCode}
-              onChange={(e) => setInlineCode(e.target.value)}
-              className="flex-1 bg-black/50 border border-white/[0.12] rounded-2xl px-4 py-2.5 text-xs sm:text-sm text-gray-100 placeholder:text-gray-500 outline-none focus:border-[#0066FF] transition-all font-mono"
-            />
-            <Button size="md" type="submit" disabled={!inlineCode.trim()}>
-              Join Room
-            </Button>
-          </form>
+          <div className="px-5 py-4 space-y-1">
+            <div className="flex items-center justify-between text-xs text-zinc-500">
+              <span>Total Talk Time</span>
+              <Timer className="h-3.5 w-3.5 text-zinc-600" />
+            </div>
+            <div className="text-2xl font-semibold text-white tracking-tight tabular-nums">
+              {analytics.formattedTotalTime}
+            </div>
+            <p className="text-[11px] text-zinc-500">
+              Avg. {analytics.formattedAvgTime} per session
+            </p>
+          </div>
+
+          <div className="px-5 py-4 space-y-1">
+            <div className="flex items-center justify-between text-xs text-zinc-500">
+              <span>Total Attendees</span>
+              <Users className="h-3.5 w-3.5 text-zinc-600" />
+            </div>
+            <div className="text-2xl font-semibold text-white tracking-tight tabular-nums">
+              {analytics.totalParticipants}
+            </div>
+            <p className="text-[11px] text-zinc-500">
+              Across hosted &amp; joined rooms
+            </p>
+          </div>
+
+          <div className="px-5 py-4 space-y-1">
+            <div className="flex items-center justify-between text-xs text-zinc-500">
+              <span>Scheduled</span>
+              <CalendarDays className="h-3.5 w-3.5 text-zinc-600" />
+            </div>
+            <div className="text-2xl font-semibold text-white tracking-tight tabular-nums">
+              {scheduledMeetings.length}
+            </div>
+            <p className="text-[11px] text-zinc-500 truncate">
+              {scheduledMeetings.length > 0
+                ? `Next: ${scheduledMeetings[0].title}`
+                : 'No upcoming meetings'}
+            </p>
+          </div>
         </div>
 
         {/* 5. Main Content Grid: Complete Meeting History & Analytics Sidebar */}
@@ -989,7 +860,7 @@ export default function DashboardPage() {
           {/* Left 2 Columns: Meeting History Log & Upcoming Schedule */}
           <div className="lg:col-span-2 space-y-5">
             {/* Control Header: Primary Tabs + Search + Filter & Sort */}
-            <div className="p-4 sm:p-5 rounded-3xl bg-[#091222]/85 border border-white/[0.08] backdrop-blur-xl space-y-4">
+            <div className="p-4 sm:p-5 rounded-3xl bg-[#11141C] border border-white/[0.07] space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-1.5 sm:gap-2 p-1 sm:p-0 rounded-2xl bg-black/35 sm:bg-transparent border border-white/[0.06] sm:border-0">
                   <button
@@ -1494,7 +1365,7 @@ export default function DashboardPage() {
             </Card>
 
             {/* 2. Duration & Collaboration Analytics Card */}
-            <Card className="bg-[#091222]/90 border-white/[0.08]">
+            <Card className="bg-[#11141C] border-white/[0.07]">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm flex items-center gap-2">
