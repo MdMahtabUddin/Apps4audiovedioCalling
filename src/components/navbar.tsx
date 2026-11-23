@@ -43,8 +43,8 @@ export function Navbar({ user, onOpenSettings, onQuickNewMeeting }: NavbarProps)
   };
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-white/[0.08] bg-[#060b14]/88 backdrop-blur-xl transition-colors pt-[env(safe-area-inset-top)]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between">
+    <header className="sticky top-0 z-40 w-full border-b border-white/[0.08] bg-[#09090b]/85 backdrop-blur-xl transition-colors pt-[env(safe-area-inset-top)]">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
         {/* Brand Logo (Compact on mobile app bar, full with tagline on desktop) */}
         <div className="flex items-center gap-6">
           <div className="sm:hidden">
@@ -62,10 +62,10 @@ export function Navbar({ user, onOpenSettings, onQuickNewMeeting }: NavbarProps)
               {onQuickNewMeeting && (
                 <button
                   onClick={onQuickNewMeeting}
-                  className="hidden sm:inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#0066FF] hover:bg-[#1975FF] text-white text-xs font-semibold transition-colors cursor-pointer shadow-sm shadow-[#0066FF]/25 border border-white/15"
+                  className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition-colors cursor-pointer"
                 >
                   <Video className="h-3.5 w-3.5" />
-                  <span>Start Call</span>
+                  <span>New Meeting</span>
                 </button>
               )}
 
@@ -106,7 +106,7 @@ export function Navbar({ user, onOpenSettings, onQuickNewMeeting }: NavbarProps)
                 {dropdownOpen && (
                   <>
                     <div className="fixed inset-0 z-40" onClick={() => setDropdownOpen(false)} />
-                    <div className="absolute right-0 mt-2 w-64 rounded-2xl border border-white/[0.1] bg-[#0b1322]/96 backdrop-blur-2xl p-2 shadow-2xl shadow-black/75 z-50 animate-in fade-in zoom-in-95 duration-150">
+                    <div className="absolute right-0 mt-2 w-60 rounded-xl border border-white/[0.1] bg-[#111114] p-1.5 shadow-2xl shadow-black/80 z-50 animate-in fade-in zoom-in-95 duration-150">
                       <div className="px-3 py-2.5 border-b border-white/[0.08] mb-1.5">
                         <p className="text-xs font-bold text-white">{user.name}</p>
                         <p className="text-[11px] text-gray-400 truncate">{user.email}</p>
@@ -177,15 +177,15 @@ export function Navbar({ user, onOpenSettings, onQuickNewMeeting }: NavbarProps)
             <div className="flex items-center gap-2 sm:gap-3">
               <Link
                 href="/login"
-                className="text-xs sm:text-sm font-semibold text-slate-300 hover:text-white px-3.5 py-2 rounded-xl hover:bg-white/[0.06] transition-colors"
+                className="text-xs sm:text-sm font-medium text-zinc-300 hover:text-white px-3 py-2 rounded-lg hover:bg-white/[0.06] transition-colors"
               >
-                Sign In
+                Sign in
               </Link>
               <Link
                 href="/register"
-                className="text-xs sm:text-sm font-semibold text-white bg-[#FF7A00] hover:bg-[#FF891A] px-4 py-2 rounded-xl shadow-sm shadow-[#FF7A00]/25 transition-colors border border-white/15"
+                className="text-xs sm:text-sm font-semibold text-zinc-950 bg-white hover:bg-zinc-200 px-4 py-2 rounded-lg transition-colors"
               >
-                Get Started
+                Get started
               </Link>
             </div>
           )}

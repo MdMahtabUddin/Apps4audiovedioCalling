@@ -9,22 +9,22 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant = 'primary', size = 'md', isLoading = false, children, disabled, ...props }, ref) => {
-    const base = 'inline-flex items-center justify-center font-semibold rounded-xl transition-all duration-150 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0066FF]/50 focus-visible:ring-offset-1 focus-visible:ring-offset-[#060b14] select-none';
+    const base = 'inline-flex items-center justify-center font-medium rounded-lg transition-colors duration-150 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 focus-visible:ring-offset-1 focus-visible:ring-offset-[#09090b] select-none';
 
     const variants = {
-      primary: 'bg-[#0066FF] hover:bg-[#1975FF] text-white shadow-sm shadow-[#0066FF]/25 active:scale-[0.985] border border-white/15',
-      orange: 'bg-[#FF7A00] hover:bg-[#FF891A] text-white shadow-sm shadow-[#FF7A00]/25 active:scale-[0.985] border border-white/15 font-bold',
-      secondary: 'bg-white/[0.06] hover:bg-white/[0.11] text-slate-200 border border-white/[0.1] active:scale-[0.985]',
-      glass: 'bg-[#0b1528]/80 hover:bg-[#10203d]/90 text-sky-300 border border-white/[0.1] shadow-sm active:scale-[0.985]',
-      outline: 'bg-transparent border border-white/[0.12] hover:border-white/25 hover:bg-white/[0.05] text-slate-300 hover:text-white active:scale-[0.985]',
-      danger: 'bg-rose-600 hover:bg-rose-500 text-white shadow-sm shadow-rose-600/25 active:scale-[0.985] border border-rose-400/25',
-      ghost: 'bg-transparent hover:bg-white/[0.06] text-slate-300 hover:text-white',
+      primary: 'bg-blue-600 hover:bg-blue-500 text-white shadow-xs active:scale-[0.99] border border-blue-500/40',
+      orange: 'bg-white hover:bg-zinc-200 text-zinc-950 font-semibold shadow-xs active:scale-[0.99] border border-white',
+      secondary: 'bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-white/10 active:scale-[0.99]',
+      glass: 'bg-zinc-900/90 hover:bg-zinc-800 text-zinc-200 border border-white/10 active:scale-[0.99]',
+      outline: 'bg-transparent border border-white/12 hover:border-white/25 hover:bg-white/[0.04] text-zinc-300 hover:text-white active:scale-[0.99]',
+      danger: 'bg-rose-600 hover:bg-rose-500 text-white active:scale-[0.99] border border-rose-500/30',
+      ghost: 'bg-transparent hover:bg-white/[0.06] text-zinc-300 hover:text-white',
     };
 
     const sizes = {
       sm: 'text-xs px-3 py-1.5 gap-1.5 rounded-lg',
-      md: 'text-xs sm:text-sm px-4 py-2.5 gap-2',
-      lg: 'text-sm sm:text-[15px] px-5 py-3 gap-2 font-semibold tracking-tight',
+      md: 'text-xs sm:text-sm px-4 py-2 gap-2',
+      lg: 'text-sm px-5 py-2.5 gap-2 font-semibold',
       icon: 'h-9 w-9 p-0 rounded-lg',
     };
 

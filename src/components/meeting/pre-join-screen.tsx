@@ -114,14 +114,11 @@ export function PreJoinScreen({ meetingInfo, initialName = '', onJoinSuccess }: 
   };
 
   return (
-    <div className="min-h-screen bg-[#060b14] text-slate-100 flex items-center justify-center p-4 sm:p-6 lg:p-10 relative overflow-hidden">
-      {/* Subtle Architectural Ambient Glow */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[640px] h-[300px] bg-gradient-to-tr from-[#0066FF]/10 via-[#FF7A00]/6 to-transparent rounded-full blur-[120px] pointer-events-none" />
-
-      <div className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-12 gap-8 items-center relative z-10">
-        {/* Left Side: Video Preview & Controls (7 Cols) */}
+    <div className="min-h-screen bg-[#09090b] text-zinc-100 flex items-center justify-center p-4 sm:p-6 lg:p-10">
+      <div className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+        {/* Left Side: Clean Video Preview & Controls (7 Cols) */}
         <div className="lg:col-span-7 flex flex-col items-center space-y-4">
-          <div className="relative w-full aspect-video rounded-2xl bg-[#0b1322] border border-white/[0.1] shadow-[0_24px_60px_-20px_rgba(0,0,0,0.85)] ring-1 ring-inset ring-white/[0.04] overflow-hidden flex items-center justify-center">
+          <div className="relative w-full aspect-video rounded-2xl bg-[#111114] border border-white/[0.08] shadow-2xl shadow-black/60 overflow-hidden flex items-center justify-center">
             {/* Live Video */}
             <video
               ref={videoRef}
@@ -263,34 +260,32 @@ export function PreJoinScreen({ meetingInfo, initialName = '', onJoinSuccess }: 
           )}
         </div>
 
-        {/* Right Side: Meeting Information & Join Form (5 Cols) */}
-        <div className="lg:col-span-5 rounded-2xl bg-[#0b1322]/94 border border-white/[0.1] backdrop-blur-2xl shadow-[0_24px_60px_-20px_rgba(0,0,0,0.85)] overflow-hidden">
-          <div className="h-[2px] w-full bg-gradient-to-r from-[#0066FF] via-[#00A3FF] to-[#FF7A00]" />
-          <div className="p-6 sm:p-7 space-y-6">
-          <div className="pb-1">
-            <BrandLogo size="md" showTagline={true} />
+        {/* Right Side: Clean Meeting Info & Join Form (5 Cols) */}
+        <div className="lg:col-span-5 rounded-2xl bg-[#111114] border border-white/[0.08] shadow-xl shadow-black/50 p-6 sm:p-7 space-y-6">
+          <div>
+            <BrandLogo size="sm" showTagline={false} />
           </div>
 
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold tracking-wider uppercase text-sky-400 px-2 py-0.5 rounded-md bg-[#0066FF]/15 border border-[#0066FF]/30">
-                Ready to Join
+              <span className="text-[11px] font-medium text-blue-400 px-2 py-0.5 rounded-md bg-blue-600/10 border border-blue-500/20">
+                Ready to join
               </span>
               {meetingInfo.waitingRoom && (
-                <Badge variant="orange">Waiting Room Enabled</Badge>
+                <Badge variant="orange">Waiting Room</Badge>
               )}
             </div>
-            <h2 className="text-2xl font-bold tracking-tight text-white">{meetingInfo.title}</h2>
-            <div className="flex items-center gap-2 text-xs text-slate-400">
-              <span className="font-mono text-slate-300">{meetingInfo.id}</span>
+            <h2 className="text-xl sm:text-2xl font-semibold tracking-tight text-white">{meetingInfo.title}</h2>
+            <div className="flex items-center gap-2 text-xs text-zinc-400">
+              <span className="font-mono text-zinc-300">{meetingInfo.id}</span>
               <span>•</span>
-              <span>Hosted by <strong className="text-white">{meetingInfo.hostName}</strong></span>
+              <span>Hosted by <strong className="text-zinc-200 font-medium">{meetingInfo.hostName}</strong></span>
             </div>
           </div>
 
-          <form onSubmit={handleJoin} className="space-y-4 pt-1">
+          <form onSubmit={handleJoin} className="space-y-4">
             {error && (
-              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/25 text-xs text-rose-300 font-medium flex items-center gap-2">
+              <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/25 text-xs text-rose-300 font-medium flex items-center gap-2">
                 <AlertCircle className="h-4 w-4 shrink-0" />
                 <span>{error}</span>
               </div>
@@ -298,7 +293,7 @@ export function PreJoinScreen({ meetingInfo, initialName = '', onJoinSuccess }: 
 
             <Input
               id="join-display-name"
-              label="Your Display Name"
+              label="Your name"
               placeholder="e.g. Alex Johnson"
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
@@ -309,7 +304,7 @@ export function PreJoinScreen({ meetingInfo, initialName = '', onJoinSuccess }: 
               <Input
                 id="join-passcode"
                 type="password"
-                label="Room Passcode"
+                label="Room passcode"
                 placeholder="Enter meeting password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -319,24 +314,23 @@ export function PreJoinScreen({ meetingInfo, initialName = '', onJoinSuccess }: 
 
             <Button
               type="submit"
-              variant="orange"
+              variant="primary"
               size="lg"
-              className="w-full text-sm sm:text-base font-semibold mt-2"
+              className="w-full h-11 text-sm font-semibold mt-1"
               isLoading={isJoining}
             >
-              {isHostUser ? 'Join Meeting as Host' : (meetingInfo.waitingRoom ? 'Ask to Join Meeting' : 'Join Meeting')}
+              {isHostUser ? 'Join as Host' : (meetingInfo.waitingRoom ? 'Ask to Join' : 'Join Meeting')}
               <ArrowRight className="h-4 w-4 ml-1" />
             </Button>
           </form>
 
           {meetingInfo.waitingRoom && (
-            <div className="pt-4 border-t border-white/[0.08] text-xs text-slate-400">
+            <div className="pt-4 border-t border-white/[0.06] text-xs text-zinc-400">
               <p className="text-[11px] text-amber-300/85">
-                Notice: The host has enabled a waiting room. You will be admitted once the host approves.
+                Waiting room is enabled. You will enter once the host admits you.
               </p>
             </div>
           )}
-          </div>
         </div>
       </div>
     </div>
