@@ -681,7 +681,7 @@ export default function AdminPanelPage() {
                         </span>
                       </div>
                       <p className="text-[11px] text-slate-400 mt-0.5">
-                        10,000 free mins/mo · No Card Required · Native MetroMeet UI
+                        Unlimited · No Minute Cap · Native MetroMeet UI
                       </p>
                     </div>
                   </div>
@@ -713,36 +713,29 @@ export default function AdminPanelPage() {
                   </button>
                 </div>
 
-                {/* Agora Monthly Usage Progress Bar */}
+                {/* Agora Monthly Usage (Unlimited / Open) */}
                 {(() => {
                   const q = data.usage?.quotas.agora;
                   const used = q?.usedMinutes ?? 0;
-                  const limit = q?.limitMinutes ?? 10000;
-                  const rem = q?.remainingMinutes ?? limit;
-                  const pct = Math.min(100, Math.round((used / limit) * 100));
                   return (
                     <div className="p-3 rounded-xl bg-black/30 border border-white/[0.07] space-y-2">
                       <div className="flex items-center justify-between text-[11px]">
                         <span className="text-slate-300 font-bold">
-                          Used: <span className="text-[#FFA033] font-mono">{used} min</span> / {limit.toLocaleString()} min
+                          Used: <span className="text-[#FFA033] font-mono">{used} min</span>
                         </span>
                         <span className="text-emerald-400 font-mono font-bold">
-                          {rem.toLocaleString()} min left
+                          ∞ Unlimited (Open)
                         </span>
                       </div>
                       <div className="h-2 w-full rounded-full bg-white/[0.08] overflow-hidden">
                         <div
-                          className={`h-full rounded-full transition-all duration-500 ${
-                            pct >= 85
-                              ? 'bg-gradient-to-r from-rose-500 to-amber-400'
-                              : 'bg-gradient-to-r from-[#FF7A00] to-[#FFB347]'
-                          }`}
-                          style={{ width: `${Math.max(used > 0 ? 3 : 0, pct)}%` }}
+                          className="h-full rounded-full bg-gradient-to-r from-[#FF7A00] to-[#FFB347] transition-all duration-500"
+                          style={{ width: used > 0 ? '100%' : '0%', opacity: used > 0 ? 0.65 : 0 }}
                         />
                       </div>
                       <div className="flex items-center justify-between text-[10px] text-slate-400">
                         <span>{q?.meetingsCount ?? 0} meetings this month ({data.usage?.monthKey || 'Current'})</span>
-                        <span className="font-mono font-bold text-slate-300">{pct}% used</span>
+                        <span className="font-mono font-bold text-emerald-400">No Limit</span>
                       </div>
                     </div>
                   );
