@@ -105,6 +105,16 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+/* Subtle Architectural Dot Matrix Backdrop (Light & Dark) */
+.bg-dot-matrix {
+  background-image: radial-gradient(rgba(15, 23, 42, 0.08) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.dark .bg-dot-matrix {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.065) 1px, transparent 1px);
+}
+
 /* Glowing text and borders */
 .text-glow-blue {
   text-shadow: 0 0 24px rgba(0, 102, 255, 0.6);

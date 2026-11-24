@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import { ToastProvider } from '@/components/ui/toast';
+import { SplashScreen } from '@/components/ui/splash-screen';
 import { PwaInstallBanner } from '@/components/ui/pwa-install-banner';
 import { SystemStatusOverlay } from '@/components/ui/system-status-overlay';
 import { ThemeProvider } from '@/components/theme/theme-provider';
@@ -75,6 +76,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen bg-[#f8fafc] dark:bg-[#09090b] text-slate-900 dark:text-zinc-100 antialiased selection:bg-blue-600 selection:text-white overscroll-none">
         <ThemeProvider>
+          <SplashScreen />
           <ToastProvider>
             <SystemStatusOverlay />
             {children}
