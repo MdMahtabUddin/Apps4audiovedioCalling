@@ -32,6 +32,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { BrandLogo } from '@/components/ui/brand-logo';
+import { ThemeToggle } from '@/components/theme/theme-provider';
 import { useToast } from '@/components/ui/toast';
 import type { RtcRoutingMode, SystemConfig } from '@/lib/admin/system-config';
 import type { MediaProviderType, ProviderUsageSummary } from '@/lib/admin/usage-tracker';
@@ -304,37 +305,38 @@ export default function AdminPanelPage() {
 
   if (needsAdminLogin) {
     return (
-      <div className="min-h-screen bg-[#050a14] text-white flex items-center justify-center p-4 relative overflow-hidden">
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[300px] bg-[#0066FF]/15 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-1/4 right-1/4 w-[360px] h-[240px] bg-[#FF7A00]/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="min-h-screen bg-[#f8fafc] dark:bg-[#09090b] text-slate-900 dark:text-zinc-100 flex items-center justify-center p-4 relative overflow-hidden transition-colors duration-200">
+        <div className="absolute inset-0 bg-dot-matrix [mask-image:radial-gradient(ellipse_65%_65%_at_50%_30%,#000_35%,transparent_100%)] pointer-events-none" />
+        <div className="absolute top-4 right-4 z-20">
+          <ThemeToggle />
+        </div>
 
-        <div className="w-full max-w-md space-y-6 relative z-10">
+        <div className="w-full max-w-[400px] space-y-6 relative z-10 animate-fade-up">
           <div className="flex flex-col items-center text-center space-y-2.5">
-            <BrandLogo size="lg" showTagline={true} href="/dashboard" />
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#0066FF]/15 border border-[#0066FF]/35 text-[#60A5FA] text-[11px] font-extrabold uppercase tracking-wider">
+            <BrandLogo size="md" showTagline={false} href="/dashboard" />
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-600/15 border border-blue-200 dark:border-blue-500/30 text-blue-700 dark:text-blue-400 text-[11px] font-semibold">
               <Shield className="h-3.5 w-3.5" />
-              Restricted Admin Portal
+              Restricted Admin Console
             </span>
           </div>
 
-          <div className="rounded-3xl bg-[#091224]/92 border border-white/12 shadow-2xl backdrop-blur-2xl overflow-hidden">
-            <div className="h-[3px] w-full bg-gradient-to-r from-[#0066FF] via-[#00A3FF] to-[#FF7A00]" />
+          <div className="rounded-2xl bg-white dark:bg-[#111114] border border-slate-200/90 dark:border-white/[0.08] shadow-xl shadow-slate-900/[0.06] dark:shadow-black/60 overflow-hidden">
             <form onSubmit={handleAdminLogin} className="p-6 space-y-4">
               <div>
-                <h1 className="text-lg font-extrabold text-white">Admin Sign In</h1>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Enter your administrator credentials to manage Primary &amp; Backup servers
+                <h1 className="text-lg font-semibold text-slate-950 dark:text-white">Admin Sign In</h1>
+                <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
+                  Authenticate to manage infrastructure, rooms, and platform policies
                 </p>
               </div>
 
               {loginError && (
-                <div className="p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-xs text-rose-300 font-semibold">
+                <div className="p-3 rounded-lg bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/25 text-xs text-rose-600 dark:text-rose-300 font-medium">
                   {loginError}
                 </div>
               )}
 
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-300 block">
+                <label className="text-xs font-medium text-slate-700 dark:text-zinc-300 block">
                   Admin Username
                 </label>
                 <input
@@ -344,12 +346,12 @@ export default function AdminPanelPage() {
                   placeholder="Enter admin username"
                   required
                   autoComplete="username"
-                  className="w-full rounded-xl bg-black/45 border border-white/12 px-3.5 py-2.5 text-sm text-white placeholder:text-slate-500 outline-none focus:border-[#00A3FF]"
+                  className="w-full h-10 rounded-lg bg-slate-50 dark:bg-[#09090b] border border-slate-200 dark:border-white/[0.1] px-3.5 text-sm text-slate-900 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-colors"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-300 block">
+                <label className="text-xs font-medium text-slate-700 dark:text-zinc-300 block">
                   Admin Password
                 </label>
                 <div className="relative">
@@ -360,12 +362,12 @@ export default function AdminPanelPage() {
                     placeholder="••••••••••••"
                     required
                     autoComplete="current-password"
-                    className="w-full rounded-xl bg-black/45 border border-white/12 px-3.5 py-2.5 pr-10 text-sm text-white placeholder:text-slate-500 outline-none focus:border-[#00A3FF]"
+                    className="w-full h-10 rounded-lg bg-slate-50 dark:bg-[#09090b] border border-slate-200 dark:border-white/[0.1] px-3.5 pr-10 text-sm text-slate-900 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-colors"
                   />
                   <button
                     type="button"
                     onClick={() => setShowAdminPassword((v) => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white cursor-pointer"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-zinc-500 hover:text-slate-700 dark:hover:text-white cursor-pointer"
                   >
                     {showAdminPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
@@ -375,14 +377,14 @@ export default function AdminPanelPage() {
               <button
                 type="submit"
                 disabled={loggingIn}
-                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-[#0066FF] to-[#00A3FF] hover:opacity-95 text-white text-sm font-extrabold shadow-lg shadow-[#0066FF]/30 transition-all cursor-pointer disabled:opacity-50"
+                className="w-full h-10 rounded-lg bg-blue-600 hover:bg-blue-700 dark:hover:bg-blue-500 text-white text-sm font-semibold shadow-sm shadow-blue-600/20 transition-colors cursor-pointer disabled:opacity-50"
               >
-                {loggingIn ? 'Verifying...' : 'Unlock Admin Panel'}
+                {loggingIn ? 'Verifying...' : 'Unlock Admin Console'}
               </button>
 
               <Link
                 href="/dashboard"
-                className="block text-center text-xs text-slate-400 hover:text-white pt-1"
+                className="block text-center text-xs text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white pt-1 transition-colors"
               >
                 ← Back to Dashboard
               </Link>
@@ -395,13 +397,13 @@ export default function AdminPanelPage() {
 
   if (loading || !data) {
     return (
-      <div className="min-h-screen bg-[#050a14] text-white flex items-center justify-center">
+      <div className="min-h-screen bg-[#f8fafc] dark:bg-[#09090b] text-slate-900 dark:text-white flex items-center justify-center transition-colors">
         <div className="flex flex-col items-center gap-3">
-          <div className="h-11 w-11 rounded-2xl bg-[#0066FF]/20 border border-[#0066FF]/40 flex items-center justify-center">
-            <Shield className="h-5 w-5 text-[#00A3FF] animate-pulse" />
+          <div className="h-10 w-10 rounded-xl bg-blue-600/10 border border-blue-500/25 flex items-center justify-center">
+            <Shield className="h-5 w-5 text-blue-600 dark:text-blue-400 animate-pulse" />
           </div>
-          <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
-            Loading Admin Control Center...
+          <p className="text-xs font-medium text-slate-500 dark:text-zinc-400">
+            Loading Admin Console...
           </p>
         </div>
       </div>
@@ -411,20 +413,14 @@ export default function AdminPanelPage() {
   const { config, infrastructure, stats } = data;
 
   return (
-    <div className="min-h-screen bg-[#050a14] text-slate-100 relative overflow-x-hidden">
-      {/* Subtle Brand Ambient Glow */}
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute -top-40 left-1/4 w-[520px] h-[320px] bg-[#0066FF]/12 rounded-full blur-[120px]" />
-        <div className="absolute bottom-0 right-1/4 w-[440px] h-[280px] bg-[#FF7A00]/8 rounded-full blur-[120px]" />
-      </div>
-
+    <div className="min-h-screen bg-[#f8fafc] dark:bg-[#09090b] text-slate-900 dark:text-zinc-100 relative overflow-x-hidden transition-colors duration-200">
       {/* Top Executive Admin Navbar */}
-      <header className="sticky top-0 z-40 border-b border-white/[0.08] bg-[#060d1c]/88 backdrop-blur-2xl">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-3">
+      <header className="sticky top-0 z-40 border-b border-slate-200/80 dark:border-white/[0.08] bg-white/85 dark:bg-[#09090b]/85 backdrop-blur-xl transition-colors">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <Link
               href="/dashboard"
-              className="h-9 w-9 rounded-full bg-white/[0.06] hover:bg-white/[0.14] border border-white/10 flex items-center justify-center text-slate-300 hover:text-white transition-all shrink-0"
+              className="h-9 w-9 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-slate-200 dark:border-white/[0.08] flex items-center justify-center text-slate-600 dark:text-zinc-300 hover:text-slate-950 dark:hover:text-white transition-colors shrink-0"
               title="Back to Dashboard"
             >
               <ArrowLeft className="h-4 w-4" />
@@ -432,33 +428,35 @@ export default function AdminPanelPage() {
             <div className="hidden sm:block">
               <BrandLogo size="sm" showTagline={false} href="/dashboard" />
             </div>
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#0066FF]/15 border border-[#0066FF]/35 text-[#60A5FA] text-[11px] font-extrabold tracking-wide">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 dark:bg-blue-600/15 border border-blue-200 dark:border-blue-500/30 text-blue-700 dark:text-blue-400 text-[11px] font-semibold">
               <Shield className="h-3.5 w-3.5" />
-              <span>Admin Panel</span>
+              <span>Admin Console</span>
             </span>
           </div>
 
           <div className="flex items-center gap-2">
+            <ThemeToggle />
+
             <button
               onClick={() => void fetchOverview(true)}
               disabled={refreshing}
-              className="h-9 px-3 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-xs font-bold text-slate-200 flex items-center gap-1.5 transition-all cursor-pointer"
+              className="h-9 px-3 rounded-lg bg-white hover:bg-slate-50 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-slate-200 dark:border-white/[0.1] text-xs font-medium text-slate-700 dark:text-zinc-200 flex items-center gap-1.5 transition-colors cursor-pointer"
             >
-              <RefreshCw className={`h-3.5 w-3.5 text-cyan-400 ${refreshing ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`h-3.5 w-3.5 text-blue-600 dark:text-blue-400 ${refreshing ? 'animate-spin' : ''}`} />
               <span className="hidden sm:inline">Refresh</span>
             </button>
 
             <button
               onClick={exportCsv}
-              className="h-9 px-3 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-xs font-bold text-slate-200 flex items-center gap-1.5 transition-all cursor-pointer"
+              className="h-9 px-3 rounded-lg bg-white hover:bg-slate-50 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-slate-200 dark:border-white/[0.1] text-xs font-medium text-slate-700 dark:text-zinc-200 flex items-center gap-1.5 transition-colors cursor-pointer"
             >
-              <Download className="h-3.5 w-3.5 text-[#FF7A00]" />
+              <Download className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
               <span className="hidden sm:inline">Export CSV</span>
             </button>
 
             <button
               onClick={handleAdminLogout}
-              className="h-9 px-3 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-xs font-bold text-rose-300 flex items-center gap-1.5 transition-all cursor-pointer"
+              className="h-9 px-3 rounded-lg bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/15 dark:hover:bg-rose-500/25 border border-rose-200 dark:border-rose-500/30 text-xs font-semibold text-rose-600 dark:text-rose-300 flex items-center gap-1.5 transition-colors cursor-pointer"
               title="Lock & Sign Out Admin Panel"
             >
               <LogOut className="h-3.5 w-3.5" />
@@ -468,71 +466,70 @@ export default function AdminPanelPage() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 relative z-10">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6 relative z-10">
         {/* 1. Platform KPI Overview Strip */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
-          <div className="p-4 sm:p-5 rounded-2xl bg-[#091224]/90 border border-white/[0.08] space-y-2">
-            <div className="flex items-center justify-between text-xs text-slate-400 font-semibold">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4 animate-fade-up">
+          <div className="p-4 sm:p-5 rounded-xl bg-white dark:bg-[#111114] border border-slate-200/90 dark:border-white/[0.08] shadow-xs dark:shadow-none space-y-2 glass-panel-hover">
+            <div className="flex items-center justify-between text-xs text-slate-500 dark:text-zinc-400 font-medium">
               <span>Total Users</span>
-              <Users className="h-4 w-4 text-[#00A3FF]" />
+              <Users className="h-4 w-4 text-blue-600 dark:text-blue-400" />
             </div>
-            <div className="text-2xl sm:text-3xl font-black text-white">{stats.totalUsers}</div>
-            <p className="text-[11px] text-slate-400">Registered accounts</p>
+            <div className="text-2xl sm:text-3xl font-semibold text-slate-950 dark:text-white tabular-nums">{stats.totalUsers}</div>
+            <p className="text-[11px] text-slate-500 dark:text-zinc-500">Registered accounts</p>
           </div>
 
-          <div className="p-4 sm:p-5 rounded-2xl bg-[#091224]/90 border border-emerald-500/20 space-y-2">
-            <div className="flex items-center justify-between text-xs text-slate-400 font-semibold">
+          <div className="p-4 sm:p-5 rounded-xl bg-white dark:bg-[#111114] border border-emerald-200 dark:border-emerald-500/25 shadow-xs dark:shadow-none space-y-2 glass-panel-hover">
+            <div className="flex items-center justify-between text-xs text-slate-500 dark:text-zinc-400 font-medium">
               <span>Live Active Rooms</span>
-              <Radio className="h-4 w-4 text-emerald-400 animate-pulse" />
+              <Radio className="h-4 w-4 text-emerald-500 animate-pulse" />
             </div>
-            <div className="text-2xl sm:text-3xl font-black text-emerald-400">
+            <div className="text-2xl sm:text-3xl font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums">
               {stats.activeMeetingsCount}
             </div>
-            <p className="text-[11px] text-slate-400">Running right now</p>
+            <p className="text-[11px] text-slate-500 dark:text-zinc-500">Running right now</p>
           </div>
 
-          <div className="p-4 sm:p-5 rounded-2xl bg-[#091224]/90 border border-white/[0.08] space-y-2">
-            <div className="flex items-center justify-between text-xs text-slate-400 font-semibold">
+          <div className="p-4 sm:p-5 rounded-xl bg-white dark:bg-[#111114] border border-slate-200/90 dark:border-white/[0.08] shadow-xs dark:shadow-none space-y-2 glass-panel-hover">
+            <div className="flex items-center justify-between text-xs text-slate-500 dark:text-zinc-400 font-medium">
               <span>Total Meetings</span>
-              <Video className="h-4 w-4 text-[#FF7A00]" />
+              <Video className="h-4 w-4 text-amber-600 dark:text-amber-400" />
             </div>
-            <div className="text-2xl sm:text-3xl font-black text-white">{stats.totalMeetings}</div>
-            <p className="text-[11px] text-slate-400">{stats.totalParticipants} total joins</p>
+            <div className="text-2xl sm:text-3xl font-semibold text-slate-950 dark:text-white tabular-nums">{stats.totalMeetings}</div>
+            <p className="text-[11px] text-slate-500 dark:text-zinc-500">{stats.totalParticipants} total joins</p>
           </div>
 
-          <div className="p-4 sm:p-5 rounded-2xl bg-[#091224]/90 border border-white/[0.08] space-y-2">
-            <div className="flex items-center justify-between text-xs text-slate-400 font-semibold">
+          <div className="p-4 sm:p-5 rounded-xl bg-white dark:bg-[#111114] border border-slate-200/90 dark:border-white/[0.08] shadow-xs dark:shadow-none space-y-2 glass-panel-hover">
+            <div className="flex items-center justify-between text-xs text-slate-500 dark:text-zinc-400 font-medium">
               <span>Environment</span>
-              <Database className="h-4 w-4 text-violet-400" />
+              <Database className="h-4 w-4 text-violet-600 dark:text-violet-400" />
             </div>
-            <div className="text-sm sm:text-base font-extrabold text-white truncate pt-1">
+            <div className="text-sm sm:text-base font-semibold text-slate-950 dark:text-white truncate pt-1">
               {infrastructure.databaseMode}
             </div>
-            <p className="text-[11px] text-slate-400 truncate">{infrastructure.environment}</p>
+            <p className="text-[11px] text-slate-500 dark:text-zinc-500 truncate">{infrastructure.environment}</p>
           </div>
         </div>
 
-        {/* 2. MULTI-PROVIDER INFRASTRUCTURE CONTROL CENTER (PRIMARY & BACKUP ON/OFF) */}
-        <section className="rounded-3xl bg-[#081122]/92 border border-[#0066FF]/25 shadow-2xl overflow-hidden">
-          <div className="h-[3px] w-full bg-gradient-to-r from-[#0066FF] via-[#00A3FF] to-[#FF7A00]" />
+        {/* 2. MULTI-PROVIDER INFRASTRUCTURE CONTROL CENTER */}
+        <section className="rounded-2xl bg-white dark:bg-[#111114] border border-slate-200/90 dark:border-white/[0.08] shadow-sm dark:shadow-none overflow-hidden animate-fade-up-1">
           <div className="p-5 sm:p-6 space-y-5">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-[#0066FF] to-[#00A3FF] text-white flex items-center justify-center shadow-lg shadow-[#0066FF]/30">
+                <div className="h-10 w-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs">
                   <Server className="h-5 w-5" />
                 </div>
                 <div>
-                  <h2 className="text-base sm:text-lg font-extrabold text-white tracking-tight">
+                  <h2 className="text-base sm:text-lg font-semibold text-slate-950 dark:text-white tracking-tight">
                     Voice &amp; Vedio Infrastructure Control
                   </h2>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-slate-500 dark:text-zinc-400">
                     Turn Primary (LiveKit) &amp; Backup (Agora) ON or OFF live without redeploying
                   </p>
                 </div>
               </div>
 
               {/* Active Route Status Pill */}
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/12 border border-emerald-500/30 text-[11px] font-bold text-emerald-300 self-start sm:self-auto">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-500/12 border border-emerald-200 dark:border-emerald-500/30 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 self-start sm:self-auto">
                 <Zap className="h-3.5 w-3.5 shrink-0" />
                 <span>Active Route: {effectiveRoutePreview}</span>
               </div>
@@ -542,37 +539,37 @@ export default function AdminPanelPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* PRIMARY: LiveKit Cloud */}
               <div
-                className={`p-5 rounded-2xl border transition-all space-y-4 ${
+                className={`p-5 rounded-xl border transition-all space-y-4 ${
                   config.primaryEnabled
-                    ? 'bg-[#0066FF]/[0.08] border-[#0066FF]/40 shadow-[0_0_24px_rgba(0,102,255,0.12)]'
-                    : 'bg-white/[0.02] border-white/10 opacity-80'
+                    ? 'bg-blue-50/60 dark:bg-blue-600/[0.08] border-blue-200 dark:border-blue-500/35'
+                    : 'bg-slate-50 dark:bg-white/[0.02] border-slate-200 dark:border-white/10 opacity-80'
                 }`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3">
                     <div
-                      className={`h-11 w-11 rounded-2xl flex items-center justify-center border ${
+                      className={`h-10 w-10 rounded-xl flex items-center justify-center border ${
                         config.primaryEnabled
-                          ? 'bg-[#0066FF]/20 border-[#00A3FF]/40 text-[#00A3FF]'
-                          : 'bg-white/5 border-white/10 text-slate-500'
+                          ? 'bg-blue-100 dark:bg-blue-600/20 border-blue-200 dark:border-blue-500/35 text-blue-600 dark:text-blue-400'
+                          : 'bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-400'
                       }`}
                     >
                       {config.primaryEnabled ? <Cloud className="h-5 w-5" /> : <CloudOff className="h-5 w-5" />}
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <h3 className="text-sm font-extrabold text-white">Primary — LiveKit Cloud</h3>
+                        <h3 className="text-sm font-semibold text-slate-950 dark:text-white">Primary — LiveKit</h3>
                         <span
-                          className={`px-2 py-0.5 rounded-full text-[9.5px] font-black uppercase ${
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase ${
                             config.primaryEnabled
-                              ? 'bg-emerald-500/20 text-emerald-300'
-                              : 'bg-rose-500/20 text-rose-300'
+                              ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'
+                              : 'bg-rose-100 dark:bg-rose-500/20 text-rose-700 dark:text-rose-300'
                           }`}
                         >
                           {config.primaryEnabled ? 'ON' : 'OFF'}
                         </span>
                       </div>
-                      <p className="text-[11px] text-slate-400 mt-0.5">
+                      <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5">
                         Unlimited · No Minute Cap · HD SFU Engine
                       </p>
                     </div>
@@ -586,20 +583,20 @@ export default function AdminPanelPage() {
                         { primaryEnabled: !config.primaryEnabled },
                         'primary',
                         !config.primaryEnabled
-                          ? 'Primary LiveKit Cloud turned ON'
-                          : 'Primary LiveKit Cloud turned OFF — traffic routed to Backup'
+                          ? 'Primary LiveKit turned ON'
+                          : 'Primary LiveKit turned OFF — traffic routed to Backup'
                       )
                     }
-                    className={`w-12 h-7 rounded-full transition-all relative cursor-pointer shrink-0 ${
+                    className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer shrink-0 ${
                       config.primaryEnabled
-                        ? 'bg-gradient-to-r from-[#0066FF] to-[#00A3FF] shadow-md shadow-[#0066FF]/40'
-                        : 'bg-slate-700'
+                        ? 'bg-blue-600'
+                        : 'bg-slate-300 dark:bg-zinc-700'
                     }`}
-                    title="Toggle Primary LiveKit Cloud"
+                    title="Toggle Primary LiveKit"
                   >
                     <span
-                      className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-all ${
-                        config.primaryEnabled ? 'left-6' : 'left-1'
+                      className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${
+                        config.primaryEnabled ? 'left-[22px]' : 'left-0.5'
                       }`}
                     />
                   </button>
@@ -610,16 +607,16 @@ export default function AdminPanelPage() {
                   const q = data.usage?.quotas.livekit;
                   const used = q?.usedMinutes ?? 0;
                   return (
-                    <div className="p-3 rounded-xl bg-black/30 border border-white/[0.07] space-y-2">
+                    <div className="p-3 rounded-lg bg-white dark:bg-[#09090b] border border-slate-200/80 dark:border-white/[0.07] space-y-2">
                       <div className="flex items-center justify-between text-[11px]">
-                        <span className="text-slate-300 font-bold">
-                          Used: <span className="text-cyan-300 font-mono">{used} min</span>
+                        <span className="text-slate-600 dark:text-zinc-300 font-semibold">
+                          Used: <span className="text-blue-600 dark:text-blue-400 font-mono">{used} min</span>
                         </span>
-                        <span className="text-emerald-400 font-mono font-bold">
+                        <span className="text-emerald-600 dark:text-emerald-400 font-mono font-semibold">
                           ∞ Unlimited (Open)
                         </span>
                       </div>
-                      <div className="h-2 w-full rounded-full bg-white/[0.08] overflow-hidden">
+                      <div className="h-1.5 w-full rounded-full bg-slate-200 dark:bg-white/[0.08] overflow-hidden">
                         <div
                           className="h-full rounded-full bg-gradient-to-r from-[#0066FF] to-[#00D2FF] transition-all duration-500"
                           style={{ width: used > 0 ? '100%' : '0%', opacity: used > 0 ? 0.65 : 0 }}
@@ -648,39 +645,39 @@ export default function AdminPanelPage() {
                 </div>
               </div>
 
-              {/* BACKUP: Agora Cloud (10,000 Free Mins/mo · No Card Required) */}
+              {/* BACKUP: Agora Cloud */}
               <div
-                className={`p-5 rounded-2xl border transition-all space-y-4 ${
+                className={`p-5 rounded-xl border transition-all space-y-4 ${
                   config.agoraEnabled
-                    ? 'bg-[#FF7A00]/[0.07] border-[#FF7A00]/35 shadow-[0_0_24px_rgba(255,122,0,0.1)]'
-                    : 'bg-white/[0.02] border-white/10 opacity-80'
+                    ? 'bg-amber-50/60 dark:bg-orange-500/[0.07] border-amber-200 dark:border-orange-500/30'
+                    : 'bg-slate-50 dark:bg-white/[0.02] border-slate-200 dark:border-white/10 opacity-80'
                 }`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3">
                     <div
-                      className={`h-11 w-11 rounded-2xl flex items-center justify-center border ${
+                      className={`h-10 w-10 rounded-xl flex items-center justify-center border ${
                         config.agoraEnabled
-                          ? 'bg-[#FF7A00]/20 border-[#FF7A00]/40 text-[#FFA033]'
-                          : 'bg-white/5 border-white/10 text-slate-500'
+                          ? 'bg-amber-100 dark:bg-orange-500/20 border-amber-200 dark:border-orange-500/35 text-amber-600 dark:text-orange-400'
+                          : 'bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-400'
                       }`}
                     >
                       {config.agoraEnabled ? <Cloud className="h-5 w-5" /> : <CloudOff className="h-5 w-5" />}
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <h3 className="text-sm font-extrabold text-white">Backup — Agora Cloud</h3>
+                        <h3 className="text-sm font-semibold text-slate-950 dark:text-white">Backup — Agora Cloud</h3>
                         <span
-                          className={`px-2 py-0.5 rounded-full text-[9.5px] font-black uppercase ${
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase ${
                             config.agoraEnabled
-                              ? 'bg-emerald-500/20 text-emerald-300'
-                              : 'bg-rose-500/20 text-rose-300'
+                              ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'
+                              : 'bg-rose-100 dark:bg-rose-500/20 text-rose-700 dark:text-rose-300'
                           }`}
                         >
                           {config.agoraEnabled ? 'ON' : 'OFF'}
                         </span>
                       </div>
-                      <p className="text-[11px] text-slate-400 mt-0.5">
+                      <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5">
                         Unlimited · No Minute Cap · Native MetroMeet UI
                       </p>
                     </div>
@@ -698,16 +695,16 @@ export default function AdminPanelPage() {
                           : 'Backup Agora Cloud turned OFF'
                       )
                     }
-                    className={`w-12 h-7 rounded-full transition-all relative cursor-pointer shrink-0 ${
+                    className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer shrink-0 ${
                       config.agoraEnabled
-                        ? 'bg-gradient-to-r from-[#FF7A00] to-[#FF4D2E] shadow-md shadow-[#FF7A00]/40'
-                        : 'bg-slate-700'
+                        ? 'bg-amber-500'
+                        : 'bg-slate-300 dark:bg-zinc-700'
                     }`}
                     title="Toggle Backup Agora Cloud"
                   >
                     <span
-                      className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-all ${
-                        config.agoraEnabled ? 'left-6' : 'left-1'
+                      className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${
+                        config.agoraEnabled ? 'left-[22px]' : 'left-0.5'
                       }`}
                     />
                   </button>
@@ -718,16 +715,16 @@ export default function AdminPanelPage() {
                   const q = data.usage?.quotas.agora;
                   const used = q?.usedMinutes ?? 0;
                   return (
-                    <div className="p-3 rounded-xl bg-black/30 border border-white/[0.07] space-y-2">
+                    <div className="p-3 rounded-lg bg-white dark:bg-[#09090b] border border-slate-200/80 dark:border-white/[0.07] space-y-2">
                       <div className="flex items-center justify-between text-[11px]">
-                        <span className="text-slate-300 font-bold">
-                          Used: <span className="text-[#FFA033] font-mono">{used} min</span>
+                        <span className="text-slate-600 dark:text-zinc-300 font-semibold">
+                          Used: <span className="text-amber-600 dark:text-orange-400 font-mono">{used} min</span>
                         </span>
-                        <span className="text-emerald-400 font-mono font-bold">
+                        <span className="text-emerald-600 dark:text-emerald-400 font-mono font-semibold">
                           ∞ Unlimited (Open)
                         </span>
                       </div>
-                      <div className="h-2 w-full rounded-full bg-white/[0.08] overflow-hidden">
+                      <div className="h-1.5 w-full rounded-full bg-slate-200 dark:bg-white/[0.08] overflow-hidden">
                         <div
                           className="h-full rounded-full bg-gradient-to-r from-[#FF7A00] to-[#FFB347] transition-all duration-500"
                           style={{ width: used > 0 ? '100%' : '0%', opacity: used > 0 ? 0.65 : 0 }}
@@ -828,18 +825,18 @@ export default function AdminPanelPage() {
         {/* 3. Platform Policy & Security Controls + Live Active Rooms */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left: Security & Policy Settings */}
-          <div className="rounded-3xl bg-[#091224]/90 border border-white/[0.08] p-5 space-y-4">
+          <div className="rounded-2xl bg-white dark:bg-[#111114] border border-slate-200/90 dark:border-white/[0.08] shadow-xs dark:shadow-none p-5 space-y-4">
             <div className="flex items-center gap-2.5">
-              <Shield className="h-4.5 w-4.5 text-[#00A3FF]" />
-              <h3 className="text-sm font-extrabold text-white">Security &amp; Room Policies</h3>
+              <Shield className="h-4.5 w-4.5 text-blue-600 dark:text-blue-400" />
+              <h3 className="text-sm font-semibold text-slate-950 dark:text-white">Security &amp; Room Policies</h3>
             </div>
 
             <div className="space-y-3">
               {/* Allow Guest Join */}
-              <div className="flex items-center justify-between gap-3 p-3 rounded-2xl bg-white/[0.03] border border-white/[0.06]">
+              <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200/70 dark:border-white/[0.06]">
                 <div>
-                  <p className="text-xs font-bold text-white">Allow Guest Join</p>
-                  <p className="text-[10.5px] text-slate-400">Let users join without login</p>
+                  <p className="text-xs font-semibold text-slate-900 dark:text-white">Allow Guest Join</p>
+                  <p className="text-[10.5px] text-slate-500 dark:text-zinc-400">Let users join without login</p>
                 </div>
                 <button
                   onClick={() =>
@@ -1058,25 +1055,25 @@ export default function AdminPanelPage() {
           </div>
 
           {/* Right 2 Columns: Live Active Rooms Monitor */}
-          <div className="lg:col-span-2 rounded-3xl bg-[#091224]/90 border border-white/[0.08] p-5 flex flex-col gap-4">
+          <div className="lg:col-span-2 rounded-2xl bg-white dark:bg-[#111114] border border-slate-200/90 dark:border-white/[0.08] shadow-xs dark:shadow-none p-5 flex flex-col gap-4">
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2.5">
-                <Activity className="h-4.5 w-4.5 text-emerald-400" />
-                <h3 className="text-sm font-extrabold text-white">
+                <Activity className="h-4.5 w-4.5 text-emerald-500" />
+                <h3 className="text-sm font-semibold text-slate-950 dark:text-white">
                   Live Active Rooms ({data.activeMeetings.length})
                 </h3>
               </div>
-              <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-400">
-                <Wifi className="h-3.5 w-3.5 text-emerald-400" />
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-slate-500 dark:text-zinc-400">
+                <Wifi className="h-3.5 w-3.5 text-emerald-500" />
                 Real-time Monitor
               </span>
             </div>
 
             {data.activeMeetings.length === 0 ? (
-              <div className="flex-1 flex flex-col items-center justify-center py-12 text-center border border-dashed border-white/10 rounded-2xl">
-                <Radio className="h-8 w-8 text-slate-600 mb-2" />
-                <p className="text-sm font-bold text-slate-300">No active meetings right now</p>
-                <p className="text-xs text-slate-500 mt-1">
+              <div className="flex-1 flex flex-col items-center justify-center py-12 text-center border border-dashed border-slate-200 dark:border-white/10 rounded-xl bg-slate-50/50 dark:bg-[#09090b]/50">
+                <Radio className="h-7 w-7 text-slate-400 dark:text-zinc-600 mb-2" />
+                <p className="text-sm font-semibold text-slate-700 dark:text-zinc-300">No active meetings right now</p>
+                <p className="text-xs text-slate-500 dark:text-zinc-500 mt-1">
                   Live rooms will appear here automatically with Force End &amp; Lock controls.
                 </p>
               </div>
@@ -1142,15 +1139,15 @@ export default function AdminPanelPage() {
         </div>
 
         {/* 4. Recent Meetings Log & Registered Users Directory */}
-        <section className="rounded-3xl bg-[#091224]/90 border border-white/[0.08] p-5 space-y-4">
+        <section className="rounded-2xl bg-white dark:bg-[#111114] border border-slate-200/90 dark:border-white/[0.08] shadow-xs dark:shadow-none p-5 space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setActiveDirectoryTab('meetings')}
-                className={`px-4 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 ${
+                className={`px-3.5 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5 ${
                   activeDirectoryTab === 'meetings'
-                    ? 'bg-[#0066FF] text-white shadow-md shadow-[#0066FF]/30'
-                    : 'bg-white/[0.05] text-slate-400 hover:text-white'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-slate-100 dark:bg-zinc-900 text-slate-600 dark:text-zinc-400 hover:text-slate-950 dark:hover:text-white'
                 }`}
               >
                 <CalendarDays className="h-3.5 w-3.5" />

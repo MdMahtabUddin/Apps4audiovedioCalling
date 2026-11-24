@@ -715,51 +715,107 @@ export default function DashboardPage() {
           </form>
         </div>
 
-        {/* 1. Clean Executive Workspace Header (Desktop) */}
-        <div className="hidden md:flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-6 border-b border-slate-200/90 dark:border-white/[0.08] animate-fade-up">
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/[0.08] text-[11px] font-medium text-slate-700 dark:text-zinc-300 shadow-xs">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                Workspace Online
-              </span>
-              {analytics.activeMeetings > 0 && (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-600/15 border border-blue-200 dark:border-blue-500/25 text-[11px] font-medium text-blue-700 dark:text-blue-400">
-                  {analytics.activeMeetings} Live Session{analytics.activeMeetings > 1 ? 's' : ''}
-                </span>
-              )}
+        {/* 1. Clean 2026 Executive Workspace Header + Unified Command Dock (Desktop) */}
+        <div className="hidden md:block relative overflow-hidden rounded-2xl border border-slate-200/90 dark:border-white/[0.08] bg-white dark:bg-[#111114] shadow-sm shadow-slate-900/[0.04] dark:shadow-none animate-fade-up">
+          <div className="absolute inset-0 bg-dot-matrix [mask-image:radial-gradient(ellipse_70%_70%_at_80%_20%,#000_30%,transparent_100%)] pointer-events-none" />
+
+          <div className="relative z-10 p-6 space-y-6">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-zinc-900 border border-slate-200 dark:border-white/[0.08] text-[11px] font-medium text-slate-700 dark:text-zinc-300">
+                    <span className="relative flex h-1.5 w-1.5">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                      <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
+                    </span>
+                    Workspace Online
+                  </span>
+                  {analytics.activeMeetings > 0 && (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-600/15 border border-blue-200 dark:border-blue-500/25 text-[11px] font-medium text-blue-700 dark:text-blue-400">
+                      {analytics.activeMeetings} Live Session{analytics.activeMeetings > 1 ? 's' : ''}
+                    </span>
+                  )}
+                </div>
+
+                <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-slate-950 dark:text-white">
+                  {greetingText}, {user?.name || 'Host'}
+                </h1>
+                <p className="text-sm text-slate-500 dark:text-zinc-400">
+                  Launch an instant HD conference, join via code, or review your team sessions.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3 shrink-0">
+                <ClockWidget />
+                <button
+                  onClick={handleExportHistoryCSV}
+                  className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg bg-slate-50 hover:bg-slate-100 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-slate-200 dark:border-white/[0.1] text-xs font-medium text-slate-700 dark:text-zinc-300 hover:text-slate-950 dark:hover:text-white transition-colors cursor-pointer"
+                  title="Download meeting history (CSV)"
+                >
+                  <Download className="h-3.5 w-3.5 text-slate-400 dark:text-zinc-400" />
+                  <span>Export CSV</span>
+                </button>
+              </div>
             </div>
 
-            <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-slate-950 dark:text-white">
-              {greetingText}, {user?.name || 'Host'}
-            </h1>
-            <p className="text-sm text-slate-500 dark:text-zinc-400">
-              Start an instant room, join by code, or manage your meeting schedule.
-            </p>
-          </div>
+            {/* Unified 2026 Command Dock */}
+            <div className="pt-5 border-t border-slate-200/80 dark:border-white/[0.07] flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-2.5">
+                <button
+                  onClick={() => setIsNewMeetingOpen(true)}
+                  className="inline-flex items-center gap-2 h-10 px-4.5 rounded-xl bg-blue-600 hover:bg-blue-700 dark:hover:bg-blue-500 text-white text-xs sm:text-sm font-semibold shadow-sm shadow-blue-600/25 transition-all active:scale-[0.98] cursor-pointer"
+                >
+                  <Video className="h-4 w-4" />
+                  <span>New Meeting</span>
+                </button>
 
-          <div className="flex items-center gap-3 shrink-0">
-            <ClockWidget />
-            <button
-              onClick={handleExportHistoryCSV}
-              className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg bg-white hover:bg-slate-50 dark:bg-[#111114] dark:hover:bg-zinc-900 border border-slate-200 dark:border-white/[0.1] text-xs font-medium text-slate-700 dark:text-zinc-300 hover:text-slate-950 dark:hover:text-white transition-colors cursor-pointer shadow-xs"
-              title="Download meeting history (CSV)"
-            >
-              <Download className="h-3.5 w-3.5 text-slate-400 dark:text-zinc-400" />
-              <span>Export CSV</span>
-            </button>
+                <button
+                  onClick={() => setIsScheduleOpen(true)}
+                  className="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-slate-100 hover:bg-slate-200/80 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-slate-200/80 dark:border-white/[0.08] text-slate-800 dark:text-zinc-200 text-xs sm:text-sm font-medium transition-colors cursor-pointer"
+                >
+                  <Calendar className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  <span>Schedule</span>
+                </button>
+
+                <button
+                  onClick={() => setIsSettingsOpen(true)}
+                  className="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-slate-100 hover:bg-slate-200/80 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-slate-200/80 dark:border-white/[0.08] text-slate-800 dark:text-zinc-200 text-xs sm:text-sm font-medium transition-colors cursor-pointer"
+                >
+                  <Camera className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                  <span>Device Studio</span>
+                </button>
+              </div>
+
+              <form onSubmit={handleInlineJoin} className="flex items-center gap-2 lg:max-w-sm w-full">
+                <div className="relative flex-1">
+                  <LogIn className="h-3.5 w-3.5 text-slate-400 dark:text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <input
+                    type="text"
+                    placeholder="Enter room code or link..."
+                    value={inlineCode}
+                    onChange={(e) => setInlineCode(e.target.value)}
+                    className="w-full h-10 bg-slate-50 dark:bg-[#09090b] border border-slate-200 dark:border-white/[0.1] rounded-xl pl-9 pr-3 text-xs sm:text-sm text-slate-900 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-colors font-mono"
+                  />
+                </div>
+                <Button size="md" variant="orange" type="submit" disabled={!inlineCode.trim()} className="h-10 rounded-xl px-4 shrink-0">
+                  Join
+                </Button>
+              </form>
+            </div>
           </div>
         </div>
 
         {/* 2. Clean 4-Column KPI Strip (Desktop) */}
         <div className="hidden md:grid grid-cols-2 lg:grid-cols-4 gap-4 animate-fade-up-1">
-          <div className="p-5 rounded-xl bg-white dark:bg-[#111114] border border-slate-200/90 dark:border-white/[0.08] shadow-xs dark:shadow-none flex flex-col justify-between gap-3">
+          <div className="p-4 sm:p-5 rounded-xl bg-white dark:bg-[#111114] border border-slate-200/90 dark:border-white/[0.08] shadow-xs dark:shadow-none flex flex-col justify-between gap-3 glass-panel-hover">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium text-slate-500 dark:text-zinc-400">Total Meetings</span>
-              <Video className="h-4 w-4 text-slate-400 dark:text-zinc-500" />
+              <div className="h-8 w-8 rounded-lg bg-blue-50 dark:bg-blue-600/10 border border-blue-200/70 dark:border-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                <Video className="h-4 w-4" />
+              </div>
             </div>
             <div>
-              <div className="text-2xl font-semibold text-slate-950 dark:text-white tracking-tight">
+              <div className="text-2xl font-semibold text-slate-950 dark:text-white tracking-tight tabular-nums">
                 {analytics.totalMeetings}
               </div>
               <p className="text-xs text-slate-500 dark:text-zinc-500 mt-1">
@@ -768,13 +824,15 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="p-5 rounded-xl bg-white dark:bg-[#111114] border border-slate-200/90 dark:border-white/[0.08] shadow-xs dark:shadow-none flex flex-col justify-between gap-3">
+          <div className="p-4 sm:p-5 rounded-xl bg-white dark:bg-[#111114] border border-slate-200/90 dark:border-white/[0.08] shadow-xs dark:shadow-none flex flex-col justify-between gap-3 glass-panel-hover">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium text-slate-500 dark:text-zinc-400">Total Talk Time</span>
-              <Timer className="h-4 w-4 text-slate-400 dark:text-zinc-500" />
+              <div className="h-8 w-8 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200/70 dark:border-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+                <Timer className="h-4 w-4" />
+              </div>
             </div>
             <div>
-              <div className="text-2xl font-semibold text-slate-950 dark:text-white tracking-tight">
+              <div className="text-2xl font-semibold text-slate-950 dark:text-white tracking-tight tabular-nums">
                 {analytics.formattedTotalTime}
               </div>
               <p className="text-xs text-slate-500 dark:text-zinc-500 mt-1">
@@ -783,13 +841,15 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="p-5 rounded-xl bg-white dark:bg-[#111114] border border-slate-200/90 dark:border-white/[0.08] shadow-xs dark:shadow-none flex flex-col justify-between gap-3">
+          <div className="p-4 sm:p-5 rounded-xl bg-white dark:bg-[#111114] border border-slate-200/90 dark:border-white/[0.08] shadow-xs dark:shadow-none flex flex-col justify-between gap-3 glass-panel-hover">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium text-slate-500 dark:text-zinc-400">Total Attendees</span>
-              <Users className="h-4 w-4 text-slate-400 dark:text-zinc-500" />
+              <div className="h-8 w-8 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200/70 dark:border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                <Users className="h-4 w-4" />
+              </div>
             </div>
             <div>
-              <div className="text-2xl font-semibold text-slate-950 dark:text-white tracking-tight">
+              <div className="text-2xl font-semibold text-slate-950 dark:text-white tracking-tight tabular-nums">
                 {analytics.totalParticipants}
               </div>
               <p className="text-xs text-slate-500 dark:text-zinc-500 mt-1">
@@ -798,13 +858,15 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="p-5 rounded-xl bg-white dark:bg-[#111114] border border-slate-200/90 dark:border-white/[0.08] shadow-xs dark:shadow-none flex flex-col justify-between gap-3">
+          <div className="p-4 sm:p-5 rounded-xl bg-white dark:bg-[#111114] border border-slate-200/90 dark:border-white/[0.08] shadow-xs dark:shadow-none flex flex-col justify-between gap-3 glass-panel-hover">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium text-slate-500 dark:text-zinc-400">Scheduled</span>
-              <CalendarDays className="h-4 w-4 text-slate-400 dark:text-zinc-500" />
+              <div className="h-8 w-8 rounded-lg bg-violet-50 dark:bg-violet-500/10 border border-violet-200/70 dark:border-violet-500/20 text-violet-600 dark:text-violet-400 flex items-center justify-center">
+                <CalendarDays className="h-4 w-4" />
+              </div>
             </div>
             <div>
-              <div className="text-2xl font-semibold text-slate-950 dark:text-white tracking-tight">
+              <div className="text-2xl font-semibold text-slate-950 dark:text-white tracking-tight tabular-nums">
                 {scheduledMeetings.length}
               </div>
               <p className="text-xs text-slate-500 dark:text-zinc-500 mt-1 truncate">
@@ -814,99 +876,6 @@ export default function DashboardPage() {
               </p>
             </div>
           </div>
-        </div>
-
-        {/* 3. Clean Quick Actions Row (Desktop) */}
-        <div className="hidden md:grid grid-cols-2 lg:grid-cols-4 gap-4 animate-fade-up-2">
-          <button
-            onClick={() => setIsNewMeetingOpen(true)}
-            className="group text-left p-5 rounded-xl bg-blue-600 hover:bg-blue-700 dark:hover:bg-blue-500 shadow-sm shadow-blue-600/20 transition-all duration-200 hover:-translate-y-0.5 cursor-pointer flex flex-col justify-between h-32"
-          >
-            <div className="h-9 w-9 rounded-lg bg-white/15 text-white flex items-center justify-center">
-              <Video className="h-4.5 w-4.5" />
-            </div>
-            <div>
-              <h3 className="text-sm font-semibold text-white flex items-center justify-between">
-                <span>New Meeting</span>
-                <ArrowRight className="h-4 w-4 opacity-80 group-hover:translate-x-0.5 transition-transform" />
-              </h3>
-              <p className="text-xs text-blue-100/85 mt-0.5">Start an instant HD room</p>
-            </div>
-          </button>
-
-          <button
-            onClick={() => setIsJoinMeetingOpen(true)}
-            className="group text-left p-5 rounded-xl bg-white dark:bg-[#111114] hover:bg-slate-50 dark:hover:bg-[#16161a] border border-slate-200/90 dark:border-white/[0.08] hover:border-slate-300 dark:hover:border-white/[0.16] shadow-xs dark:shadow-none transition-all duration-200 hover:-translate-y-0.5 cursor-pointer flex flex-col justify-between h-32"
-          >
-            <div className="h-9 w-9 rounded-lg bg-slate-100 dark:bg-zinc-900 border border-slate-200/80 dark:border-white/[0.08] text-slate-700 dark:text-zinc-200 flex items-center justify-center">
-              <LogIn className="h-4.5 w-4.5" />
-            </div>
-            <div>
-              <h3 className="text-sm font-semibold text-slate-900 dark:text-white flex items-center justify-between">
-                <span>Join Meeting</span>
-                <ArrowRight className="h-4 w-4 text-slate-400 dark:text-zinc-500 group-hover:text-slate-900 dark:group-hover:text-white group-hover:translate-x-0.5 transition-all" />
-              </h3>
-              <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">Connect via code or link</p>
-            </div>
-          </button>
-
-          <button
-            onClick={() => setIsScheduleOpen(true)}
-            className="group text-left p-5 rounded-xl bg-white dark:bg-[#111114] hover:bg-slate-50 dark:hover:bg-[#16161a] border border-slate-200/90 dark:border-white/[0.08] hover:border-slate-300 dark:hover:border-white/[0.16] shadow-xs dark:shadow-none transition-all duration-200 hover:-translate-y-0.5 cursor-pointer flex flex-col justify-between h-32"
-          >
-            <div className="h-9 w-9 rounded-lg bg-slate-100 dark:bg-zinc-900 border border-slate-200/80 dark:border-white/[0.08] text-slate-700 dark:text-zinc-200 flex items-center justify-center">
-              <Calendar className="h-4.5 w-4.5" />
-            </div>
-            <div>
-              <h3 className="text-sm font-semibold text-slate-900 dark:text-white flex items-center justify-between">
-                <span>Schedule Call</span>
-                <ArrowRight className="h-4 w-4 text-slate-400 dark:text-zinc-500 group-hover:text-slate-900 dark:group-hover:text-white group-hover:translate-x-0.5 transition-all" />
-              </h3>
-              <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">Plan upcoming sessions</p>
-            </div>
-          </button>
-
-          <button
-            onClick={() => setIsSettingsOpen(true)}
-            className="group text-left p-5 rounded-xl bg-white dark:bg-[#111114] hover:bg-slate-50 dark:hover:bg-[#16161a] border border-slate-200/90 dark:border-white/[0.08] hover:border-slate-300 dark:hover:border-white/[0.16] shadow-xs dark:shadow-none transition-all duration-200 hover:-translate-y-0.5 cursor-pointer flex flex-col justify-between h-32"
-          >
-            <div className="h-9 w-9 rounded-lg bg-slate-100 dark:bg-zinc-900 border border-slate-200/80 dark:border-white/[0.08] text-slate-700 dark:text-zinc-200 flex items-center justify-center">
-              <Camera className="h-4.5 w-4.5" />
-            </div>
-            <div>
-              <h3 className="text-sm font-semibold text-slate-900 dark:text-white flex items-center justify-between">
-                <span>Device Studio</span>
-                <ArrowRight className="h-4 w-4 text-slate-400 dark:text-zinc-500 group-hover:text-slate-900 dark:group-hover:text-white group-hover:translate-x-0.5 transition-all" />
-              </h3>
-              <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">Test mic &amp; HD camera</p>
-            </div>
-          </button>
-        </div>
-
-        {/* 4. Clean Quick Meeting Code Bar (Desktop) */}
-        <div className="hidden md:flex p-4 rounded-xl bg-white dark:bg-[#111114] border border-slate-200/90 dark:border-white/[0.08] shadow-xs dark:shadow-none items-center justify-between gap-4 animate-fade-up-3">
-          <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-lg bg-slate-100 dark:bg-zinc-900 border border-slate-200/80 dark:border-white/[0.08] text-slate-600 dark:text-zinc-300 flex items-center justify-center shrink-0">
-              <LogIn className="h-4 w-4" />
-            </div>
-            <div>
-              <h4 className="text-sm font-semibold text-slate-900 dark:text-white">Join with a code</h4>
-              <p className="text-xs text-slate-500 dark:text-zinc-400">Paste a room code or invite URL to connect immediately</p>
-            </div>
-          </div>
-
-          <form onSubmit={handleInlineJoin} className="flex items-center gap-2 max-w-md w-full">
-            <input
-              type="text"
-              placeholder="e.g. abc-defg-hij or full link"
-              value={inlineCode}
-              onChange={(e) => setInlineCode(e.target.value)}
-              className="flex-1 h-10 bg-slate-50 dark:bg-[#09090b] border border-slate-200 dark:border-white/[0.1] rounded-lg px-3.5 text-sm text-slate-900 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-colors font-mono"
-            />
-            <Button size="md" type="submit" disabled={!inlineCode.trim()}>
-              Join Room
-            </Button>
-          </form>
         </div>
 
         {/* 5. Main Content Grid: Meeting History & Sidebar */}
