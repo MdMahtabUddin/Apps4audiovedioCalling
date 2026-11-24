@@ -154,15 +154,6 @@ export function Navbar({ user, onOpenSettings, onQuickNewMeeting }: NavbarProps)
                         </button>
                       )}
 
-                      <Link
-                        href="/admin"
-                        onClick={() => setDropdownOpen(false)}
-                        className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg transition-colors mt-0.5 cursor-pointer font-medium"
-                      >
-                        <Shield className="h-4 w-4" />
-                        Admin Panel
-                      </Link>
-
                       <button
                         onClick={handleLogout}
                         disabled={isLoggingOut}

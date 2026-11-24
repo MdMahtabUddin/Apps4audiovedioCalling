@@ -116,14 +116,6 @@ export function SystemStatusOverlay() {
                 <RefreshCw className={`h-3.5 w-3.5 ${checking ? 'animate-spin' : ''}`} />
                 <span>{checking ? 'Checking Status...' : 'Check Live Status'}</span>
               </button>
-
-              <Link
-                href="/admin"
-                className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-slate-300 hover:text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-all"
-              >
-                <Shield className="h-3.5 w-3.5 text-cyan-400" />
-                <span>Admin Login</span>
-              </Link>
             </div>
           </div>
         </div>

@@ -198,18 +198,10 @@ export default function LoginPage() {
             </form>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500 dark:text-zinc-400 px-1">
-            <div>
-              New here?{' '}
-              <Link href="/register" className="font-semibold text-slate-900 dark:text-white hover:underline underline-offset-4">
-                Create account
-              </Link>
-            </div>
-            <Link
-              href="/admin"
-              className="text-slate-500 dark:text-zinc-500 hover:text-slate-900 dark:hover:text-zinc-200 font-medium transition-colors"
-            >
-              Admin Portal →
+          <div className="text-center text-xs text-slate-500 dark:text-zinc-400 px-1">
+            New here?{' '}
+            <Link href="/register" className="font-semibold text-slate-900 dark:text-white hover:underline underline-offset-4">
+              Create account
             </Link>
           </div>
         </div>

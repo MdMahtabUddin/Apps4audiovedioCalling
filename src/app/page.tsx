@@ -513,7 +513,6 @@ export default function HomePage() {
           <div className="flex items-center gap-6 text-xs text-slate-500 dark:text-zinc-500">
             <Link href="/login" className="hover:text-slate-900 dark:hover:text-zinc-200 transition-colors">Sign in</Link>
             <Link href="/register" className="hover:text-slate-900 dark:hover:text-zinc-200 transition-colors">Create account</Link>
-            <Link href="/admin" className="hover:text-slate-900 dark:hover:text-zinc-200 transition-colors">Admin</Link>
           </div>
         </div>
       </footer>
