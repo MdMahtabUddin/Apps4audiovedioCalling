@@ -14,14 +14,14 @@ export function Badge({
   ...props
 }: BadgeProps) {
   const variants = {
-    default: 'bg-gray-800 text-gray-300 border-gray-700/60',
-    success: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-    warning: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-    danger: 'bg-red-500/10 text-red-400 border-red-500/20',
-    indigo: 'bg-[#0066FF]/15 text-[#388BFF] border-[#0066FF]/30',
-    blue: 'bg-[#0066FF]/15 text-[#388BFF] border-[#0066FF]/30',
-    orange: 'bg-[#FF7A00]/15 text-[#FFA033] border-[#FF7A00]/30',
-    outline: 'bg-transparent text-gray-300 border-gray-700',
+    default: 'bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 border-slate-200 dark:border-zinc-700/60',
+    success: 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20',
+    warning: 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-500/20',
+    danger: 'bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-200 dark:border-rose-500/20',
+    indigo: 'bg-blue-50 dark:bg-blue-600/15 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-500/30',
+    blue: 'bg-blue-50 dark:bg-blue-600/15 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-500/30',
+    orange: 'bg-orange-50 dark:bg-orange-500/15 text-orange-700 dark:text-orange-400 border-orange-200 dark:border-orange-500/30',
+    outline: 'bg-transparent text-slate-700 dark:text-zinc-300 border-slate-300 dark:border-zinc-700',
   };
 
   const dotColors = {
