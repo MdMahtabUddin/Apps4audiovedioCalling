@@ -2,32 +2,31 @@ import type { Metadata, Viewport } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import { ToastProvider } from '@/components/ui/toast';
-import { SplashScreen } from '@/components/ui/splash-screen';
 import { PwaInstallBanner } from '@/components/ui/pwa-install-banner';
 import { SystemStatusOverlay } from '@/components/ui/system-status-overlay';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
   subsets: ['latin'],
+  display: 'swap',
 });
 
 const geistMono = Geist_Mono({
   variable: '--font-geist-mono',
   subsets: ['latin'],
+  display: 'swap',
 });
 
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
   viewportFit: 'cover',
-  themeColor: '#050a14',
+  themeColor: '#09090b',
 };
 
 export const metadata: Metadata = {
-  title: 'MetroMeet — Enterprise Vedio Infrastructure by MetroNet',
-  description: 'Ultra low-latency vedio conferencing platform powered by MetroNet optical backbone network with WebRTC mesh, waiting room security, and crystal-clear Opus audio.',
+  title: 'MetroMeet — Enterprise Vedio Conferencing',
+  description: 'Fast, secure, high-definition vedio conferencing with studio voice clarity and self-hosted reliability.',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
@@ -47,8 +46,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} dark`}>
-      <body className="min-h-screen bg-[#050a14] text-gray-100 antialiased selection:bg-[#0066FF] selection:text-white overscroll-none">
-        <SplashScreen />
+      <body className="min-h-screen bg-[#09090b] text-zinc-100 antialiased selection:bg-blue-600 selection:text-white overscroll-none">
         <ToastProvider>
           <SystemStatusOverlay />
           {children}

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, use } from 'react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Video, AlertCircle, ArrowLeft, Lock, Calendar, ShieldAlert } from 'lucide-react';
@@ -8,13 +9,29 @@ import { Button } from '@/components/ui/button';
 import { MeetingProvider, useMeeting } from '@/lib/meeting/meeting-provider';
 import { VideoProvider } from '@/lib/webrtc/video-provider';
 import { PreJoinScreen } from '@/components/meeting/pre-join-screen';
-import { WaitingRoomScreen } from '@/components/meeting/waiting-room-screen';
-import { MeetingRoomView } from '@/components/meeting/meeting-room-view';
-import { LiveKitMeetingStage } from '@/components/meeting/livekit-meeting-stage';
-import { AgoraBackupStage } from '@/components/meeting/agora-backup-stage';
-import { DailyBackupStage } from '@/components/meeting/daily-backup-stage';
 import { MeetingValidationResponse, UserProfile } from '@/types';
 import { generateMeetingId } from '@/lib/utils';
+
+const WaitingRoomScreen = dynamic(
+  () => import('@/components/meeting/waiting-room-screen').then((m) => m.WaitingRoomScreen),
+  { ssr: false }
+);
+const LiveKitMeetingStage = dynamic(
+  () => import('@/components/meeting/livekit-meeting-stage').then((m) => m.LiveKitMeetingStage),
+  { ssr: false }
+);
+const AgoraBackupStage = dynamic(
+  () => import('@/components/meeting/agora-backup-stage').then((m) => m.AgoraBackupStage),
+  { ssr: false }
+);
+const DailyBackupStage = dynamic(
+  () => import('@/components/meeting/daily-backup-stage').then((m) => m.DailyBackupStage),
+  { ssr: false }
+);
+const MeetingRoomView = dynamic(
+  () => import('@/components/meeting/meeting-room-view').then((m) => m.MeetingRoomView),
+  { ssr: false }
+);
 
 function MeetingContainer({ meetingId }: { meetingId: string }) {
   const router = useRouter();

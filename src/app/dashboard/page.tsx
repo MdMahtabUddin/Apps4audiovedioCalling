@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import {
   Video,
@@ -42,13 +43,26 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ClockWidget } from '@/components/dashboard/clock-widget';
-import { NewMeetingModal } from '@/components/dashboard/new-meeting-modal';
-import { JoinMeetingModal } from '@/components/dashboard/join-meeting-modal';
-import { ScheduleMeetingModal } from '@/components/dashboard/schedule-meeting-modal';
-import { SettingsModal } from '@/components/dashboard/settings-modal';
 import { useToast } from '@/components/ui/toast';
 import { UserProfile, MeetingItem, ScheduledMeetingItem } from '@/types';
 import { generateMeetingId } from '@/lib/utils';
+
+const NewMeetingModal = dynamic(
+  () => import('@/components/dashboard/new-meeting-modal').then((m) => m.NewMeetingModal),
+  { ssr: false }
+);
+const JoinMeetingModal = dynamic(
+  () => import('@/components/dashboard/join-meeting-modal').then((m) => m.JoinMeetingModal),
+  { ssr: false }
+);
+const ScheduleMeetingModal = dynamic(
+  () => import('@/components/dashboard/schedule-meeting-modal').then((m) => m.ScheduleMeetingModal),
+  { ssr: false }
+);
+const SettingsModal = dynamic(
+  () => import('@/components/dashboard/settings-modal').then((m) => m.SettingsModal),
+  { ssr: false }
+);
 
 type HistoryFilter = 'all' | 'active' | 'completed';
 type HistorySort = 'newest' | 'longest' | 'participants';
@@ -228,28 +242,19 @@ export default function DashboardPage() {
   const [isScheduleOpen, setIsScheduleOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-  // Live ticker for active meeting duration updates
+  // Live ticker only runs when at least one meeting is actively live (zero idle CPU re-renders)
+  const hasLiveMeeting = useMemo(() => recentMeetings.some((m) => m.isLive), [recentMeetings]);
   useEffect(() => {
+    if (!hasLiveMeeting) return;
     const timer = setInterval(() => setNowMs(Date.now()), 10000);
     return () => clearInterval(timer);
-  }, []);
+  }, [hasLiveMeeting]);
 
-  // Load local scratchpad & inspect connected media hardware count
+  // Load local scratchpad if saved
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const savedNotes = localStorage.getItem('metromeet_dashboard_scratchpad');
       if (savedNotes) setScratchpad(savedNotes);
-
-      if (navigator.mediaDevices?.enumerateDevices) {
-        navigator.mediaDevices
-          .enumerateDevices()
-          .then((devices) => {
-            const audio = devices.filter((d) => d.kind === 'audioinput').length || 1;
-            const video = devices.filter((d) => d.kind === 'videoinput').length || 1;
-            setDeviceCount({ audio, video });
-          })
-          .catch(() => {});
-      }
     }
   }, []);
 
@@ -1576,53 +1581,59 @@ export default function DashboardPage() {
           </button>
 
           {/* Center Floating Native Action Button: New Meeting */}
-          <div className="flex flex-col items-center -mt-6">
+          <div className="flex flex-col items-center -mt-5">
             <button
               onClick={() => setIsNewMeetingOpen(true)}
-              className="h-13 w-13 rounded-2xl bg-gradient-to-br from-[#0066FF] via-[#0088FF] to-[#FF7A00] text-white flex items-center justify-center shadow-[0_8px_24px_rgba(0,102,255,0.5)] border-2 border-[#060d1d] active:scale-95 transition-transform cursor-pointer"
+              className="h-12 w-12 rounded-xl bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center shadow-lg shadow-blue-600/30 border border-white/15 active:scale-95 transition-transform cursor-pointer"
               title="New Meeting"
             >
-              <Plus className="h-6 w-6" strokeWidth={2.6} />
+              <Plus className="h-6 w-6" strokeWidth={2.4} />
             </button>
-            <span className="text-[10px] font-bold text-white mt-1">New</span>
+            <span className="text-[10px] font-semibold text-zinc-200 mt-1">New</span>
           </div>
 
           <button
             onClick={() => setIsScheduleOpen(true)}
             className={`flex flex-col items-center gap-1 py-1 rounded-xl transition-colors cursor-pointer ${
-              activeTab === 'upcoming' ? 'text-[#00A3FF]' : 'text-slate-400 active:text-white'
+              activeTab === 'upcoming' ? 'text-blue-400' : 'text-zinc-400 active:text-white'
             }`}
           >
-            <Calendar className="h-5 w-5" strokeWidth={activeTab === 'upcoming' ? 2.3 : 1.8} />
-            <span className="text-[10px] font-semibold">Schedule</span>
+            <Calendar className="h-5 w-5" strokeWidth={activeTab === 'upcoming' ? 2.2 : 1.8} />
+            <span className="text-[10px] font-medium">Schedule</span>
           </button>
 
           <button
             onClick={() => setIsSettingsOpen(true)}
-            className="flex flex-col items-center gap-1 py-1 rounded-xl text-slate-400 active:text-white transition-colors cursor-pointer"
+            className="flex flex-col items-center gap-1 py-1 rounded-xl text-zinc-400 active:text-white transition-colors cursor-pointer"
           >
             <Settings className="h-5 w-5" strokeWidth={1.8} />
-            <span className="text-[10px] font-semibold">Settings</span>
+            <span className="text-[10px] font-medium">Settings</span>
           </button>
         </div>
       </nav>
 
-      {/* Modals */}
-      <NewMeetingModal
-        isOpen={isNewMeetingOpen}
-        onClose={() => setIsNewMeetingOpen(false)}
-        onMeetingCreated={fetchDashboardData}
-      />
-      <JoinMeetingModal
-        isOpen={isJoinMeetingOpen}
-        onClose={() => setIsJoinMeetingOpen(false)}
-      />
-      <ScheduleMeetingModal
-        isOpen={isScheduleOpen}
-        onClose={() => setIsScheduleOpen(false)}
-        onScheduled={fetchDashboardData}
-      />
-      {user && (
+      {/* Lazy-Loaded Modals (only downloaded & mounted when opened) */}
+      {isNewMeetingOpen && (
+        <NewMeetingModal
+          isOpen={isNewMeetingOpen}
+          onClose={() => setIsNewMeetingOpen(false)}
+          onMeetingCreated={fetchDashboardData}
+        />
+      )}
+      {isJoinMeetingOpen && (
+        <JoinMeetingModal
+          isOpen={isJoinMeetingOpen}
+          onClose={() => setIsJoinMeetingOpen(false)}
+        />
+      )}
+      {isScheduleOpen && (
+        <ScheduleMeetingModal
+          isOpen={isScheduleOpen}
+          onClose={() => setIsScheduleOpen(false)}
+          onScheduled={fetchDashboardData}
+        />
+      )}
+      {user && isSettingsOpen && (
         <SettingsModal
           isOpen={isSettingsOpen}
           onClose={() => setIsSettingsOpen(false)}
