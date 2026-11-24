@@ -313,7 +313,7 @@ export default function AdminPanelPage() {
 
         <div className="w-full max-w-[400px] space-y-6 relative z-10 animate-fade-up">
           <div className="flex flex-col items-center text-center space-y-2.5">
-            <BrandLogo size="md" showTagline={false} href="/dashboard" />
+            <BrandLogo size="md" showTagline={true} href="/dashboard" />
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-600/15 border border-blue-200 dark:border-blue-500/30 text-blue-700 dark:text-blue-400 text-[11px] font-semibold">
               <Shield className="h-3.5 w-3.5" />
               Restricted Admin Console

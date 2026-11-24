@@ -83,7 +83,7 @@ export default function RegisterPage() {
 
       <div className="w-full max-w-[400px] space-y-6 animate-fade-up">
         <div className="text-center space-y-2 flex flex-col items-center">
-          <BrandLogo size="md" showTagline={false} href="/" />
+          <BrandLogo size="md" showTagline={true} href="/" />
           <h1 className="text-2xl font-semibold tracking-tight text-slate-900 dark:text-white pt-2">Create an account</h1>
           <p className="text-sm text-slate-500 dark:text-zinc-400">Start hosting HD Vedio meetings in seconds</p>
         </div>

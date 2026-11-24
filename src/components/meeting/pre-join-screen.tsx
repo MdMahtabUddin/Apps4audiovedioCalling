@@ -268,7 +268,7 @@ export function PreJoinScreen({ meetingInfo, initialName = '', onJoinSuccess }: 
         {/* Right Side: Clean Meeting Info & Join Form (5 Cols) */}
         <div className="lg:col-span-5 rounded-2xl bg-white dark:bg-[#111114] border border-slate-200/90 dark:border-white/[0.08] shadow-xl shadow-slate-900/[0.06] dark:shadow-black/50 p-6 sm:p-7 space-y-6 transition-colors duration-200">
           <div>
-            <BrandLogo size="sm" showTagline={false} />
+            <BrandLogo size="md" showTagline={true} />
           </div>
 
           <div className="space-y-2">

@@ -132,7 +132,7 @@ export default function LoginPage() {
         <div className="w-full max-w-[380px] space-y-6 animate-fade-up">
           <div className="space-y-2 text-center lg:text-left">
             <div className="lg:hidden flex justify-center pb-2">
-              <BrandLogo size="md" showTagline={false} href="/" />
+              <BrandLogo size="md" showTagline={true} href="/" />
             </div>
             <h1 className="text-2xl font-semibold tracking-tight text-slate-950 dark:text-white">
               Welcome back
