@@ -1372,55 +1372,57 @@ export default function DashboardPage() {
             </Card>
 
             {/* 2. Duration & Collaboration Analytics Card */}
-            <Card className="bg-[#091222]/90 border-white/[0.08]">
+            <Card>
               <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm flex items-center gap-2">
-                    <TrendingUp className="h-4 w-4 text-[#FFA033]" />
-                    Duration & Call Analytics
+                <div className="flex items-center justify-between gap-2">
+                  <CardTitle className="text-sm font-semibold flex items-center gap-2 text-slate-900 dark:text-white">
+                    <TrendingUp className="h-4 w-4 text-amber-500" />
+                    Duration &amp; Call Analytics
                   </CardTitle>
-                  <Badge variant="orange">Telemetry</Badge>
+                  <span className="px-2 py-0.5 rounded-md bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/25 text-[11px] font-semibold text-amber-700 dark:text-amber-400">
+                    Telemetry
+                  </span>
                 </div>
-                <CardDescription className="text-xs">
+                <CardDescription className="text-xs text-slate-500 dark:text-zinc-400">
                   Breakdown of your meeting lengths and longest session highlight
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 {/* Longest Meeting Highlight Box */}
                 {analytics.longestMeeting ? (
-                  <div className="p-3.5 rounded-2xl bg-gradient-to-r from-[#FF7A00]/15 via-[#0066FF]/10 to-transparent border border-[#FF7A00]/30 space-y-1.5">
-                    <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-[#FFA033]">
+                  <div className="p-3.5 rounded-xl bg-amber-50/70 dark:bg-amber-500/[0.08] border border-amber-200/80 dark:border-amber-500/25 space-y-1">
+                    <div className="flex items-center justify-between text-[10px] font-semibold uppercase tracking-wider text-amber-700 dark:text-amber-400">
                       <span className="flex items-center gap-1">
-                        <Award className="h-3.5 w-3.5" /> Longest Session Highlight
+                        <Award className="h-3.5 w-3.5" /> Longest Session
                       </span>
-                      <span>{analytics.longestMeeting.formattedDuration}</span>
+                      <span className="font-mono">{analytics.longestMeeting.formattedDuration}</span>
                     </div>
-                    <p className="text-xs sm:text-sm font-black text-white truncate">
+                    <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">
                       {analytics.longestMeeting.title}
                     </p>
-                    <p className="text-[11px] text-gray-400">
+                    <p className="text-[11px] text-slate-500 dark:text-zinc-400">
                       {analytics.longestMeeting.formattedDate} at{' '}
                       {analytics.longestMeeting.formattedStartTime}
                     </p>
                   </div>
                 ) : (
-                  <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/[0.06] text-xs text-gray-400 text-center">
+                  <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#09090b] border border-slate-200/80 dark:border-white/[0.06] text-xs text-slate-500 dark:text-zinc-400 text-center">
                     Host a meeting to unlock duration breakdown insights.
                   </div>
                 )}
 
                 {/* Weekly Activity Mini Bar Chart (Last 7 Days) */}
-                <div className="pt-2 border-t border-white/[0.07] space-y-2">
+                <div className="pt-3 border-t border-slate-200/80 dark:border-white/[0.07] space-y-2">
                   <div className="flex items-center justify-between text-[11px]">
-                    <span className="font-bold text-gray-300">Last 7 Days Activity</span>
-                    <span className="text-[10px] text-gray-500">Sessions / Day</span>
+                    <span className="font-semibold text-slate-800 dark:text-zinc-200">Last 7 Days Activity</span>
+                    <span className="text-[10px] text-slate-500 dark:text-zinc-500">Sessions / Day</span>
                   </div>
                   <div className="grid grid-cols-7 gap-1.5 items-end h-16 pt-2">
                     {analytics.last7Days.map((day, idx) => {
                       const heightPct =
                         day.count > 0
-                          ? Math.max(22, Math.round((day.count / analytics.maxDailyCount) * 100))
-                          : 10;
+                          ? Math.max(24, Math.round((day.count / analytics.maxDailyCount) * 100))
+                          : 12;
                       return (
                         <div key={idx} className="flex flex-col items-center gap-1 h-full justify-end">
                           <div className="w-full flex-1 flex items-end justify-center">
@@ -1428,13 +1430,13 @@ export default function DashboardPage() {
                               title={`${day.label}: ${day.count} meeting${day.count !== 1 ? 's' : ''}`}
                               className={`w-full rounded-t-md transition-all duration-500 ${
                                 day.count > 0
-                                  ? 'bg-gradient-to-t from-[#0066FF] to-[#FF7A00]'
-                                  : 'bg-white/[0.07]'
+                                  ? 'bg-gradient-to-t from-blue-600 to-sky-400'
+                                  : 'bg-slate-200/80 dark:bg-white/[0.07]'
                               }`}
                               style={{ height: `${heightPct}%` }}
                             />
                           </div>
-                          <span className="text-[9px] font-semibold text-gray-400">
+                          <span className="text-[10px] font-medium text-slate-500 dark:text-zinc-400">
                             {day.label}
                           </span>
                         </div>
@@ -1444,18 +1446,18 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Duration Distribution Bars */}
-                <div className="space-y-2.5 pt-1">
+                <div className="space-y-3 pt-1">
                   <div className="space-y-1">
                     <div className="flex justify-between text-[11px]">
-                      <span className="text-gray-400">Quick Syncs (&lt; 15 mins)</span>
-                      <span className="font-bold text-gray-200">{analytics.shortCalls} calls</span>
+                      <span className="text-slate-600 dark:text-zinc-400">Quick Syncs (&lt; 15 mins)</span>
+                      <span className="font-semibold text-slate-900 dark:text-zinc-200 tabular-nums">{analytics.shortCalls} calls</span>
                     </div>
-                    <div className="h-1.5 w-full rounded-full bg-white/[0.06] overflow-hidden">
+                    <div className="h-1.5 w-full rounded-full bg-slate-100 dark:bg-white/[0.07] overflow-hidden">
                       <div
-                        className="h-full rounded-full bg-[#388BFF] transition-all duration-500"
+                        className="h-full rounded-full bg-blue-600 dark:bg-blue-500 transition-all duration-500"
                         style={{
                           width: `${
-                            analytics.totalMeetings > 0
+                            analytics.totalMeetings > 0 && analytics.shortCalls > 0
                               ? Math.max(8, Math.round((analytics.shortCalls / analytics.totalMeetings) * 100))
                               : 0
                           }%`,
@@ -1466,15 +1468,15 @@ export default function DashboardPage() {
 
                   <div className="space-y-1">
                     <div className="flex justify-between text-[11px]">
-                      <span className="text-gray-400">Standard Sessions (15–45 mins)</span>
-                      <span className="font-bold text-gray-200">{analytics.mediumCalls} calls</span>
+                      <span className="text-slate-600 dark:text-zinc-400">Standard Sessions (15–45 mins)</span>
+                      <span className="font-semibold text-slate-900 dark:text-zinc-200 tabular-nums">{analytics.mediumCalls} calls</span>
                     </div>
-                    <div className="h-1.5 w-full rounded-full bg-white/[0.06] overflow-hidden">
+                    <div className="h-1.5 w-full rounded-full bg-slate-100 dark:bg-white/[0.07] overflow-hidden">
                       <div
-                        className="h-full rounded-full bg-emerald-400 transition-all duration-500"
+                        className="h-full rounded-full bg-emerald-500 transition-all duration-500"
                         style={{
                           width: `${
-                            analytics.totalMeetings > 0
+                            analytics.totalMeetings > 0 && analytics.mediumCalls > 0
                               ? Math.max(8, Math.round((analytics.mediumCalls / analytics.totalMeetings) * 100))
                               : 0
                           }%`,
@@ -1485,15 +1487,15 @@ export default function DashboardPage() {
 
                   <div className="space-y-1">
                     <div className="flex justify-between text-[11px]">
-                      <span className="text-gray-400">Deep Dives (45+ mins)</span>
-                      <span className="font-bold text-gray-200">{analytics.longCalls} calls</span>
+                      <span className="text-slate-600 dark:text-zinc-400">Deep Dives (45+ mins)</span>
+                      <span className="font-semibold text-slate-900 dark:text-zinc-200 tabular-nums">{analytics.longCalls} calls</span>
                     </div>
-                    <div className="h-1.5 w-full rounded-full bg-white/[0.06] overflow-hidden">
+                    <div className="h-1.5 w-full rounded-full bg-slate-100 dark:bg-white/[0.07] overflow-hidden">
                       <div
-                        className="h-full rounded-full bg-[#FF7A00] transition-all duration-500"
+                        className="h-full rounded-full bg-amber-500 transition-all duration-500"
                         style={{
                           width: `${
-                            analytics.totalMeetings > 0
+                            analytics.totalMeetings > 0 && analytics.longCalls > 0
                               ? Math.max(8, Math.round((analytics.longCalls / analytics.totalMeetings) * 100))
                               : 0
                           }%`,
