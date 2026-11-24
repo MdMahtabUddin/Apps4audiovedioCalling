@@ -30,11 +30,20 @@ export default function HomePage() {
   const [meetingInput, setMeetingInput] = useState('');
   const [isCreating, setIsCreating] = useState(false);
 
-  // Clean live camera preview
+  // Clean live camera preview + subtle animated studio stage
   const [isCamPreviewOn, setIsCamPreviewOn] = useState(false);
   const [isMicMuted, setIsMicMuted] = useState(false);
+  const [activeSpeakerIdx, setActiveSpeakerIdx] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
+
+  useEffect(() => {
+    if (isCamPreviewOn) return;
+    const timer = setInterval(() => {
+      setActiveSpeakerIdx((prev) => (prev + 1) % 3);
+    }, 2800);
+    return () => clearInterval(timer);
+  }, [isCamPreviewOn]);
 
   useEffect(() => {
     fetch('/api/auth/me')
@@ -214,42 +223,138 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Right Column: Clean Interactive Camera Check Card */}
+            {/* Right Column: Animated Studio Preview & Interactive Camera Card */}
             <div className="lg:col-span-5 animate-fade-up-2">
-              <div className="rounded-2xl border border-slate-200/90 dark:border-white/[0.08] bg-white dark:bg-[#111114] p-3 shadow-xl shadow-slate-900/[0.06] dark:shadow-black/60 space-y-3 transition-all duration-300 hover:shadow-2xl">
-                <div className="relative aspect-[16/10] w-full rounded-xl bg-slate-100 dark:bg-[#09090b] border border-slate-200/70 dark:border-white/[0.06] overflow-hidden flex items-center justify-center">
-                  {isCamPreviewOn ? (
-                    <video
-                      ref={videoRef}
-                      autoPlay
-                      playsInline
-                      muted
-                      className="w-full h-full object-cover scale-x-[-1]"
-                    />
-                  ) : (
-                    <div className="flex flex-col items-center text-center px-6 space-y-3">
-                      <div className="h-14 w-14 rounded-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/[0.08] shadow-xs flex items-center justify-center text-slate-500 dark:text-zinc-400">
-                        <Camera className="h-6 w-6" />
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-sm font-semibold text-slate-800 dark:text-zinc-200">Ready when you are</p>
-                        <p className="text-xs text-slate-500 dark:text-zinc-500">Test your camera before joining a room</p>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Subtle Status Tag */}
-                  <div className="absolute top-3 left-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white/90 dark:bg-black/70 backdrop-blur-md border border-slate-200/80 dark:border-white/[0.08] text-[11px] font-medium text-slate-700 dark:text-zinc-300">
-                    <span className={`h-1.5 w-1.5 rounded-full ${isCamPreviewOn ? 'bg-emerald-500' : 'bg-slate-400 dark:bg-zinc-500'}`} />
-                    {isCamPreviewOn ? 'Camera Active' : 'Preview Off'}
+              <div className="rounded-2xl border border-slate-200/90 dark:border-white/[0.08] bg-white dark:bg-[#111114] p-3.5 shadow-2xl shadow-slate-900/[0.08] dark:shadow-black/70 space-y-3 transition-all duration-300">
+                {/* Top Minimal Window Bar */}
+                <div className="flex items-center justify-between px-1 pb-0.5">
+                  <div className="flex items-center gap-1.5">
+                    <span className="h-2.5 w-2.5 rounded-full bg-slate-200 dark:bg-zinc-700" />
+                    <span className="h-2.5 w-2.5 rounded-full bg-slate-200 dark:bg-zinc-700" />
+                    <span className="h-2.5 w-2.5 rounded-full bg-slate-200 dark:bg-zinc-700" />
+                    <span className="ml-2 text-[11px] font-mono text-slate-400 dark:text-zinc-500">
+                      Studio · HD 1080p
+                    </span>
                   </div>
+                  <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200/80 dark:border-emerald-500/20 text-[10px] font-semibold text-emerald-700 dark:text-emerald-400">
+                    <span className="relative flex h-1.5 w-1.5">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                      <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
+                    </span>
+                    <span>{isCamPreviewOn ? 'Live Camera' : '48kHz Live'}</span>
+                  </div>
+                </div>
 
-                  {/* Subtle Animated Voice Equalizer Pill when Mic is On */}
-                  {!isMicMuted && (
-                    <div className="absolute bottom-3 right-3 inline-flex items-end gap-0.5 h-6 px-2 py-1.5 rounded-md bg-white/90 dark:bg-black/70 backdrop-blur-md border border-slate-200/80 dark:border-white/[0.08]">
-                      <span className="w-0.5 bg-blue-600 dark:bg-blue-400 rounded-full soundwave-bar-1" />
-                      <span className="w-0.5 bg-blue-600 dark:bg-blue-400 rounded-full soundwave-bar-2" />
-                      <span className="w-0.5 bg-blue-600 dark:bg-blue-400 rounded-full soundwave-bar-3" />
+                {/* Main Stage Area */}
+                <div className="relative aspect-[16/11] w-full rounded-xl bg-gradient-to-br from-slate-100 via-slate-50 to-blue-50/60 dark:from-[#0c0c10] dark:via-[#09090b] dark:to-blue-950/20 border border-slate-200/80 dark:border-white/[0.06] overflow-hidden p-2.5">
+                  {isCamPreviewOn ? (
+                    <div className="relative w-full h-full rounded-lg overflow-hidden bg-black">
+                      <video
+                        ref={videoRef}
+                        autoPlay
+                        playsInline
+                        muted
+                        className="w-full h-full object-cover scale-x-[-1]"
+                      />
+                      <div className="absolute bottom-2.5 left-2.5 px-2.5 py-1 rounded-md bg-black/65 backdrop-blur-md text-[11px] font-medium text-white">
+                        You (Live Preview)
+                      </div>
+                      {!isMicMuted && (
+                        <div className="absolute bottom-2.5 right-2.5 inline-flex items-end gap-0.5 h-6 px-2 py-1.5 rounded-md bg-black/65 backdrop-blur-md">
+                          <span className="w-0.5 bg-emerald-400 rounded-full soundwave-bar-1" />
+                          <span className="w-0.5 bg-emerald-400 rounded-full soundwave-bar-2" />
+                          <span className="w-0.5 bg-emerald-400 rounded-full soundwave-bar-3" />
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 grid-rows-2 gap-2 h-full w-full">
+                      {[
+                        {
+                          initials: 'MH',
+                          name: 'Mahtab',
+                          role: 'Host',
+                          bg: 'from-blue-600 to-indigo-600',
+                          tint: 'bg-blue-50/70 dark:bg-blue-950/25',
+                        },
+                        {
+                          initials: 'SR',
+                          name: 'Sarah',
+                          role: 'Design',
+                          bg: 'from-violet-600 to-fuchsia-600',
+                          tint: 'bg-violet-50/70 dark:bg-violet-950/25',
+                        },
+                        {
+                          initials: 'AK',
+                          name: 'Alex',
+                          role: 'Product',
+                          bg: 'from-emerald-600 to-teal-600',
+                          tint: 'bg-emerald-50/70 dark:bg-emerald-950/25',
+                        },
+                      ].map((person, idx) => {
+                        const isSpeaking = activeSpeakerIdx === idx;
+                        return (
+                          <div
+                            key={person.name}
+                            className={`relative rounded-lg border transition-all duration-500 flex flex-col items-center justify-center overflow-hidden ${
+                              person.tint
+                            } ${
+                              isSpeaking
+                                ? 'border-blue-500/80 dark:border-blue-400/80 shadow-md shadow-blue-500/15 scale-[1.01]'
+                                : 'border-slate-200/80 dark:border-white/[0.07]'
+                            }`}
+                          >
+                            {/* Soft Breathing Speaker Halo */}
+                            <div className="relative flex items-center justify-center">
+                              {isSpeaking && (
+                                <span className="absolute inset-0 -m-1.5 rounded-full border-2 border-blue-500/40 dark:border-blue-400/40 animate-ping" />
+                              )}
+                              <div
+                                className={`h-11 w-11 rounded-full bg-gradient-to-br ${person.bg} text-white text-xs font-bold flex items-center justify-center shadow-sm transition-transform duration-500 ${
+                                  isSpeaking ? 'scale-105' : 'scale-100'
+                                }`}
+                              >
+                                {person.initials}
+                              </div>
+                            </div>
+
+                            {/* Bottom Nameplate + Live Equalizer */}
+                            <div className="absolute bottom-1.5 left-1.5 right-1.5 flex items-center justify-between">
+                              <span className="px-2 py-0.5 rounded bg-white/85 dark:bg-black/60 backdrop-blur-sm text-[10px] font-semibold text-slate-800 dark:text-zinc-200 border border-slate-200/60 dark:border-white/[0.06] truncate">
+                                {person.name}
+                              </span>
+                              {isSpeaking ? (
+                                <span className="inline-flex items-end gap-0.5 h-4 px-1.5 py-0.5 rounded bg-blue-600 text-white">
+                                  <span className="w-0.5 bg-white rounded-full soundwave-bar-1" />
+                                  <span className="w-0.5 bg-white rounded-full soundwave-bar-2" />
+                                  <span className="w-0.5 bg-white rounded-full soundwave-bar-3" />
+                                </span>
+                              ) : (
+                                <span className="h-4 w-4 rounded bg-white/80 dark:bg-black/50 flex items-center justify-center text-slate-400 dark:text-zinc-500">
+                                  <Mic className="h-2.5 w-2.5" />
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+
+                      {/* 4th Tile: Interactive "You" Camera Preview Trigger */}
+                      <button
+                        type="button"
+                        onClick={handleToggleCamera}
+                        className="group relative rounded-lg border border-dashed border-slate-300 dark:border-white/[0.15] bg-white/80 dark:bg-zinc-900/60 hover:border-blue-500 dark:hover:border-blue-400 hover:bg-blue-50/50 dark:hover:bg-blue-950/20 transition-all duration-200 flex flex-col items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        <div className="relative">
+                          <span className="absolute inset-0 rounded-full bg-blue-500/20 group-hover:animate-ping" />
+                          <div className="relative h-9 w-9 rounded-full bg-blue-600/10 dark:bg-blue-500/15 border border-blue-500/25 text-blue-600 dark:text-blue-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <Camera className="h-4 w-4" />
+                          </div>
+                        </div>
+                        <span className="text-[10.5px] font-semibold text-slate-700 dark:text-zinc-200">
+                          Try Camera
+                        </span>
+                      </button>
                     </div>
                   )}
                 </div>
@@ -273,7 +378,7 @@ export default function HomePage() {
                       onClick={handleToggleCamera}
                       className={`h-9 px-3 rounded-lg border text-xs font-medium inline-flex items-center gap-1.5 transition-colors cursor-pointer ${
                         isCamPreviewOn
-                          ? 'bg-blue-50 dark:bg-blue-600/15 border-blue-200 dark:border-blue-500/30 text-blue-700 dark:text-blue-400'
+                          ? 'bg-blue-600 border-blue-600 text-white hover:bg-blue-700'
                           : 'bg-slate-50 dark:bg-zinc-900 border-slate-200 dark:border-white/[0.08] text-slate-700 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800'
                       }`}
                     >
