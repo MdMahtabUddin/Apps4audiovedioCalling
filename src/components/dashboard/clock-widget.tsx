@@ -34,11 +34,11 @@ export function ClockWidget() {
 
   return (
     <div className="flex flex-col items-end text-right">
-      <div className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white font-mono drop-shadow-sm">
+      <div className="text-2xl sm:text-3xl font-semibold tracking-tight text-slate-900 dark:text-white font-mono">
         {time || '--:--'}
       </div>
-      <div className="flex items-center gap-1.5 text-xs text-gray-400 mt-1 font-medium">
-        <Calendar className="h-3.5 w-3.5 text-indigo-400" />
+      <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-zinc-400 mt-0.5 font-medium">
+        <Calendar className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
         <span>{date || 'Loading date...'}</span>
       </div>
     </div>

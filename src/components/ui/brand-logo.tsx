@@ -75,30 +75,28 @@ export function BrandLogo({
           </svg>
 
           {/* Typography */}
-          <div className="flex items-center tracking-tight font-black italic relative overflow-hidden rounded-lg">
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#2B82FF] via-[#00D4FF] to-[#0057FF] drop-shadow-[0_0_14px_rgba(0,102,255,0.45)] transition-all group-hover:drop-shadow-[0_0_20px_rgba(0,212,255,0.7)]">
+          <div className={`flex items-center tracking-tight font-black italic relative overflow-hidden rounded-lg ${dimensions.text}`}>
+            <span className="text-blue-600 dark:text-[#388BFF] transition-colors">
               Metro
             </span>
-            <span className="text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.3)] ml-0.5 font-black">
+            <span className="text-slate-900 dark:text-white ml-0.5 font-black transition-colors">
               Meet
             </span>
-            <span className="ml-1.5 px-2 py-0.5 text-[8.5px] not-italic font-black tracking-widest rounded-full bg-gradient-to-r from-[#FF7A00] via-[#FFA336] to-[#FF4500] text-white shadow-md shadow-orange-500/35 uppercase border border-white/20 animate-pulse">
+            <span className="ml-1.5 px-1.5 py-0.5 text-[8.5px] not-italic font-extrabold tracking-widest rounded-md bg-gradient-to-r from-[#FF7A00] to-[#F95700] text-white uppercase">
               PRO
             </span>
-            {/* Ambient Shimmer Beam Sweep */}
-            <span className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/25 to-transparent pointer-events-none" />
           </div>
         </div>
       </div>
 
       {showTagline && size !== 'sm' && (
         <div className="flex items-center gap-1.5 -mt-0.5">
-          <span className="h-1.5 w-1.5 rounded-full bg-[#00D4FF] animate-ping" />
-          <span className="text-[10px] font-semibold text-[#388BFF] italic tracking-wide">
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+          <span className="text-[10px] font-semibold text-blue-600 dark:text-[#388BFF] italic tracking-wide">
             We Do <span className="font-black text-[#FF7A00]">IT</span>
           </span>
-          <span className="text-[9px] text-gray-500">|</span>
-          <span className="text-[9px] text-gray-400 font-medium tracking-tight">
+          <span className="text-[9px] text-slate-400 dark:text-zinc-600">|</span>
+          <span className="text-[9px] text-slate-500 dark:text-zinc-400 font-medium tracking-tight">
             Enterprise Vedio Infrastructure
           </span>
         </div>

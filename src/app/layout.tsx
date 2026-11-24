@@ -4,6 +4,7 @@ import './globals.css';
 import { ToastProvider } from '@/components/ui/toast';
 import { PwaInstallBanner } from '@/components/ui/pwa-install-banner';
 import { SystemStatusOverlay } from '@/components/ui/system-status-overlay';
+import { ThemeProvider } from '@/components/theme/theme-provider';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -21,7 +22,10 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover',
-  themeColor: '#09090b',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#f8fafc' },
+    { media: '(prefers-color-scheme: dark)', color: '#09090b' },
+  ],
 };
 
 export const metadata: Metadata = {
@@ -39,19 +43,44 @@ export const metadata: Metadata = {
   },
 };
 
+const themeInitScript = `
+(function() {
+  try {
+    var t = localStorage.getItem('metromeet_theme');
+    if (t === 'light') {
+      document.documentElement.classList.remove('dark');
+      document.documentElement.classList.add('light');
+    } else if (t === 'dark') {
+      document.documentElement.classList.add('dark');
+      document.documentElement.classList.remove('light');
+    } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+      document.documentElement.classList.remove('dark');
+      document.documentElement.classList.add('light');
+    } else {
+      document.documentElement.classList.add('dark');
+    }
+  } catch (e) {}
+})();
+`;
+
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} dark`}>
-      <body className="min-h-screen bg-[#09090b] text-zinc-100 antialiased selection:bg-blue-600 selection:text-white overscroll-none">
-        <ToastProvider>
-          <SystemStatusOverlay />
-          {children}
-          <PwaInstallBanner />
-        </ToastProvider>
+    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} dark`} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
+      <body className="min-h-screen bg-[#f8fafc] dark:bg-[#09090b] text-slate-900 dark:text-zinc-100 antialiased selection:bg-blue-600 selection:text-white overscroll-none">
+        <ThemeProvider>
+          <ToastProvider>
+            <SystemStatusOverlay />
+            {children}
+            <PwaInstallBanner />
+          </ToastProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

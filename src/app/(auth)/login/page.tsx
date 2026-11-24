@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { BrandLogo } from '@/components/ui/brand-logo';
+import { ThemeToggle } from '@/components/theme/theme-provider';
 import { useToast } from '@/components/ui/toast';
 
 export default function LoginPage() {
@@ -51,19 +52,23 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-[#09090b]">
-      <div className="w-full max-w-[400px] space-y-6">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-[#f8fafc] dark:bg-[#09090b] relative transition-colors duration-200">
+      <div className="absolute top-4 right-4">
+        <ThemeToggle />
+      </div>
+
+      <div className="w-full max-w-[400px] space-y-6 animate-fade-up">
         <div className="text-center space-y-2 flex flex-col items-center">
           <BrandLogo size="md" showTagline={false} href="/" />
-          <h1 className="text-2xl font-semibold tracking-tight text-white pt-2">Sign in to MetroMeet</h1>
-          <p className="text-sm text-zinc-400">Enter your credentials to access your workspace</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-900 dark:text-white pt-2">Sign in to MetroMeet</h1>
+          <p className="text-sm text-slate-500 dark:text-zinc-400">Enter your credentials to access your workspace</p>
         </div>
 
-        <Card className="border-white/[0.08] bg-[#111114] p-6">
+        <Card className="p-6">
           <CardContent className="p-0">
             <form onSubmit={handleSubmit} className="space-y-4">
               {error && (
-                <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/25 text-xs text-rose-300 font-medium">
+                <div className="p-3 rounded-lg bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/25 text-xs text-rose-600 dark:text-rose-300 font-medium">
                   {error}
                 </div>
               )}
@@ -80,12 +85,12 @@ export default function LoginPage() {
 
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <label htmlFor="password" className="text-xs font-medium text-zinc-300">
+                  <label htmlFor="password" className="text-xs font-medium text-slate-700 dark:text-zinc-300">
                     Password
                   </label>
                   <Link
                     href="/forgot-password"
-                    className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                    className="text-xs text-blue-600 dark:text-blue-400 hover:underline transition-colors"
                   >
                     Forgot password?
                   </Link>
@@ -102,7 +107,7 @@ export default function LoginPage() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-2.5 text-zinc-500 hover:text-zinc-200 transition-colors cursor-pointer"
+                    className="absolute right-3 top-2.5 text-slate-400 dark:text-zinc-500 hover:text-slate-700 dark:hover:text-zinc-200 transition-colors cursor-pointer"
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
@@ -115,17 +120,17 @@ export default function LoginPage() {
               </Button>
             </form>
 
-            <div className="mt-6 text-center text-xs text-zinc-400 space-y-3">
+            <div className="mt-6 text-center text-xs text-slate-500 dark:text-zinc-400 space-y-3">
               <div>
                 Don&apos;t have an account?{' '}
-                <Link href="/register" className="font-medium text-white hover:underline underline-offset-4">
+                <Link href="/register" className="font-semibold text-slate-900 dark:text-white hover:underline underline-offset-4">
                   Create account
                 </Link>
               </div>
-              <div className="pt-3 border-t border-white/[0.06]">
+              <div className="pt-3 border-t border-slate-100 dark:border-white/[0.06]">
                 <Link
                   href="/admin"
-                  className="text-[11px] font-medium text-zinc-500 hover:text-zinc-300 transition-colors"
+                  className="text-[11px] font-medium text-slate-500 dark:text-zinc-500 hover:text-slate-800 dark:hover:text-zinc-300 transition-colors"
                 >
                   Admin Portal →
                 </Link>

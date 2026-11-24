@@ -21,6 +21,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { BrandLogo } from '@/components/ui/brand-logo';
+import { ThemeToggle } from '@/components/theme/theme-provider';
 import { useVideo } from '@/lib/webrtc/video-provider';
 import { useMeeting } from '@/lib/meeting/meeting-provider';
 import { MeetingValidationResponse } from '@/types';
@@ -114,11 +115,15 @@ export function PreJoinScreen({ meetingInfo, initialName = '', onJoinSuccess }: 
   };
 
   return (
-    <div className="min-h-screen bg-[#09090b] text-zinc-100 flex items-center justify-center p-4 sm:p-6 lg:p-10">
-      <div className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+    <div className="min-h-screen bg-[#f8fafc] dark:bg-[#09090b] text-slate-900 dark:text-zinc-100 flex items-center justify-center p-4 sm:p-6 lg:p-10 relative transition-colors duration-200">
+      <div className="absolute top-4 right-4">
+        <ThemeToggle />
+      </div>
+
+      <div className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-12 gap-8 items-center animate-fade-up">
         {/* Left Side: Clean Video Preview & Controls (7 Cols) */}
         <div className="lg:col-span-7 flex flex-col items-center space-y-4">
-          <div className="relative w-full aspect-video rounded-2xl bg-[#111114] border border-white/[0.08] shadow-2xl shadow-black/60 overflow-hidden flex items-center justify-center">
+          <div className="relative w-full aspect-video rounded-2xl bg-slate-900 dark:bg-[#111114] border border-slate-200 dark:border-white/[0.08] shadow-xl shadow-slate-900/10 dark:shadow-black/60 overflow-hidden flex items-center justify-center">
             {/* Live Video */}
             <video
               ref={videoRef}
@@ -261,31 +266,31 @@ export function PreJoinScreen({ meetingInfo, initialName = '', onJoinSuccess }: 
         </div>
 
         {/* Right Side: Clean Meeting Info & Join Form (5 Cols) */}
-        <div className="lg:col-span-5 rounded-2xl bg-[#111114] border border-white/[0.08] shadow-xl shadow-black/50 p-6 sm:p-7 space-y-6">
+        <div className="lg:col-span-5 rounded-2xl bg-white dark:bg-[#111114] border border-slate-200/90 dark:border-white/[0.08] shadow-xl shadow-slate-900/[0.06] dark:shadow-black/50 p-6 sm:p-7 space-y-6 transition-colors duration-200">
           <div>
             <BrandLogo size="sm" showTagline={false} />
           </div>
 
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <span className="text-[11px] font-medium text-blue-400 px-2 py-0.5 rounded-md bg-blue-600/10 border border-blue-500/20">
+              <span className="text-[11px] font-medium text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-600/10 border border-blue-200/80 dark:border-blue-500/20">
                 Ready to join
               </span>
               {meetingInfo.waitingRoom && (
                 <Badge variant="orange">Waiting Room</Badge>
               )}
             </div>
-            <h2 className="text-xl sm:text-2xl font-semibold tracking-tight text-white">{meetingInfo.title}</h2>
-            <div className="flex items-center gap-2 text-xs text-zinc-400">
-              <span className="font-mono text-zinc-300">{meetingInfo.id}</span>
+            <h2 className="text-xl sm:text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">{meetingInfo.title}</h2>
+            <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-zinc-400">
+              <span className="font-mono text-slate-700 dark:text-zinc-300">{meetingInfo.id}</span>
               <span>•</span>
-              <span>Hosted by <strong className="text-zinc-200 font-medium">{meetingInfo.hostName}</strong></span>
+              <span>Hosted by <strong className="text-slate-900 dark:text-zinc-200 font-medium">{meetingInfo.hostName}</strong></span>
             </div>
           </div>
 
           <form onSubmit={handleJoin} className="space-y-4">
             {error && (
-              <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/25 text-xs text-rose-300 font-medium flex items-center gap-2">
+              <div className="p-3 rounded-lg bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/25 text-xs text-rose-600 dark:text-rose-300 font-medium flex items-center gap-2">
                 <AlertCircle className="h-4 w-4 shrink-0" />
                 <span>{error}</span>
               </div>
